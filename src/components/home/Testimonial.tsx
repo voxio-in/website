@@ -1,4 +1,3 @@
-
 const Testimonial = () => {
   return (
     <section className="py-16 md:py-24">
@@ -14,20 +13,30 @@ const Testimonial = () => {
           </svg>
           <blockquote>
             <p className="text-xl md:text-2xl font-medium text-gray-900 dark:text-white">
-              "Implementing Voxio AI's chatbot on our website has been transformative. Customer response times improved by 78%, and our support team can now focus on complex issues while the AI handles routine inquiries. The seamless integration process took less than a day."
+              "Adopting Voxio AI's voicebot and 3D avatar has fundamentally
+              transformed our user engagement at Silverwings XR. The technology
+              delivers a highly interactive and intuitive experience, driving
+              our first-contact resolution up by over 65%. This has empowered
+              our team to shift their focus from routine inquiries to
+              high-value, complex projects, knowing our users are in capable
+              hands. We were particularly impressed with the deployment speed;
+              the team is very efficient. "
             </p>
           </blockquote>
           <div className="mt-10">
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center cursor-pointer">
+              <a href="https://www.silverwingsxr.com/" target="_blank" rel="noopener noreferrer" className="flex items-center focus:outline-none">
+
               <div className="h-12 w-12 rounded-full bg-gray-300"></div>
-              <div className="ml-4 text-left">
+              <div className="ml-4 text-left ">
                 <p className="text-base font-semibold text-gray-900 dark:text-white">
-                  Sarah Johnson
+                  Kapil Chabria
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  CTO at TechCorp
+                  CEO and Founder of SilverWings XR
                 </p>
               </div>
+              </a>
             </div>
           </div>
         </div>
