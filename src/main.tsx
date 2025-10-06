@@ -5,9 +5,9 @@ import './index.css'
 import { initVoxioAgent } from 'voxioagent'
 
 // Initialize VoxioAgent with API key from environment variables
-// initVoxioAgent({
-//   apiKey: import.meta.env.VITE_VOXIO_API_KEY,
-// })
+initVoxioAgent({
+  apiKey: import.meta.env.VITE_VOXIO_API_KEY,
+})
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
