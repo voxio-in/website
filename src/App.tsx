@@ -24,6 +24,8 @@ import Docs from "./pages/Docs";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Demo from "./pages/Demo";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -35,21 +37,39 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          
+
           {/* Product Routes */}
           <Route path="/products" element={<Products />} />
           <Route path="/products/chatbot" element={<ProductChatbot />} />
-          <Route path="/products/website-voicebot" element={<ProductWebsiteVoiceBot />} />
-          <Route path="/products/call-voicebot" element={<ProductCallVoiceBot />} />
-          <Route path="/products/avatar-voicebot" element={<ProductAvatarVoiceBot />} />
-          
+          <Route
+            path="/products/website-voicebot"
+            element={<ProductWebsiteVoiceBot />}
+          />
+          <Route
+            path="/products/call-voicebot"
+            element={<ProductCallVoiceBot />}
+          />
+          <Route
+            path="/products/avatar-voicebot"
+            element={<ProductAvatarVoiceBot />}
+          />
+
           {/* Solution Routes */}
           <Route path="/solutions" element={<Solutions />} />
-          <Route path="/solutions/customer-support" element={<CustomerSupport />} />
-          <Route path="/solutions/lead-generation" element={<LeadGeneration />} />
+          <Route
+            path="/solutions/customer-support"
+            element={<CustomerSupport />}
+          />
+          <Route
+            path="/solutions/lead-generation"
+            element={<LeadGeneration />}
+          />
           <Route path="/solutions/ecommerce" element={<Ecommerce />} />
-          <Route path="/solutions/internal-helpdesk" element={<InternalHelpdesk />} />
-          
+          <Route
+            path="/solutions/internal-helpdesk"
+            element={<InternalHelpdesk />}
+          />
+
           {/* Other Routes */}
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
@@ -58,7 +78,9 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/demo" element={<Demo />} />
-          
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-use" element={<TermsOfService />} />
+
           {/* Catch All */}
           <Route path="*" element={<NotFound />} />
         </Routes>
