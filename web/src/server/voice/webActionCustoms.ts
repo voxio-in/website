@@ -5,7 +5,7 @@ import { buildVoiceCustoms } from './roleplays/shared'
 
 import { md, render } from './prompts/render'
 import craftRules from './prompts/webnav/craft.md?raw'
-import formPage from './prompts/webnav/form.md?raw'
+import clinicPage from './prompts/webnav/clinic.md?raw'
 import universityPage from './prompts/webnav/university.md?raw'
 import railPage from './prompts/webnav/rail.md?raw'
 import shopPage from './prompts/webnav/shop.md?raw'
@@ -17,9 +17,9 @@ const CRAFT = render(md(craftRules), { MARKER })
 type PageSpec = { greeting: string; page: string }
 
 const PAGES: Record<SurfaceId, PageSpec> = {
-  form: {
-    greeting: 'Hi, Voxio here. Who am I speaking with?',
-    page: render(md(formPage), { MARKER }),
+  clinic: {
+    greeting: 'Civil Hospital appointments. Who is the appointment for?',
+    page: render(md(clinicPage), { MARKER }),
   },
 
   university: {

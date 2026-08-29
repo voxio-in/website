@@ -3,12 +3,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { FormSurface, RailSurface, ShopSurface, UniversitySurface } from '#/components/surfaces'
+import { ClinicSurface, RailSurface, ShopSurface, UniversitySurface } from '#/components/surfaces'
 import { DEFAULT_SURFACE, SURFACES, surfaceById, type SurfaceId } from '#/lib/surfaces'
 import { endRoomSession, startRoomSession, type RoomStart } from '#/server/room'
 
 const SURFACE_VIEWS: Record<SurfaceId, () => React.ReactElement> = {
-  form: FormSurface,
+  clinic: ClinicSurface,
   university: UniversitySurface,
   rail: RailSurface,
   shop: ShopSurface,
@@ -44,7 +44,7 @@ function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
 
 /** A human sentence for the log, from the action the model sent. */
 function describe(a: Action): string {
-  const field = (a.selector || '').replace(/^#(wa|uni|rail|shop)-/, '').replace(/-/g, ' ')
+  const field = (a.selector || '').replace(/^#(hp|uni|rail|shop)-/, '').replace(/-/g, ' ')
   switch (a.action) {
     case 'fill_field':
       return `Typed “${a.value ?? ''}” into ${field}`
@@ -390,13 +390,9 @@ export default function WebActionRoom() {
     <div className="wa">
       <audio ref={audioRef} hidden />
 
-      {/*
-
-      */}
       {!open ? (
         <>
-          {/* ---------- 1 · the scenario ----------
-              charge of a card whose entire job is the stage below them. */}
+          {/* ---------- 1 · which mess ---------- */}
           <div className="dstep">
             <span className="dstep-n" aria-hidden="true">1</span>
             <span className="dstep-t">Which site should it drive?</span>
@@ -419,100 +415,119 @@ export default function WebActionRoom() {
               </button>
             ))}
           </div>
-          <p className="dhint">{surface.blurb}</p>
 
+          {/* ---------- 2 · the specimen ----------
+              The caption sits OUTSIDE the frame, in our type, saying why this
+              screen is hard. That is what makes the ugliness inside read as the
+              subject rather than as our own bad design. */}
+          <figure className="waspec">
+            <figcaption className="waspec-cap">
+              <span className="waspec-site">{surface.site}</span>
+              <span className="waspec-hard">{surface.hard}</span>
+            </figcaption>
+
+            <div className="wastage">
+              <div className="wachrome">
+                <i />
+                <i />
+                <i />
+                <span className="wachrome-url">{surface.host}</span>
+              </div>
+              <div className="wastage-body">
+                <div
+                  className="wa-stage"
+                  ref={stageRef}
+                  onSubmitCapture={(e) => e.preventDefault()}
+                >
+                  <Surface />
+                </div>
+                {/* The fold. The visitor cannot scroll this — the agent does —
+                    so the bottom edge has to say "there is more down here"
+                    rather than ending on a sliced word. */}
+                <div className="wastage-fold" aria-hidden="true" />
+              </div>
+            </div>
+
+            <p className="waspec-dare">
+              <span className="waspec-dare-k">Before you press start</span>
+              {surface.dare}
+            </p>
+          </figure>
         </>
       ) : null}
 
-      <div className={open ? 'wa-overlay' : 'wa-preview'}>
-        {/* ---------- 2 · the stage ----------
+      {open ? (
+        /* ---------- the takeover ----------
+           Still unmistakably our page — our ground, our type, our orb — with
+           their site under glass in the middle of it. The frame is what carries
+           the whole argument, so it is never edge to edge. */
+        <div className="wa-room">
+          <div className="wa-room-top">
+            <span className="wa-room-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <g transform="rotate(-30 12 12)">
+                  <circle cx="7.3" cy="3.2" r="1.45" />
+                  <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8" />
+                  <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8" />
+                  <circle cx="16.7" cy="20.8" r="1.45" />
+                </g>
+              </svg>
+            </span>
+            <span className="wa-room-k">Voxio is driving</span>
+            <span className="wa-room-site">{surface.site}</span>
+            <span className="wa-room-right">
+              {left !== null ? (
+                <span className="wa-room-clock">
+                  {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')} left
+                </span>
+              ) : null}
+              <button type="button" className="wa-close" onClick={() => hangUp('ended')}>
+                End
+              </button>
+            </span>
+          </div>
 
-            tell where this page ends and the driven site begins. */}
-        {!open ? (
-          <div className="wastage">
+          <div className="wa-room-frame">
             <div className="wachrome">
               <i />
               <i />
               <i />
-              {/* Derived from the label rather than added to the Surface type:
-                  needs. */}
-              <span className="wachrome-url">
-                {`${surface.label.toLowerCase().replace(/[^a-z]+/g, '')}.example.in`}
-              </span>
+              <span className="wachrome-url">{surface.host}</span>
             </div>
-            <div className="wastage-body">
-              <div
-                className="wa-stage"
-                ref={stageRef}
-                onSubmitCapture={(e) => e.preventDefault()}
-              >
-                <Surface />
-              </div>
-            </div>
-
-            {/* The narration strip. This is the whole product — it is what turns
-                the stage where it cannot be missed. */}
-            <div className="wacap">
-              <span className="wacap-dot" aria-hidden="true" />
-              <span className={log.length ? '' : 'wacap-empty'}>
-                {log.length
-                  ? log[log.length - 1].label
-                  : pinned
-                    ? `Ready — say “${pinned}”`
-                    : 'Press start and say what you are looking for. It narrates every step.'}
-              </span>
+            <div
+              className="wa-stage"
+              ref={stageRef}
+              onSubmitCapture={(e) => e.preventDefault()}
+            >
+              <Surface />
             </div>
           </div>
-        ) : (
-          <div
-            className="wa-stage"
-            ref={stageRef}
-            onSubmitCapture={(e) => e.preventDefault()}
-          >
-            <Surface />
-          </div>
-        )}
 
-        {open ? (
-          <div className="wa-widget">
-            <div className="wa-widget-head">
-              <span className={`orb${speaking ? ' is-speaking' : ''}`} aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-              <div>
-                <p className="wa-widget-title">
-                  {phase === 'connecting' ? 'Connecting…' : speaking ? 'Speaking' : 'Listening'}
-                </p>
-                <p className="wa-widget-sub">
-                  {left !== null
-                    ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left`
-                    : 'Say what you are looking for'}
-                </p>
-              </div>
-              <button type="button" className="wa-close" onClick={() => hangUp('ended')}>
-                End
-              </button>
-            </div>
-
-            <div className="wa-widget-log">
-              {log.length === 0 ? (
-                <p className="wa-widget-empty">Everything it does to this page shows up here.</p>
+          {/* One strip, not two. This is the narration: what it is doing to
+              their page, in our voice, where it cannot be missed. */}
+          <div className="wa-dock">
+            <span className={`orb${speaking ? ' is-speaking' : ''}`} aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <span className="wa-dock-state">
+              {phase === 'connecting' ? 'Connecting' : speaking ? 'Speaking' : 'Listening'}
+            </span>
+            <span className="wa-dock-line">
+              {log.length ? (
+                <span className={`wa-dock-act is-${log[log.length - 1]!.status}`}>
+                  {log[log.length - 1]!.label}
+                </span>
               ) : (
-                log.slice(-4).map((entry) => (
-                  <div key={entry.id} className={`wa-log-row is-${entry.status}`}>
-                    <span className="wa-log-dot" aria-hidden="true" />
-                    <span>{entry.label}</span>
-                  </div>
-                ))
+                <span className="wa-dock-idle">
+                  {pinned ? `Say “${pinned}”` : 'Say what you are looking for.'}
+                </span>
               )}
-            </div>
+            </span>
           </div>
-        ) : (
-          <div className="wa-preview-veil" aria-hidden="true" />
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {!open ? (
         <>
@@ -529,8 +544,6 @@ export default function WebActionRoom() {
                 : 'It drives the page while you talk. Nothing is submitted. Escape stops it.'}
           </p>
 
-          {/* ---------- sample requests ----------
-              exists, these chips are already the right shape for it. */}
           <div className="wachips">
             <span className="wachips-k">Or start with one of these</span>
             {surface.asks.map((ask) => (

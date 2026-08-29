@@ -621,3 +621,210 @@ body.wa-open .hero-photo { display: none; }
   .bfield-v.is-typing, .bfield-v--late { clip-path: none; }
   .callflow .wave { transform: none; }
 }
+
+/* ============================================================
+   the hospital portal
+   ------------------------------------------------------------
+   Every detail here is the demo's subject, not decoration: the department list
+   in medical language, the FULL rows, the steps that stay empty until you get
+   the one before them right. It is drawn the way these portals actually are —
+   a national emblem strip, a table with real borders, and a footer boasting
+   about 1024x768.
+   ============================================================ */
+.surface--clinic {
+  background: #f4f5f7;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 11.5px;
+  color: #1c1c22;
+}
+
+.hp-gov {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: #1a1a1a;
+  color: #e8e8e8;
+  font-size: 10px;
+}
+.hp-gov-emblem {
+  width: 10px;
+  height: 12px;
+  background: linear-gradient(180deg, #ff9933 33%, #ffffff 33% 66%, #138808 66%);
+}
+.hp-gov-right { margin-left: auto; color: #bdbdbd; }
+
+.hp-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, #14508c, #0e3a67);
+  color: #fff;
+}
+.hp-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffd34d;
+  color: #0e3a67;
+  font-weight: 700;
+  font-size: 13px;
+}
+.hp-name { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
+.hp-sub { margin: 1px 0 0; font-size: 10px; color: rgba(255, 255, 255, 0.72); }
+.hp-login { margin-left: auto; display: flex; gap: 6px; }
+.hp-login button {
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.hp-tabs {
+  display: flex;
+  background: #0a2c4f;
+  color: #cfe0f0;
+  font-size: 11px;
+}
+.hp-tabs span {
+  padding: 7px 13px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+.hp-tabs .is-on { background: #f4f5f7; color: #0a2c4f; font-weight: 700; }
+
+/* The notice nobody reads and everybody needs. */
+.hp-ticker {
+  padding: 6px 12px;
+  background: #fff4d6;
+  border-bottom: 1px solid #e3d5a8;
+  color: #6b4c00;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.hp-ticker strong { color: #a33; margin-right: 6px; }
+
+.hp-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 0;
+  align-items: start;
+}
+.hp-col { padding: 10px 12px; }
+.hp-col--wide { border-left: 1px solid #d6d9de; }
+
+.hp-step {
+  margin: 0 0 7px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #14508c;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0e3a67;
+}
+.hp-col--wide .hp-step:not(:first-child) { margin-top: 14px; }
+
+.hp-depts { display: flex; flex-direction: column; gap: 3px; }
+.hp-dept {
+  padding: 6px 8px;
+  border: 1px solid #c3c7cd;
+  border-radius: 2px;
+  background: #fff;
+  color: #14508c;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.hp-dept:hover { background: #eaf1f8; }
+.hp-dept.is-on { background: #14508c; border-color: #14508c; color: #fff; text-decoration: none; font-weight: 700; }
+
+.hp-tiny { margin: 8px 0 0; font-size: 9.5px; color: #6a6f78; line-height: 1.5; }
+.hp-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed #c3c7cd;
+  background: #fbfbfc;
+  color: #7a7f88;
+  font-size: 10.5px;
+}
+
+.hp-slots { width: 100%; border-collapse: collapse; font-size: 11px; }
+.hp-slots th {
+  padding: 5px 7px;
+  background: #dbe3ec;
+  border: 1px solid #c3c7cd;
+  text-align: left;
+  font-size: 10.5px;
+}
+.hp-slots td { padding: 5px 7px; border: 1px solid #d6d9de; background: #fff; }
+.hp-slots tr.is-full td { background: #f6f6f7; color: #8b9099; }
+.hp-full { color: #a33; font-weight: 700; font-size: 10px; }
+.hp-take {
+  padding: 3px 8px;
+  border: 1px solid #1a7a3c;
+  border-radius: 2px;
+  background: #eaf7ee;
+  color: #1a7a3c;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hp-take:hover { background: #1a7a3c; color: #fff; }
+
+.hp-held {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  background: #eaf7ee;
+  border: 1px solid #b6ddc3;
+  color: #1a5c31;
+  font-size: 10.5px;
+}
+.hp-grid {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 6px 10px;
+  align-items: center;
+}
+.hp-grid label { font-size: 10.5px; color: #3a3f48; }
+.hp-grid input,
+.hp-grid select,
+.hp-grid textarea {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #b9bcc2;
+  border-radius: 2px;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  color: #1c1c22;
+}
+.hp-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.hp-submit {
+  padding: 6px 14px;
+  border: 1px solid #0e3a67;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1a63ab, #14508c);
+  color: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hp-note { font-size: 10px; color: #6a6f78; }
+
+.hp-foot {
+  margin: 0;
+  padding: 7px 12px;
+  border-top: 1px solid #d6d9de;
+  background: #e8eaee;
+  color: #6a6f78;
+  font-size: 9.5px;
+}

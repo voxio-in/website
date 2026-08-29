@@ -75,11 +75,13 @@ function Webnav() {
             <h2 className="section-title">
               Watch it <em>use the page</em>.
             </h2>
+            {/* The lede no longer names one portal — the picker below has four,
+                and each states its own trap in its own caption. */}
             <p className="section-lede">
-              Below is a typical university portal &mdash; four levels of menu and a form
-              three clicks past where anyone looks. Rather than telling you where to click,
-              the agent drives it while you talk: you hear what it is about to do, then you
-              watch it happen. Nothing is submitted anywhere.
+              Four real systems, rebuilt faithfully &mdash; a hospital, a university, the
+              railway booking flow and a shop. Pick one, try to do the job yourself, then
+              hand it over: you hear what the agent is about to do, then you watch it happen
+              on the screen in front of you. Nothing is submitted anywhere.
             </p>
           </div>
 

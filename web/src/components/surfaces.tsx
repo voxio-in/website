@@ -2,57 +2,167 @@
 
 import { useState } from 'react'
 
-export function FormSurface() {
+const CLINIC_DEPTS = [
+  { id: 'hp-d-gen', label: 'General Medicine (OPD-1)' },
+  { id: 'hp-d-cardio', label: 'Cardiology' },
+  { id: 'hp-d-ctvs', label: 'Cardiothoracic & Vascular Surgery' },
+  { id: 'hp-d-ortho', label: 'Orthopaedics' },
+  { id: 'hp-d-ent', label: 'ENT' },
+  { id: 'hp-d-derma', label: 'Dermatology & Venereology' },
+]
+
+const CLINIC_SLOTS = [
+  { id: 'hp-s-1', doc: 'Dr S. Ramanathan', dept: 'Cardiology', day: 'Mon 02 Mar', time: '11:40', free: 0 },
+  { id: 'hp-s-2', doc: 'Dr A. Varghese', dept: 'Cardiology', day: 'Tue 03 Mar', time: '09:20', free: 2 },
+  { id: 'hp-s-3', doc: 'Dr N. Prasad', dept: 'Cardiology', day: 'Wed 04 Mar', time: '10:00', free: 0 },
+  { id: 'hp-s-4', doc: 'Dr A. Varghese', dept: 'Cardiology', day: 'Thu 05 Mar', time: '12:10', free: 5 },
+]
+
+/* The appointment system every government hospital runs. Everything that makes
+   it hard is deliberate and load-bearing for the demo: departments named for
+   doctors rather than patients, most slots showing FULL, and a form that only
+   appears once a slot is chosen. */
+export function ClinicSurface() {
+  const [dept, setDept] = useState<string | null>(null)
+  const [slot, setSlot] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
 
+  const chosen = CLINIC_SLOTS.find((x) => x.id === slot)
+
   return (
-    <div className="surface surface--form">
-      <form className="contact-form wa-form" onSubmit={(e) => e.preventDefault()}>
-        <div className="field">
-          <label htmlFor="wa-name">Your name</label>
-          <input id="wa-name" name="name" type="text" placeholder="Ayush" />
+    <div className="surface surface--clinic">
+      <div className="hp-gov">
+        <span className="hp-gov-emblem" aria-hidden="true" />
+        <span>Government of India &middot; Ministry of Health &amp; Family Welfare</span>
+        <span className="hp-gov-right">Screen Reader | A+ A A&minus; | हिन्दी</span>
+      </div>
+
+      <div className="hp-head">
+        <div className="hp-mark" aria-hidden="true">CH</div>
+        <div>
+          <p className="hp-name">Civil Hospital</p>
+          <p className="hp-sub">Hospital Management System &middot; Patient Services Portal v2.4</p>
         </div>
-        <div className="field">
-          <label htmlFor="wa-org">Where you work</label>
-          <input id="wa-org" name="org" type="text" placeholder="Echobotics" />
+        <div className="hp-login">
+          <button id="hp-login" type="button">Patient Login</button>
+          <button id="hp-register" type="button">New Registration</button>
         </div>
-        <div className="field">
-          <label htmlFor="wa-email">Work email</label>
-          <input id="wa-email" name="email" type="text" placeholder="you@company.com" />
+      </div>
+
+      <div className="hp-tabs">
+        <span className="is-on">Book Appointment</span>
+        <span>Lab Reports</span>
+        <span>Blood Bank</span>
+        <span>Ayushman Bharat</span>
+        <span>Grievance</span>
+      </div>
+
+      <div className="hp-ticker">
+        <strong>NOTICE</strong> OPD registration closes at 11:00 AM. Appointments booked
+        online must be confirmed at Counter 4 with a valid ID before the slot time.
+      </div>
+
+      <div className="hp-body">
+        <div className="hp-col">
+          <p className="hp-step">Step 1 &mdash; Select Department</p>
+          <div className="hp-depts">
+            {CLINIC_DEPTS.map((d) => (
+              <button
+                key={d.id}
+                id={d.id}
+                type="button"
+                className={`hp-dept${dept === d.id ? ' is-on' : ''}`}
+                onClick={() => {
+                  setDept(d.id)
+                  setSlot(null)
+                }}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <p className="hp-tiny">
+            Department not listed? Report at the General OPD counter between 8:00 and 10:30 AM.
+          </p>
         </div>
-        <div className="field">
-          <label htmlFor="wa-team">How many people</label>
-          <select id="wa-team" name="team" defaultValue="Just me">
-            <option>Just me</option>
-            <option>2 to 20</option>
-            <option>21 to 200</option>
-            <option>More than 200</option>
-          </select>
+
+        <div className="hp-col hp-col--wide">
+          <p className="hp-step">Step 2 &mdash; Select Slot</p>
+          {!dept ? (
+            <p className="hp-empty">Select a department to view available slots.</p>
+          ) : (
+            <table className="hp-slots">
+              <thead>
+                <tr>
+                  <th>Consultant</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CLINIC_SLOTS.map((r) => (
+                  <tr key={r.id} className={r.free === 0 ? 'is-full' : ''}>
+                    <td>{r.doc}</td>
+                    <td>{r.day}</td>
+                    <td>{r.time}</td>
+                    <td>
+                      {r.free === 0 ? (
+                        <span className="hp-full">FULL</span>
+                      ) : (
+                        <button id={r.id} type="button" className="hp-take" onClick={() => setSlot(r.id)}>
+                          {r.free} left &mdash; Book
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <p className="hp-step">Step 3 &mdash; Patient Details</p>
+          {!chosen ? (
+            <p className="hp-empty">Details open once a slot is held.</p>
+          ) : (
+            <div className="hp-form">
+              <p className="hp-held">
+                Holding {chosen.day}, {chosen.time} with {chosen.doc}. This hold expires in 10 minutes.
+              </p>
+              <div className="hp-grid">
+                <label htmlFor="hp-name">Patient Name (as per ID)</label>
+                <input id="hp-name" type="text" />
+                <label htmlFor="hp-age">Age</label>
+                <input id="hp-age" type="text" />
+                <label htmlFor="hp-gender">Gender</label>
+                <select id="hp-gender" defaultValue="Select">
+                  <option>Select</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                </select>
+                <label htmlFor="hp-abha">ABHA / Health ID</label>
+                <input id="hp-abha" type="text" />
+                <label htmlFor="hp-phone">Mobile Number</label>
+                <input id="hp-phone" type="text" />
+                <label htmlFor="hp-reason">Reason for Visit</label>
+                <textarea id="hp-reason" rows={2} />
+              </div>
+              <div className="hp-actions">
+                <button className="hp-submit" id="hp-submit" type="button" onClick={() => setSent(true)}>
+                  Confirm Appointment
+                </button>
+                <span className="hp-note" role="status" aria-live="polite">
+                  {sent ? 'Pressed — nothing was sent. This portal is the demo.' : 'Nothing here is submitted anywhere.'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="field">
-          <label htmlFor="wa-use">What you are looking at</label>
-          <select id="wa-use" name="use" defaultValue="Not sure yet">
-            <option>Not sure yet</option>
-            <option>Calling agents</option>
-            <option>Avatar agents</option>
-            <option>Website navigation</option>
-          </select>
-        </div>
-        <div className="field field--wide">
-          <label htmlFor="wa-notes">The conversation you want handled</label>
-          <textarea id="wa-notes" name="notes" rows={3} placeholder="Who is talking to whom?" />
-        </div>
-        <div className="form-actions">
-          <button className="btn btn-solid" id="wa-submit" type="submit" onClick={() => setSent(true)}>
-            Send message
-          </button>
-          <span className="form-note" role="status" aria-live="polite">
-            {sent ? 'Pressed — nothing was sent. This form is the demo.' : 'Nothing here is submitted anywhere.'}
-          </span>
-        </div>
-      </form>
-      <p className="wa-what" id="wa-what">
-        <strong>What happens next</strong> — ask it to scroll here and it will.
+      </div>
+
+      <p className="hp-foot" id="hp-what">
+        Site designed and hosted by NIC. Best viewed in 1024&times;768 resolution.
       </p>
     </div>
   )

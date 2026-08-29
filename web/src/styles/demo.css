@@ -432,10 +432,52 @@
 }
 .dcard .layouts { margin-top: 10px; }
 
+/* ---------- the specimen ----------
+   The caption is outside the frame and set in our own type. That separation is
+   the whole point: inside is theirs and it is a mess, outside is us saying so.
+   Without it the visitor reads the mess as our design. */
+.waspec { margin: 0 0 14px; }
+.waspec-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 2px 0 10px;
+}
+.waspec-site {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.waspec-hard {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #dfe6e6;
+}
+/* The dare. Fifteen seconds of failing to find it yourself is worth more than
+   any amount of copy about how hard these sites are. */
+.waspec-dare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+}
+.waspec-dare-k {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0fd6ad;
+}
+
 .wastage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 11;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -469,6 +511,18 @@
   position: absolute;
   inset: 33px 0 0 0;
   overflow: hidden;
+}
+
+/* The visitor cannot scroll this frame — the agent does — so the bottom edge
+   has to read as a fold rather than as a sliced word. */
+.wastage-fold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 54px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(240, 242, 244, 0.72) 62%, rgba(232, 235, 238, 0.95) 100%);
 }
 
 .wacap {

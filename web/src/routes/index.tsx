@@ -32,19 +32,23 @@ function Home() {
               <Rotator />
             </span>
 
+            {/* Voice was only ever half of it. The headline now says the whole
+                product — voice, chat and text on one engine — and still lands
+                on the claim nobody else can make: it does not answer about the
+                system, it works it. */}
             <h1>
               <span className="headline-line">
-                <span className="headline-text appear appear--mask" style={{ "--d": "0.42s" }}>Voice agents that</span>
+                <span className="headline-text appear appear--mask" style={{ "--d": "0.42s" }}>Agents that talk, type</span>
               </span>
               <span className="headline-line">
-                <span className="headline-text appear appear--mask" style={{ "--d": "0.62s" }}>adapt to <em>the room</em>.</span>
+                <span className="headline-text appear appear--mask" style={{ "--d": "0.62s" }}>and <em>get it done</em>.</span>
               </span>
             </h1>
 
             <p className="lede appear appear--soft" style={{ "--d": "0.82s" }}>
-              Wherever your customer shows up, it&rsquo;s already there. On the phone, on your
-              website, or face-to-face on a screen &mdash; one agent that reads the room and
-              changes how it behaves as the conversation turns.
+              Voxio AI puts one intelligent agent on every line your customer already uses
+              &mdash; the phone, the chat window, a message thread, or face-to-face on a
+              screen. It does not explain your system to them. It works it while they talk.
             </p>
 
             <div className="hero-actions">

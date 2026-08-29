@@ -1073,7 +1073,12 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
   .bar-rule { display: none; }
   .nav-ind { display: none; } /* nothing to travel between once stacked */
   .burger { display: grid; }
-  .logo, .burger { z-index: 80; }
+  /* Both need a position for that z-index to mean anything. Without it the
+     burger stayed a static box, and .nav-shell — fixed, inset 0, painted above
+     every unpositioned sibling once it opens — covered the close button and
+     swallowed the click. The X looked dead because the menu was sitting on
+     top of it. */
+  .logo, .burger { position: relative; z-index: 80; }
 
   .menu-backdrop { display: block; }
   /* The menu needs a floor, not a tint. At 42% the page underneath stayed
