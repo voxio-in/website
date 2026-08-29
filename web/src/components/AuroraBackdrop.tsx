@@ -1,7 +1,7 @@
 // The site background, rendered once in __root for every route.
 
 import { useRouterState } from '@tanstack/react-router'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export type Variant = 'ribbons' | 'infinity' | 'both'
 
@@ -24,14 +24,7 @@ export default function AuroraBackdrop({
 
   return (
     <div className="aur" aria-hidden="true" ref={root}>
-      {photo &&
-        (video ? (
-          <video className="aur-video" autoPlay muted loop playsInline preload="auto">
-            <source src={video} type="video/mp4" />
-          </video>
-        ) : (
-          <div className="aur-photo" />
-        ))}
+      {photo && (video ? <AuroraVideo src={video} /> : <div className="aur-photo" />)}
       <div className="aur-wash" />
       <div className="aur-stars" />
 
@@ -94,6 +87,108 @@ export default function AuroraBackdrop({
 
       <div className="aur-vignette" />
     </div>
+  )
+}
+
+/* The video, and the still that stands in when it will not play.
+
+   Three things go wrong outside Chrome and all three land here.
+
+   React does not reflect `muted` as an ATTRIBUTE on the server-rendered
+   markup, so WebKit and Gecko see an unmuted autoplay video, refuse it, and
+   draw their own play glyph over the top — the "video shows a play button"
+   report. Setting the PROPERTY imperatively before the first play() is the
+   only reliable fix, so we do that on mount, ahead of the attempt.
+
+   If play() is still rejected (a battery saver, Brave's shields, a data-saver
+   mode) there is no point leaving a dead black rectangle: we fall back to the
+   still frame, which is what the design asks for anyway when there is no video.
+
+   And we do not reveal the video until it has actually decoded a frame, so the
+   first paint is the ground colour rather than a flash of white. */
+function AuroraVideo({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [state, setState] = useState<'wait' | 'ok' | 'fail'>('wait')
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    // Before play(), never after: an autoplay attempt on an unmuted element is
+    // rejected once and not retried by the engine.
+    el.muted = true
+    el.defaultMuted = true
+
+    let done = false
+    const ok = () => {
+      if (done) return
+      done = true
+      setState('ok')
+    }
+    const fail = () => {
+      if (done) return
+      done = true
+      setState('fail')
+    }
+
+    if (el.readyState >= 2) ok()
+    el.addEventListener('loadeddata', ok)
+    el.addEventListener('error', fail)
+
+    void el.play().catch(fail)
+
+    // Some engines resolve neither: they simply never start. But a plain
+    // deadline is wrong here — it punishes a slow connection for being slow,
+    // and drops to the still while the bytes are actually arriving. So we watch
+    // PROGRESS, not the clock: give up only once the transfer has gone quiet
+    // for a stretch with nothing decoded.
+    let lastMoved = performance.now()
+    const moved = () => {
+      lastMoved = performance.now()
+    }
+    el.addEventListener('progress', moved)
+    el.addEventListener('loadstart', moved)
+
+    const STALL_MS = 6000
+    const watch = window.setInterval(() => {
+      if (done) return window.clearInterval(watch)
+      if (el.readyState >= 2) return ok()
+      if (performance.now() - lastMoved > STALL_MS) fail()
+    }, 1000)
+
+    return () => {
+      window.clearInterval(watch)
+      el.removeEventListener('progress', moved)
+      el.removeEventListener('loadstart', moved)
+      el.removeEventListener('loadeddata', ok)
+      el.removeEventListener('error', fail)
+    }
+  }, [src])
+
+  return (
+    <>
+      {/* Always rendered, never conditionally: the still sits UNDER the video
+          for the whole of its life, so the fade has something to fade from and
+          the fallback needs no swap. Making it conditional changed the child
+          list, and React then destroyed and recreated the <video> mid-load —
+          which is a fine way to make a working video look like a broken one. */}
+      <div className="aur-photo aur-photo--hold" />
+      <video
+        ref={ref}
+        hidden={state === 'fail'}
+        className={`aur-video${state === 'ok' ? ' is-ready' : ''}`}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        controls={false}
+        disablePictureInPicture
+        disableRemotePlayback
+        tabIndex={-1}
+        src={src}
+      />
+    </>
   )
 }
 

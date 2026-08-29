@@ -1917,3 +1917,43 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 @media (hover: none), (pointer: coarse) {
   .logo-tip::after, .logo-tip::before { content: none; }
 }
+
+/* ==========================================================================
+   perf-lite — the reduced backdrop, applied when the browser cannot hold
+   frame rate. Set by PerfTier.tsx, which measures rather than sniffs.
+
+   The site puts roughly seventy backdrop-filters on the page. Blink samples
+   the backdrop once per composited group; WebKit and Gecko re-sample per
+   surface, and a 24-28px blur with a saturate() on top is the most expensive
+   thing either of them does. Halving the radii and dropping saturate() keeps
+   the glass reading as glass at a fraction of the cost, and the elements that
+   were only ever a tint lose the blur altogether.
+   ========================================================================== */
+
+html.perf-lite {
+  --glass-blur: blur(10px);
+  --nav-glass-blur: blur(12px) brightness(0.92);
+  /* The nav is the one surface re-sampled on every scroll frame, because it is
+     pinned. It loses the most blur, so it gains the most tint — the text
+     behind it must not show through at any radius. */
+  --nav-glass-tint: rgba(16, 18, 26, 0.93);
+}
+
+/* The liquid-glass surfaces run an SVG displacement map over the sampled
+   backdrop, which is a second full pass on top of the blur. Stand it down to
+   the plain blur — the refraction is a detail nobody reads at 30fps anyway.
+   Named selectors rather than a universal one: a `*` rule here would cost more
+   in style recalculation than it saves in paint. */
+html.perf-lite :is(.badge, .hero-actions .btn-ghost) {
+  backdrop-filter: blur(10px) brightness(1.06);
+  -webkit-backdrop-filter: blur(10px) brightness(1.06);
+}
+
+/* A fixed full-viewport noise layer above everything forces every backdrop
+   beneath it to be re-composited. Its job is a 3.5% texture; a static, cheaper
+   grain does the same job. */
+html.perf-lite .grain { opacity: 0.02; }
+
+/* Decorative motion, off. Entrances (`appear`) stay — they run once and they
+   carry the reading order. */
+html.perf-lite :is(.glow, .pulse, .shimmer, .orbit, .float) { animation: none; }

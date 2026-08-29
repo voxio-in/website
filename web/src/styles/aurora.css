@@ -161,3 +161,62 @@
     rgba(3, 20, 25, 0.88) 660px
   );
 }
+
+/* ---------- the video's own entrance ----------
+   Hidden until a frame has actually decoded, so a slow connection shows the
+   still rather than a black hole. */
+.aur-video {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.aur-video.is-ready { opacity: 1; }
+.aur-photo--hold { animation: none; }
+/* The hold still sits under the video permanently, so it must not also run the
+   drift: two full-screen layers moving independently is a shimmer, not a fade. */
+
+
+/* ---------- perf-lite ----------
+   What a browser that cannot hold frame rate gets instead. See PerfTier.tsx.
+
+   The rule for what may be cut: anything here is decoration. The photograph,
+   the palette, the vignette and the wash all stay, so the page still looks
+   like the same page — it just stops repainting the world sixty times a
+   second to do it. */
+
+/* 1. The single most expensive thing on the page. The curtains animate INSIDE
+      a group carrying feGaussianBlur stdDeviation=38, so every frame re-runs a
+      1600x900 blur; the lemniscate does the same through aur-glow. Blink caches
+      this, WebKit and Gecko re-rasterise. Freeze the motion and the filter is
+      paid once. */
+.perf-lite .aur-wave,
+.perf-lite .aur-inf,
+.perf-lite .aur-inf-trail,
+.perf-lite .aur-inf-head,
+.perf-lite .aur-stars,
+.perf-lite .aur-photo { animation: none; }
+
+/* 2. A CSS filter on a PLAYING video takes it off the compositor's video path,
+      so each decoded frame is re-filtered on the CPU on its way to the screen.
+      Do the darkening with a flat scrim instead — cheaper by an order of
+      magnitude, and close enough that you would have to A/B it to tell. */
+.perf-lite .aur-video {
+  filter: none;
+  transform: none;
+}
+.perf-lite .aur-video::after { content: none; }
+.perf-lite .aur {
+  --aur-photo-filter: none;
+}
+.perf-lite .aur-wash {
+  mix-blend-mode: normal; /* full-viewport blending forces layer flattening */
+  background:
+    radial-gradient(120% 70% at 50% 2%, var(--aur-wash-1), transparent 58%),
+    radial-gradient(90% 58% at 14% 22%, var(--aur-wash-2), transparent 66%),
+    radial-gradient(80% 54% at 88% 16%, var(--aur-wash-3), transparent 68%),
+    linear-gradient(180deg, rgba(3, 23, 28, 0.32) 0%, rgba(3, 23, 28, 0.30) 34%, var(--aur-wash-floor) 88%, var(--aur-ground) 100%);
+}
+.perf-lite .aur-curtains { mix-blend-mode: normal; opacity: 0.3; }
+
+/* 3. The still, when the video will not run, drifts by scaling a full-screen
+      background image. That is a full-viewport repaint on a 46s loop. */
+.perf-lite .aur-photo { transform: scale(1.06); }

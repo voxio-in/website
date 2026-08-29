@@ -1,0 +1,129 @@
+/* loading.css — the two things that stand in for time passing: the boot veil
+   at first paint, and the bar that runs while a route is fetched. */
+
+/* ---------- boot veil ---------- */
+
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 400; /* above .grain (100) and the nav; it covers everything */
+  display: grid;
+  place-items: center;
+  background: #03171c; /* the aurora's ground, so the lift is not a colour cut */
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+.boot.is-lifting {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.boot-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.boot-word {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: 0.34em; /* the wordmark's own spacing, held open a little */
+  text-indent: 0.34em;    /* ...which would otherwise sit the word off-centre */
+  color: rgba(255, 255, 255, 0.9);
+  animation: boot-word 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes boot-word {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A run of light crossing a hairline, rather than a spinner. A spinner says
+   "an operation is running"; this says "the page is arriving", which is the
+   truth and is calmer. */
+.boot-track {
+  position: relative;
+  width: 132px;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+.boot-run {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, #0fd6ad, transparent);
+  animation: boot-run 1.15s ease-in-out infinite;
+}
+@keyframes boot-run {
+  from { transform: translateX(-110%); }
+  to   { transform: translateX(340%); }
+}
+
+/* ---------- route progress ---------- */
+
+.rprog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 300; /* under the veil, over the nav */
+  pointer-events: none;
+  background: transparent;
+}
+.rprog-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #006161, #0fd6ad 60%, #7ef2d2);
+  box-shadow: 0 0 10px rgba(15, 214, 173, 0.5);
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+/* ---------- a page waiting on its own data ----------
+   The pending component for a route that has to fetch before it can render.
+   Skeletons rather than a spinner: they hold the layout, so nothing jumps when
+   the real content lands. */
+
+.pending {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 168px 40px 120px;
+}
+.skel {
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 300% 100%;
+  animation: skel 1.5s ease-in-out infinite;
+}
+@keyframes skel {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
+.skel--title { height: 42px; width: min(560px, 78%); margin-bottom: 20px; }
+.skel--line  { height: 13px; margin-bottom: 12px; }
+.skel--line:nth-of-type(2) { width: 92%; }
+.skel--line:nth-of-type(3) { width: 74%; }
+.skel--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin-top: 48px;
+}
+.skel--card { height: 168px; }
+
+@media (max-width: 700px) {
+  .pending { padding: 132px 20px 90px; }
+}
+
+/* Motion that repeats forever is exactly what a reduced-motion request means,
+   and exactly what perf-lite cannot afford. Both keep the shapes and lose the
+   travelling light. */
+@media (prefers-reduced-motion: reduce) {
+  .boot-run, .skel { animation: none; }
+  .boot-run { transform: none; width: 100%; opacity: 0.5; }
+}
+html.perf-lite .skel { animation: none; }

@@ -15,8 +15,12 @@ import navIconsCss from '../../../nav-icons.css?url'
 import auroraCss from '#/styles/aurora.css?url'
 import glyphsCss from '#/styles/glyphs.css?url'
 import homeCss from '#/styles/home.css?url'
+import loadingCss from '#/styles/loading.css?url'
 
 import AuroraBackdrop from '#/components/AuroraBackdrop'
+import BootVeil from '#/components/BootVeil'
+import PerfTier from '#/components/PerfTier'
+import RouteProgress from '#/components/RouteProgress'
 import GlassDefs from '#/components/GlassDefs'
 import Navbar from '#/components/Navbar'
 import PullToHome from '#/components/PullToHome'
@@ -49,6 +53,7 @@ export const Route = createRootRoute({
       { rel: 'stylesheet', href: auroraCss },
       { rel: 'stylesheet', href: glyphsCss },
       { rel: 'stylesheet', href: homeCss },
+      { rel: 'stylesheet', href: loadingCss },
     ],
   }),
   shellComponent: RootDocument,
@@ -63,6 +68,11 @@ function RootDocument() {
         <style>{`html,body{background:#03171c;color:#fff}`}</style>
       </head>
       <body>
+        {/* Measures the browser and stands the costly effects down if it
+            cannot hold frame rate. Must mount before anything animates. */}
+        <PerfTier />
+        <BootVeil />
+        <RouteProgress />
         <GlassDefs />
         {/* The site background, for every route. Here rather than per page:
             the component was four chances for them to drift apart. */}
