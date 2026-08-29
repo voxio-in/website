@@ -1,0 +1,398 @@
+/* ============================================================ CARD GLYPHS — the site-wide icon system ------------------------------------------------------------ One line-art */
+
+.sicon {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 2px;
+}
+.sicon svg { width: 100%; height: 100%; overflow: visible; }
+.sicon .sg > * {
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  transition: stroke 0.35s ease, opacity 0.35s ease;
+}
+
+:is(.card, .tile, .who, .step, .venue):hover .sicon .sg > *,
+:is(.card, .tile, .who, .step, .venue):focus-within .sicon .sg > * {
+  stroke: rgba(255, 255, 255, 0.92);
+}
+
+@keyframes sg-fadeout { 0%, 35% { opacity: 1; } 50%, 85% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes sg-fadein  { 0%, 35% { opacity: 0; } 50%, 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes sg-lift    { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+.sicon--answer .sg-gap { fill: rgba(255, 255, 255, 0.5); stroke: none; }
+.sicon--answer .sg-wave { opacity: 0; }
+.step:hover .sicon--answer .sg-you { animation: sg-you 1.5s ease-in-out infinite; }
+.step:hover .sicon--answer .sg-gap { animation: sg-gap 1.5s ease-in-out infinite; }
+.step:hover .sicon--answer .sg-it { animation: sg-it 1.5s ease-in-out infinite; }
+.step:hover .sicon--answer .sg-wave { animation: sg-wave 1.5s ease-in-out infinite; }
+@keyframes sg-you { 0%, 40% { opacity: 1; } 55%, 100% { opacity: 0.28; } }
+@keyframes sg-gap { 0%, 35% { opacity: 1; transform: none; } 50%, 100% { opacity: 0; transform: translateX(5px); } }
+@keyframes sg-it  { 0%, 40% { opacity: 0.28; } 58%, 100% { opacity: 1; } }
+@keyframes sg-wave { 0%, 45% { opacity: 0; } 62%, 92% { opacity: 1; } 100% { opacity: 0; } }
+
+.sicon--interrupt .sg-cut { opacity: 0; stroke-dasharray: 24; stroke-dashoffset: 24; }
+.sicon--interrupt .sg-yours { opacity: 0.3; }
+.step:hover .sicon--interrupt .sg-its { animation: sg-its 1.8s ease-in-out infinite; }
+.step:hover .sicon--interrupt .sg-cut { animation: sg-cut 1.8s ease-in-out infinite; }
+.step:hover .sicon--interrupt .sg-yours { animation: sg-yours 1.8s ease-in-out infinite; }
+@keyframes sg-its {
+  0%, 30% { clip-path: inset(0 0 0 0); }
+  45%, 100% { clip-path: inset(0 50% 0 0); }
+}
+@keyframes sg-cut {
+  0%, 28% { opacity: 0; stroke-dashoffset: 24; }
+  42% { opacity: 1; stroke-dashoffset: 0; }
+  75% { opacity: 1; }
+  100% { opacity: 0; stroke-dashoffset: 0; }
+}
+@keyframes sg-yours { 0%, 32% { opacity: 0.3; } 48%, 100% { opacity: 1; } }
+
+.sicon--protect .sg-push { opacity: 0.3; }
+.step:hover .sicon--protect .sg-push { animation: sg-push 1.9s ease-in-out infinite; }
+.step:hover .sicon--protect .sg-brk { animation: sg-brk 1.9s ease-in-out infinite; }
+.sicon--protect .sg-held { stroke-dasharray: 8; }
+.step:hover .sicon--protect .sg-held { animation: sg-held 1.9s ease-in-out infinite; }
+@keyframes sg-push {
+  0%, 100% { opacity: 0.3; transform: none; }
+  45% { opacity: 0.8; transform: translateX(2px); }
+}
+@keyframes sg-brk { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes sg-held {
+  0% { stroke-dashoffset: 8; }
+  60%, 100% { stroke-dashoffset: 0; }
+}
+
+.sicon--language text {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 19px;
+  fill: rgba(255, 255, 255, 0.6);
+  stroke: none;
+  transition: fill 0.35s ease;
+}
+:is(.card, .tile, .who, .step, .venue):hover .sicon--language text { fill: rgba(255, 255, 255, 0.95); }
+.sicon--language .sg-en { opacity: 0; }
+:is(.card, .step):hover .sicon--language .sg-hi { animation: sg-fadeout 2.4s ease-in-out infinite; }
+:is(.card, .step):hover .sicon--language .sg-en { animation: sg-fadein 2.4s ease-in-out infinite; }
+:is(.card, .step):hover .sicon--language .sg-rule { animation: sg-rule 2.4s ease-in-out infinite; }
+@keyframes sg-rule { 0%, 100% { opacity: 0.4; } 45% { opacity: 0.9; } }
+
+.sicon--honest .sg-none { opacity: 0; stroke-dasharray: 2 4; }
+.step:hover .sicon--honest .sg-num { animation: sg-fadeout 2.2s ease-in-out infinite; }
+.step:hover .sicon--honest .sg-none { animation: sg-fadein 2.2s ease-in-out infinite; }
+.step:hover .sicon--honest .sg-box { animation: sg-box 2.2s ease-in-out infinite; }
+@keyframes sg-box { 0%, 100% { opacity: 0.5; } 55% { opacity: 0.95; } }
+
+.sicon--signal .sg-b2,
+.sicon--signal .sg-b3,
+.sicon--signal .sg-b4 { opacity: 0.22; }
+.step:hover .sicon--signal .sg-b1 { animation: sg-bar 1.1s steps(1, end) infinite; }
+.step:hover .sicon--signal .sg-b2 { animation: sg-bar2 1.1s steps(1, end) infinite; }
+@keyframes sg-bar  { 0%, 100% { opacity: 1; } 62% { opacity: 0.35; } }
+@keyframes sg-bar2 { 0%, 55% { opacity: 0.22; } 60%, 78% { opacity: 0.7; } 80%, 100% { opacity: 0.22; } }
+
+.sicon--inbound .sg-core { fill: rgba(255, 255, 255, 0.5); stroke: none; }
+.sicon--inbound .sg-ring { opacity: 0; transform-origin: 20px 20px; }
+.card:hover .sicon--inbound .sg-ring { animation: sg-ring-in 2.7s ease-out infinite; }
+.card:hover .sicon--inbound .sg-r2 { animation-delay: 0.9s; }
+.card:hover .sicon--inbound .sg-r3 { animation-delay: 1.8s; }
+@keyframes sg-ring-in {
+  0% { transform: scale(2.4); opacity: 0; }
+  30% { opacity: 0.85; }
+  100% { transform: scale(0.34); opacity: 0; }
+}
+
+.sicon--outbound .sg-core { fill: rgba(255, 255, 255, 0.5); stroke: none; }
+.sicon--outbound .sg-ring { opacity: 0; transform-origin: 20px 20px; }
+.card:hover .sicon--outbound .sg-ring { animation: sg-ring-out 2.7s ease-out infinite; }
+.card:hover .sicon--outbound .sg-o2 { animation-delay: 0.9s; }
+.card:hover .sicon--outbound .sg-o3 { animation-delay: 1.8s; }
+@keyframes sg-ring-out {
+  0% { transform: scale(0.34); opacity: 0; }
+  25% { opacity: 0.85; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.sicon--voicemail .sg-flat { stroke-dasharray: 11; stroke-dashoffset: 11; }
+.sicon--voicemail .sg-hangup { opacity: 0; }
+.sicon--voicemail .sg-end { fill: rgba(255, 255, 255, 0.5); stroke: none; }
+.card:hover .sicon--voicemail .sg-speech { animation: sg-vm-speech 3.4s ease-in-out infinite; }
+.card:hover .sicon--voicemail .sg-flat { animation: sg-vm-flat 3.4s ease-in-out infinite; }
+.card:hover .sicon--voicemail .sg-hangup { animation: sg-vm-drop 3.4s ease-in-out infinite; }
+@keyframes sg-vm-speech { 0%, 28% { opacity: 1; } 48%, 92% { opacity: 0.18; } 100% { opacity: 1; } }
+@keyframes sg-vm-flat { 0%, 26% { stroke-dashoffset: 11; } 46%, 92% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 11; } }
+@keyframes sg-vm-drop {
+  0%, 62% { opacity: 0; transform: translateY(-3px); }
+  78%, 92% { opacity: 0.9; transform: none; }
+  100% { opacity: 0; transform: translateY(-3px); }
+}
+
+.sicon--later .sg-face { opacity: 0.45; }
+.sicon--later .sg-pin { fill: rgba(255, 255, 255, 0.5); stroke: none; }
+.sicon--later .sg-hand,
+.sicon--later .sg-hour { transform-origin: 20px 20px; }
+.card:hover .sicon--later .sg-hand { animation: sg-spin 3s linear infinite; }
+.card:hover .sicon--later .sg-hour { animation: sg-spin 18s linear infinite; }
+@keyframes sg-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.sicon--dropped .sg-span { stroke-dasharray: 3 4; opacity: 0.25; }
+.sicon--dropped .sg-carry { fill: rgba(255, 255, 255, 0.55); stroke: none; }
+.card:hover .sicon--dropped .sg-span { animation: sg-span 2.6s ease-in-out infinite; }
+.card:hover .sicon--dropped .sg-carry { animation: sg-carry 2.6s ease-in-out infinite; }
+@keyframes sg-span { 0%, 22% { opacity: 0.25; } 55%, 88% { opacity: 0.8; } 100% { opacity: 0.25; } }
+@keyframes sg-carry {
+  0%, 20% { transform: none; }
+  60%, 88% { transform: translateX(10px); }
+  100% { transform: none; }
+}
+
+.sicon--after .sg-rows { stroke-dasharray: 33; stroke-dashoffset: 33; }
+.card:hover .sicon--after .sg-bars { animation: sg-vm-speech 3.2s ease-in-out infinite; }
+.card:hover .sicon--after .sg-rows { animation: sg-after-rows 3.2s ease-in-out infinite; }
+@keyframes sg-after-rows { 0%, 24% { stroke-dashoffset: 33; } 52%, 92% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 33; } }
+
+.sicon--face .sg-eyes { stroke-width: 2.6; }
+.card:hover .sicon--face .sg-brow { animation: sg-brow 2.2s ease-in-out infinite; }
+.card:hover .sicon--face .sg-mouth { animation: sg-mouth-set 2.2s ease-in-out infinite; }
+.card:hover .sicon--face .sg-eyes { animation: sg-lift 2.2s ease-in-out infinite; }
+@keyframes sg-brow {
+  0%, 22% { transform: none; opacity: 0.55; }
+  48%, 82% { transform: translateY(2px); opacity: 1; }
+  100% { transform: none; opacity: 0.55; }
+}
+.sicon--face .sg-mouth { transform-origin: 20px 26px; }
+@keyframes sg-mouth-set {
+  0%, 22% { transform: none; }
+  48%, 82% { transform: translateY(-2px) scaleY(-1); }
+  100% { transform: none; }
+}
+
+.sicon--logged .sg-fill { stroke-dasharray: 16; stroke-dashoffset: 16; }
+.card:hover .sicon--logged .sg-said { animation: sg-vm-speech 3.2s ease-in-out infinite; }
+.card:hover .sicon--logged .sg-fill { animation: sg-after-rows 3.2s ease-in-out infinite; }
+.card:hover .sicon--logged .sg-rec { animation: sg-box 3.2s ease-in-out infinite; }
+
+.sicon--drive .sg-bar { opacity: 0.45; }
+.sicon--drive .sg-btn { opacity: 0.45; }
+.card:hover .sicon--drive .sg-ptr { animation: sg-ptr 2.4s ease-in-out infinite; }
+.card:hover .sicon--drive .sg-btn { animation: sg-press 2.4s ease-in-out infinite; }
+@keyframes sg-ptr {
+  0%, 15% { transform: none; }
+  55%, 78% { transform: translate(11px, 4px); }
+  100% { transform: none; }
+}
+@keyframes sg-press {
+  0%, 50% { opacity: 0.45; }
+  62%, 80% { opacity: 1; }
+  100% { opacity: 0.45; }
+}
+
+.sicon--expression .sg-hard { opacity: 0; }
+.who:hover .sicon--expression .sg-calm,
+.card:hover .sicon--expression .sg-calm { animation: sg-fadeout 2.8s ease-in-out infinite; }
+.who:hover .sicon--expression .sg-hard,
+.card:hover .sicon--expression .sg-hard { animation: sg-fadein 2.8s ease-in-out infinite; }
+.who:hover .sicon--expression .sg-b1,
+.card:hover .sicon--expression .sg-b1 { animation: sg-brow 2.8s ease-in-out infinite; }
+
+.sicon--anyface .sg-b,
+.sicon--anyface .sg-b2 { opacity: 0; }
+.card:hover .sicon--anyface .sg-a,
+.card:hover .sicon--anyface .sg-a2 { animation: sg-fadeout 3s ease-in-out infinite; }
+.card:hover .sicon--anyface .sg-b,
+.card:hover .sicon--anyface .sg-b2 { animation: sg-fadein 3s ease-in-out infinite; }
+.card:hover .sicon--anyface .sg-frame { animation: sg-box 3s ease-in-out infinite; }
+
+.sicon--withhold .sg-dots { stroke-width: 2.6; }
+.sicon--withhold .sg-held { opacity: 0; stroke-dasharray: 6; stroke-dashoffset: 6; }
+.who:hover .sicon--withhold .sg-dots { animation: sg-hold-dots 3s ease-in-out infinite; }
+.who:hover .sicon--withhold .sg-held { animation: sg-hold-out 3s ease-in-out infinite; }
+@keyframes sg-hold-dots { 0%, 45% { opacity: 1; } 62%, 88% { opacity: 0.2; } 100% { opacity: 1; } }
+@keyframes sg-hold-out {
+  0%, 44% { opacity: 0; stroke-dashoffset: 6; }
+  64%, 88% { opacity: 1; stroke-dashoffset: 0; }
+  100% { opacity: 0; stroke-dashoffset: 6; }
+}
+
+.sicon--refuse .sg-shock { opacity: 0; }
+.who:hover .sicon--refuse .sg-push,
+.who:hover .sicon--refuse .sg-tip { animation: sg-shove 1.7s ease-in-out infinite; }
+.who:hover .sicon--refuse .sg-shock { animation: sg-shock 1.7s ease-in-out infinite; }
+.who:hover .sicon--refuse .sg-wall { animation: sg-brk 1.7s ease-in-out infinite; }
+@keyframes sg-shove {
+  0%, 20% { transform: none; }
+  55% { transform: translateX(4px); }
+  75%, 100% { transform: none; }
+}
+@keyframes sg-shock { 0%, 45% { opacity: 0; } 58%, 72% { opacity: 0.85; } 100% { opacity: 0; } }
+
+.sicon--refund .sg-heat { opacity: 0; }
+.sicon--refund .sg-back { stroke-dasharray: 30; stroke-dashoffset: 30; }
+.who:hover .sicon--refund .sg-back { animation: sg-refund 2.6s ease-in-out infinite; }
+.who:hover .sicon--refund .sg-arrow { animation: sg-refund-tip 2.6s ease-in-out infinite; }
+.who:hover .sicon--refund .sg-heat { animation: sg-heat 2.6s ease-in-out infinite; }
+@keyframes sg-refund { 0%, 18% { stroke-dashoffset: 30; } 55%, 88% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 30; } }
+@keyframes sg-refund-tip {
+  0%, 22% { transform: none; opacity: 0.5; }
+  58%, 84% { transform: translateX(-2px); opacity: 1; }
+  100% { transform: none; opacity: 0.5; }
+}
+@keyframes sg-heat { 0%, 30% { opacity: 0; } 55%, 82% { opacity: 0.8; } 100% { opacity: 0; } }
+
+.sicon--abandon .sg-track { opacity: 0.3; }
+.sicon--abandon .sg-head2 { fill: rgba(255, 255, 255, 0.55); stroke: none; }
+.sicon--abandon .sg-gone { opacity: 0; }
+.who:hover .sicon--abandon .sg-fill,
+.who:hover .sicon--abandon .sg-head2 { animation: sg-stall 3.2s ease-in-out infinite; }
+.who:hover .sicon--abandon .sg-gone { animation: sg-leave 3.2s ease-in-out infinite; }
+@keyframes sg-stall {
+  0% { transform: translateX(-11px); opacity: 0.4; }
+  35%, 62% { transform: none; opacity: 1; }
+  80%, 100% { transform: none; opacity: 0.25; }
+}
+@keyframes sg-leave {
+  0%, 58% { opacity: 0; transform: translateX(-4px); }
+  80% { opacity: 0.85; transform: none; }
+  100% { opacity: 0; transform: translateX(4px); }
+}
+
+.sicon--buried .sg-l2 { opacity: 0.42; }
+.sicon--buried .sg-l3 { opacity: 0.3; }
+.sicon--buried .sg-l4 { opacity: 0.22; }
+.sicon--buried .sg-it { fill: rgba(255, 255, 255, 0.5); stroke: none; opacity: 0.2; }
+.who:hover .sicon--buried .sg-l1 { animation: sg-dig 2.8s ease-in-out infinite; }
+.who:hover .sicon--buried .sg-l2 { animation: sg-dig 2.8s ease-in-out infinite 0.35s; }
+.who:hover .sicon--buried .sg-l3 { animation: sg-dig 2.8s ease-in-out infinite 0.7s; }
+.who:hover .sicon--buried .sg-l4 { animation: sg-dig 2.8s ease-in-out infinite 1.05s; }
+.who:hover .sicon--buried .sg-it { animation: sg-found 2.8s ease-in-out infinite; }
+@keyframes sg-dig { 0%, 100% { opacity: 0.22; } 22%, 44% { opacity: 1; } }
+@keyframes sg-found { 0%, 52% { opacity: 0.2; } 68%, 86% { opacity: 1; } 100% { opacity: 0.2; } }
+
+.sicon--unhelpful .sg-step2,
+.sicon--unhelpful .sg-chev2 { opacity: 0.4; }
+.sicon--unhelpful .sg-lost { opacity: 0.15; }
+.who:hover .sicon--unhelpful .sg-step1 { animation: sg-dig 3s ease-in-out infinite; }
+.who:hover .sicon--unhelpful .sg-chev { animation: sg-dig 3s ease-in-out infinite 0.3s; }
+.who:hover .sicon--unhelpful .sg-step2 { animation: sg-dig 3s ease-in-out infinite 0.6s; }
+.who:hover .sicon--unhelpful .sg-chev2 { animation: sg-dig 3s ease-in-out infinite 0.9s; }
+.who:hover .sicon--unhelpful .sg-lost { animation: sg-nowhere 3s ease-in-out infinite; }
+@keyframes sg-nowhere {
+  0%, 40% { opacity: 0.15; transform: none; }
+  62% { opacity: 0.5; transform: translateX(3px); }
+  100% { opacity: 0.15; transform: none; }
+}
+
+.sicon--oversimple .sg-one { opacity: 0; }
+.who:hover .sicon--oversimple .sg-bits { animation: sg-fadeout 3s ease-in-out infinite; }
+.who:hover .sicon--oversimple .sg-one { animation: sg-fadein 3s ease-in-out infinite; }
+.who:hover .sicon--oversimple .sg-big { animation: sg-box 3s ease-in-out infinite; }
+
+.sicon--elevenscreens .sg-s3 { opacity: 0.28; }
+.sicon--elevenscreens .sg-s2 { opacity: 0.5; }
+.who:hover .sicon--elevenscreens .sg-s3 { animation: sg-stack 2.4s ease-in-out infinite; }
+.who:hover .sicon--elevenscreens .sg-s2 { animation: sg-stack 2.4s ease-in-out infinite 0.3s; }
+.who:hover .sicon--elevenscreens .sg-s1 { animation: sg-stack 2.4s ease-in-out infinite 0.6s; }
+@keyframes sg-stack {
+  0%, 100% { opacity: 0.28; transform: none; }
+  30%, 55% { opacity: 1; transform: translate(-1px, -1px); }
+}
+
+.sicon--assistant .sg-head3 { opacity: 0.6; }
+.sicon--assistant .sg-say { stroke-width: 2.6; opacity: 0; }
+.who:hover .sicon--assistant .sg-say { animation: sg-say 2.2s ease-in-out infinite; }
+.who:hover .sicon--assistant .sg-head3 { animation: sg-nod 2.2s ease-in-out infinite; }
+.who:hover .sicon--assistant .sg-shelf { animation: sg-lift 2.2s ease-in-out infinite; }
+@keyframes sg-say { 0%, 25% { opacity: 0; } 45%, 78% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes sg-nod {
+  0%, 100% { transform: none; opacity: 0.6; }
+  40%, 62% { transform: translateY(1px); opacity: 1; }
+}
+
+.sicon--built .sg-check { stroke-dasharray: 22; stroke-dashoffset: 22; }
+.card:hover .sicon--built .sg-check { animation: sg-check 2.4s ease-in-out infinite; }
+.card:hover .sicon--built .sg-box2 { animation: sg-box 2.4s ease-in-out infinite; }
+@keyframes sg-check { 0%, 15% { stroke-dashoffset: 22; } 45%, 88% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 22; } }
+
+.sicon--journey .sg-route { stroke-dasharray: 46; stroke-dashoffset: 46; }
+.sicon--journey .sg-from { fill: rgba(255, 255, 255, 0.55); stroke: none; }
+.sicon--journey .sg-to { opacity: 0.3; }
+.card:hover .sicon--journey .sg-route { animation: sg-walk 3.2s ease-in-out infinite; }
+.card:hover .sicon--journey .sg-to { animation: sg-arrive 3.2s ease-in-out infinite; }
+@keyframes sg-walk { 0%, 10% { stroke-dashoffset: 46; } 62%, 90% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 46; } }
+@keyframes sg-arrive {
+  0%, 58% { opacity: 0.3; }
+  74%, 90% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+.sicon--conversation .sg-c2 { opacity: 0.35; }
+.card:hover .sicon--conversation .sg-c1 { animation: sg-turn 2.6s ease-in-out infinite; }
+.card:hover .sicon--conversation .sg-c2 { animation: sg-turn 2.6s ease-in-out infinite 1.3s; }
+@keyframes sg-turn { 0%, 100% { opacity: 0.35; } 20%, 42% { opacity: 1; } }
+
+.sicon--shortlist .sg-few { opacity: 0; stroke-dasharray: 33; stroke-dashoffset: 33; }
+.sicon--shortlist .sg-fan { opacity: 0.35; stroke-dasharray: 2 3; }
+.sicon--shortlist .sg-top { fill: rgba(255, 255, 255, 0.55); stroke: none; opacity: 0; }
+:is(.card, .tile):hover .sicon--shortlist .sg-many { animation: sg-thin 3.2s ease-in-out infinite; }
+:is(.card, .tile):hover .sicon--shortlist .sg-few { animation: sg-rank 3.2s ease-in-out infinite; }
+:is(.card, .tile):hover .sicon--shortlist .sg-top { animation: sg-say 3.2s ease-in-out infinite; }
+@keyframes sg-thin { 0%, 28% { opacity: 1; } 52%, 88% { opacity: 0.28; } 100% { opacity: 1; } }
+@keyframes sg-rank {
+  0%, 26% { opacity: 0; stroke-dashoffset: 33; }
+  55%, 88% { opacity: 1; stroke-dashoffset: 0; }
+  100% { opacity: 0; stroke-dashoffset: 33; }
+}
+
+.sicon--match .sg-lap { opacity: 0; stroke-dasharray: 2 3; }
+.sicon--match .sg-you2 { opacity: 0.45; }
+:is(.card, .tile):hover .sicon--match .sg-you2 { animation: sg-close 3s ease-in-out infinite; }
+:is(.card, .tile):hover .sicon--match .sg-lap { animation: sg-say 3s ease-in-out infinite; }
+@keyframes sg-close {
+  0%, 12% { transform: translateX(4px); opacity: 0.45; }
+  48%, 84% { transform: none; opacity: 1; }
+  100% { transform: translateX(4px); opacity: 0.45; }
+}
+
+.sicon--interview .sg-probe { opacity: 0; stroke-dasharray: 5; stroke-dashoffset: 5; }
+.sicon--interview .sg-q { stroke-dasharray: 10; stroke-dashoffset: 10; }
+:is(.card, .tile):hover .sicon--interview .sg-q { animation: sg-ask 2.8s ease-in-out infinite; }
+:is(.card, .tile):hover .sicon--interview .sg-probe { animation: sg-hold-out 2.8s ease-in-out infinite; }
+:is(.card, .tile):hover .sicon--interview .sg-them { animation: sg-nod 2.8s ease-in-out infinite; }
+@keyframes sg-ask { 0%, 14% { stroke-dashoffset: 10; } 42%, 88% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 10; } }
+
+.sicon--triage .sg-rows2 { opacity: 0.35; }
+.sicon--triage .sg-flag { opacity: 0; }
+.sicon--triage .sg-pick { fill: rgba(255, 255, 255, 0.5); stroke: none; opacity: 0; }
+:is(.card, .tile):hover .sicon--triage .sg-pick { animation: sg-pick 3s ease-in-out infinite; }
+:is(.card, .tile):hover .sicon--triage .sg-flag { animation: sg-say 3s ease-in-out infinite; }
+@keyframes sg-pick {
+  0%, 22% { opacity: 0; transform: translateX(-8px); }
+  52%, 84% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateX(-8px); }
+}
+
+.sicon--dialtone .sg-ring2,
+.sicon--dialtone .sg-ring3 { opacity: 0; }
+.card:hover .sicon--dialtone .sg-ring2 { animation: sg-say 1.8s ease-in-out infinite; }
+.card:hover .sicon--dialtone .sg-ring3 { animation: sg-say 1.8s ease-in-out infinite 0.25s; }
+.card:hover .sicon--dialtone .sg-set { animation: sg-brk 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sicon * { animation: none !important; }
+  .sicon .sg > * { opacity: 1 !important; }
+  .sicon--language .sg-en,
+  .sicon--honest .sg-none,
+  .sicon--answer .sg-wave,
+  .sicon--expression .sg-hard,
+  .sicon--anyface .sg-b,
+  .sicon--anyface .sg-b2,
+  .sicon--oversimple .sg-one,
+  .sicon--withhold .sg-held,
+  .sicon--shortlist .sg-few { opacity: 0 !important; }
+  .sicon .sg > * { stroke-dashoffset: 0 !important; }
+}

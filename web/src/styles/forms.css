@@ -1,0 +1,168 @@
+/* The glass form panel: the big pane, the sheets inside it, the fields and the action row. Lifted out of contact.css when /calling grew a form of its own — both pages ask a visitor for something, and they must ask in the same voice. */
+
+.glass-panel {
+  position: relative;
+  isolation: isolate;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 38px 38px 34px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05)),
+    rgba(12, 12, 14, 0.82);
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.42),
+    inset 2px 3px 12px rgba(255, 255, 255, 0.14),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.22),
+    0 26px 60px rgba(0, 0, 0, 0.44),
+    0 4px 14px rgba(0, 0, 0, 0.24);
+
+  backdrop-filter: blur(0.5px) saturate(170%) brightness(1.06) url(#liquid-glass-nav);
+  -webkit-backdrop-filter: blur(14px) saturate(170%) brightness(1.06);
+}
+@supports not (backdrop-filter: url(#liquid-glass-nav)) {
+  .glass-panel {
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel { background: rgba(18, 18, 20, 0.93); }
+}
+
+.glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.2px;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.18) 20%,
+    rgba(255, 255, 255, 0) 46%,
+    rgba(255, 255, 255, 0.10) 70%,
+    rgba(255, 255, 255, 0.55) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(178deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 34%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(70% 120% at 22% -20%, rgba(255, 255, 255, 0.16), transparent 62%);
+}
+
+.glass-panel > * { position: relative; z-index: 2; }
+
+.sheet {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: linear-gradient(168deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.07) 46%,
+    rgba(255, 255, 255, 0.04) 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 2px 8px rgba(255, 255, 255, 0.12),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.20),
+    0 6px 18px rgba(0, 0, 0, 0.26);
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.contact-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.field--wide { grid-column: 1 / -1; }
+
+.field {
+  padding: 11px 15px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(168deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.06) 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.20);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.field:focus-within {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: linear-gradient(168deg, rgba(255, 255, 255, 0.19) 0%, rgba(255, 255, 255, 0.09) 100%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.18),
+    0 8px 22px rgba(0, 0, 0, 0.3);
+}
+
+.field label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.field input,
+.field select,
+.field textarea {
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  padding: 5px 0 0;
+  outline: none;
+  width: 100%;
+}
+.field textarea { resize: vertical; line-height: 1.6; }
+.field select { appearance: none; cursor: pointer; }
+.field select option { background: #121214; color: #fff; }
+.field input::placeholder, .field textarea::placeholder { color: rgba(255, 255, 255, 0.34); }
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.form-actions .btn { border-radius: 999px; padding: 0 24px; }
+.form-note { font-size: 12.5px; color: rgba(255, 255, 255, 0.6); }
+
+.contact-aside { display: flex; flex-direction: column; gap: 22px; padding: 24px 22px; }
+.aside-block { display: flex; flex-direction: column; gap: 7px; }
+.aside-block .fact-k {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.09em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.5);
+}
+.aside-block .fact-v { align-self: flex-start; font-size: 14.5px; }
+.aside-body { font-size: 13.6px; line-height: 1.68; color: rgba(255, 255, 255, 0.72); }
+
+@media (max-width: 900px) {
+  .contact-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .contact-form { grid-template-columns: minmax(0, 1fr); }
+  .glass-panel { padding: 24px 20px 22px; border-radius: 20px; }
+}

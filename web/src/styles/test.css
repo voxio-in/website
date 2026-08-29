@@ -1,0 +1,40 @@
+/* /test — the variant switcher only. The backdrop's own rules moved to styles/aurora.css when it became the site-wide background; this file is just the chrome for the mock. */
+
+.test-note {
+  position: fixed;
+  right: 20px;
+  bottom: 84px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 12px;
+  background: rgba(6, 22, 26, 0.78);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(126, 242, 210, 0.22);
+  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #cfeee6;
+}
+.test-note button {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.test-note button:hover { background: rgba(126, 242, 210, 0.12); }
+.test-note button.is-on {
+  background: rgba(126, 242, 210, 0.18);
+  border-color: rgba(126, 242, 210, 0.45);
+  color: #eafff8;
+}
+.test-note span { opacity: 0.5; padding-left: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aur-photo, .aur-stars, .aur-wave, .aur-inf,
+  .aur-inf-trail, .aur-inf-head { animation: none; }
+}

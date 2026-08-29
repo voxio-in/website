@@ -1,0 +1,84 @@
+/* Ported from the <style> block in collaborations.html — page-specific rules only; everything shared is in site.css. */
+
+.masthead { max-width: 1180px; margin: 0 auto; /* clears the fixed header, which is out of flow */
+  padding: 148px var(--header-x) 8px; }
+.masthead h1 { font-size: 54px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.02; }
+.masthead h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; }
+.masthead .section-lede { margin-top: 22px; font-size: 16.5px; }
+
+.os { display: grid; grid-template-columns: 300px 1fr; gap: 48px; align-items: start; }
+.os + .os { margin-top: 56px; padding-top: 56px; border-top: 1px solid var(--border-soft); }
+.os-name { font-size: 30px; font-weight: 600; letter-spacing: -0.035em; line-height: 1.1; }
+.os-for { margin-top: 10px; font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.os-copy p { font-size: 15.5px; line-height: 1.72; color: #cfcfcf; }
+.os-copy p + p { margin-top: 14px; }
+
+.principle {
+  margin-bottom: 56px;
+  padding: 24px 28px;
+  border-left: 2px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.045), transparent 70%);
+}
+.principle p { font-size: 16px; line-height: 1.7; color: #dcdcdc; max-width: 760px; }
+.principle strong { font-weight: 600; color: #fff; }
+
+.os-copy em { font-style: italic; color: #e6e6e6; }
+.os-copy strong { font-weight: 600; color: #fff; }
+
+.built-on { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.built-on span {
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  font-size: 12px; color: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 900px) {
+  .masthead { padding: 118px 24px 4px; }
+  .masthead h1 { font-size: 36px; }
+  .os { grid-template-columns: 1fr; gap: 20px; }
+  .os-name { font-size: 25px; }
+  .os + .os { margin-top: 40px; padding-top: 40px; }
+}
+
+.os-ours {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+}
+.os-ours-k {
+  display: block;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.os-ours ul {
+  margin-top: 11px;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+}
+.os-ours li {
+  position: relative;
+  padding-left: 15px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #cfcfcf;
+}
+.os-ours li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.os-ours-none {
+  margin-top: 11px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}

@@ -1,0 +1,1860 @@
+/* site.css - shared shell for every page but index.html, which keeps its own
+   inline copy on purpose: it is a single self-contained document whose first
+   paint must be black before any external stylesheet can arrive. */
+
+/* Force black before anything else can paint. */
+html, body { background: #000000 !important; color: #ffffff; }
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/inter.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/instrument-serif-italic.woff2") format("woff2");
+}
+
+html, body {
+  background: #000000;
+  background: var(--bg, #000000);
+  color: #ffffff;
+  color: var(--text, #ffffff);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  position: relative;
+}
+
+:root {
+  --bg: #000000;
+  --text: #ffffff;
+  --muted: #9a9a9a;
+  --stat: #d8d8d8;
+  --border: rgba(255, 255, 255, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.12);
+
+  /* ---- the content surfaces: cards, tiles, venues, desks ----
+     Everything on the page that is a translucent panel — never the navigation,
+     which has its own set below.
+
+     One blur surface per glass GROUP, never per item: a backdrop-filter cannot
+     sample another backdrop-filter, so nesting them produces flat, inconsistent
+     panes (and one extra offscreen texture each). The nav bar is therefore a
+     single glass container and its links are plain translucent fills inside it.
+     saturate() is what separates glass from frosted plastic — it lets colour
+     from whatever is behind bleed through instead of washing to grey. */
+  --glass-fill: rgba(255, 255, 255, 0.06);
+  --glass-fill-hover: rgba(255, 255, 255, 0.12);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-edge-hover: rgba(255, 255, 255, 0.34);
+  --glass-blur: blur(24px) saturate(180%);
+  /* specular top highlight + inner floor shade + cast shadow, the three cues
+     that read as "a thick pane sitting above the page" */
+  --glass-lift: inset 0 1px 0 rgba(255, 255, 255, 0.22),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+                0 10px 34px rgba(0, 0, 0, 0.5);
+
+  /* ---- the navbar's glass: plain glassmorphism, deliberately ----
+     The bar used to be liquid glass — an SVG displacement lens plus chromatic
+     dispersion, with almost no blur, because blur is the glassmorphism cue and
+     that material was avoiding it. This is the opposite and simpler thing: a
+     heavy blur, one flat translucent film, a hairline edge, a soft cast
+     shadow. Four declarations, no filter, no pseudo-element sheen.
+
+     The dark tint under the white film is still load-bearing and is not
+     decoration: the film alone leaves white labels sitting on whatever bright
+     frame of the backdrop happens to be behind them. The tint is what buys the
+     contrast; the white film on top of it is what reads as glass.
+
+     Opacity: the tint carries most of it, and 0.78 rather than the 0.42 this
+     started at. At 0.42 the backdrop read straight through the sheet — over the
+     bright frames of the aurora the bar dissolved and the links had to fight
+     whatever was behind them. Opaque enough to be a surface, translucent enough
+     that you can still see the page move underneath it: that is the whole trick,
+     and the blur is what sells it rather than the alpha. Push the tint past ~0.9
+     and the blur stops being visible at all, at which point this is a solid bar
+     paying for a filter it no longer needs.
+
+     Tinted, not clear. The tint used to be neutral (14,14,18) with the blur
+     boosting saturation to 150% — so whatever colour was behind the bar came
+     through at full strength and merely softened: clear glass, which means the
+     bar's own colour changed with the backdrop. Now the tint carries a slight
+     cool cast of its own and the filter pulls the sample's saturation DOWN
+     instead of up, so the pane reads as a piece of smoked glass with a fixed
+     colour that the page happens to show through. */
+  --nav-glass-film: rgba(255, 255, 255, 0.05);
+  --nav-glass-tint: rgba(16, 18, 26, 0.84);
+  --nav-glass-edge: rgba(255, 255, 255, 0.14);
+  --nav-glass-blur: blur(26px) saturate(72%) brightness(0.92);
+  --nav-glass-shadow: 0 10px 34px rgba(0, 0, 0, 0.42),
+                      inset 0 1px 0 rgba(255, 255, 255, 0.09);
+
+  /* ---- vertical rhythm ----
+     Four numbers govern the vertical placement of every section on every page,
+     and nothing sets its own. Before this the home page ran head-to-content
+     gaps of 34, 52, 60 and 86px in five consecutive sections — same structure
+     each time, so the sections read as sitting at random heights relative to
+     the hairline above them. Anything that needs a different gap changes the
+     token in a media query, never the rule. */
+  --sec-y: 104px;    /* a section's own top and bottom padding */
+  --sec-head: 52px;  /* the section head → the first content block under it */
+  --sec-block: 44px; /* one content block → the next, inside a section */
+  --sec-tail: 32px;  /* the last content block → a trailing link */
+
+  --logo: 15.5px;
+  --logo-mark: 22px;
+  --nav: 14px;
+  --nav-h: 40px;
+  --btn: 13.5px;
+  --btn-h: 40px;
+  --hero-btn-h: 42px;
+  --h1: 48px;
+  --lede: 15.5px;
+  --badge: 12.5px;
+  --stat-size: 13.5px;
+  --header-y: 22px;
+  --header-x: 40px;
+  --stats-x: 72px;
+  --stats-y: 36px;
+  /* ---- the hero, one composition on four pages ----
+     /, /calling, /avatar and /webnav are the same hero with different words, so
+     these three numbers are the only thing that places any of them. They were
+     previously spread over FOUR rules that disagreed — site.css's .hero, a
+     .page--peek/.callhero override further down this file, home.css's
+     .page--nostats, and a padding-bottom in each of avatar.css and webnav.css —
+     which put the product heroes 115px and 139px higher up the screen than the
+     home one, with 134px and 158px more space under the buttons.
+
+     The home hero is the reference: it is the one that was placed deliberately,
+     so the other three were moved onto it rather than the other way round.
+
+     --hero-top is 72, not the 104 the product override used. 104 was the fixed
+     header's full box, reserved so that centring could not push the copy up
+     under the nav on a short window. It is not needed any more: the shells are
+     min-height with height auto, so a copy block taller than the frame GROWS
+     the frame instead of overflowing it, and there is no overflow to split. */
+  --hero-top: 72px;
+  --hero-bottom: 8px;
+  /* How far the scroll content is pulled up over the hero to break the fold.
+     See the note above .hero-shell + .scroll. */
+  --hero-pull: -245px;
+
+  --copy-max: 860px;
+  --lede-max: 470px;
+}
+
+/* ---------- layer 4: grain ----------
+   The only generated texture on the page. Expressed as an inline SVG data URI
+   rather than a raster asset, so no image files are introduced. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- layer 2: hero video ----------
+   No scrim or overlay ELEMENT above it — the darkening is a filter on the video
+   itself, which is not the same thing: a scrim would also sit between the video
+   and the nav's backdrop sample, and the glass would then refract the scrim
+   rather than the image.
+
+   The clip is a bright, near-white iridescent orb. Left at full brightness the
+   hero's white headline drops to roughly 1.2:1 against it and is unreadable, so
+   it is taken down far enough for white type to hold while keeping the colour
+   the glass panes refract. No crossorigin attribute: the remote fallback host
+   serves no CORS headers and adding it breaks loading outright. */
+.hero-photo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 1;
+  pointer-events: none;
+  border: 0;
+}
+
+/* ---------- layer 3: page frame ---------- */
+/* Two rows, not three: .header is position:fixed and so contributes no grid
+   row. The hero takes the free space and the stats sit under it. */
+.page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ---------- header ----------
+   The floating navigation plane: one sheet, completely separated from the
+   content layer, fixed so it stays put for the whole scroll. The hero's copy is
+   bottom-aligned, so overlaying the top of the hero costs nothing.
+
+   Being out of flow is why .page drops to two grid rows, and why the header
+   lives outside .page entirely — see the note at that element.
+
+   No filter, transform or will-change on .header itself: any of those would
+   make it the containing block for the collapsed menu's `position: fixed`
+   panel, which must resolve against the viewport. */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding: var(--header-y) var(--header-x) 10px;
+  padding-top: max(var(--header-y), env(safe-area-inset-top));
+  padding-left: max(var(--header-x), env(safe-area-inset-left));
+  padding-right: max(var(--header-x), env(safe-area-inset-right));
+  pointer-events: none; /* the sheet takes the clicks; the gutters must not */
+}
+
+/* ============================================================
+   Glassmorphism — the sheet
+   ------------------------------------------------------------
+   ONE pane per section of the bar: the wordmark, the two link groups and the
+   CTA. Each is a single surface, because a backdrop-filter cannot sample
+   another backdrop-filter — nesting them yields flat, inconsistent panes.
+   Everything inside a pane is a plain fill.
+
+   This was liquid glass and is now the ordinary kind. The difference is the
+   whole point of the material, so it is worth being explicit about:
+
+     was                              is
+     0.5px blur — fog was the enemy   20px blur — the blur IS the material
+     SVG displacement lens            no filter at all
+     chromatic dispersion, ±2.2px     none
+     masked rim-light ring (::after)  a 1px border
+     wet sheen gradient (::before)    one inset top hairline
+     6 stacked shadows, 4 specular    1 ambient shadow
+
+   Four declarations instead of a filter graph. Nothing here needs
+   GlassDefs.tsx any more — that SVG is still mounted for the hero badge, the
+   hero's ghost button and the contact form, which are unchanged.
+   ============================================================ */
+/* The panes sit in a row with real gaps between them. The group itself takes
+   no clicks — only the panes do — so the gaps stay transparent to the page. */
+.bar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.glass-bar {
+  position: relative;
+  isolation: isolate;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px;
+  border-radius: 999px;
+
+  /* A flat white film over a dark tint — see --nav-glass-film for why the tint
+     is not optional. One layer each; no top-to-bottom gradient, because a
+     gradient fill is what starts reading as a lit, curved pane rather than as
+     a flat sheet of frosted glass. */
+  background:
+    linear-gradient(var(--nav-glass-film), var(--nav-glass-film)),
+    var(--nav-glass-tint);
+
+  /* A visible hairline, not a faint one. The rim-light ring that used to draw
+     this edge is gone with the rest of the liquid glass, so the border is now
+     the only thing describing where the pane ends. */
+  border: 1px solid var(--nav-glass-edge);
+
+  /* One ambient shadow to lift it off the page, and one inset top hairline for
+     the light catching the upper edge. That is the whole material. */
+  box-shadow: var(--nav-glass-shadow);
+
+  /* The blur IS the material here. No url() lens, so there is no engine that
+     drops the declaration and no fallback to restate. */
+  backdrop-filter: var(--nav-glass-blur);
+  -webkit-backdrop-filter: var(--nav-glass-blur);
+}
+
+/* ---- the individual panes ----
+   Every pane is forced to one common height. Left to themselves they size to
+   their own content — the nav panes to a 40px link, the CTA pane to a 40px
+   button, the brand pane to the wordmark — and the row comes out ragged. */
+.glass-bar { min-height: calc(var(--nav-h) + 12px); }
+.glass-bar--brand { padding: 6px 16px 6px 4px; flex: none; }
+.glass-bar--brand .logo { height: var(--nav-h); }
+.glass-bar--nav   { padding: 6px; flex: none; }
+/* the CTA pane is a glass frame around the button, so it keeps a tight margin */
+.glass-bar--cta   { padding: 6px; flex: none; }
+/* The button inherits .btn's 6px radius, which leaves square corners poking
+   out of a pill-shaped pane. Inside the CTA pane it has to be a pill too, and
+   the pane's own radius has to clear it — otherwise the two curves fight. */
+.glass-bar--cta .header-cta {
+  margin-left: 0;
+  border-radius: 999px;
+  padding: 0 18px;
+}
+
+/* The pane carries no pseudo-elements. It used to have two: a masked
+   gradient RING for the rim light (bright top-left, weak bounce
+   bottom-right) and a wet SHEEN across the top third. Both are liquid-glass
+   cues — they describe a thick, curved, lit slab — and both are gone, because
+   frosted glass is flat and evenly lit. The border and the inset hairline on
+   .glass-bar do all of the edge work now.
+
+   Deleting them is why `isolation: isolate` and the z-index:2 on .logo and
+   .nav a look redundant here. They are kept: the travelling indicator still
+   stacks under the links inside the pane. */
+
+/* ---------- section 1: the wordmark ----------
+   No fill, no border, no blur of its own — it sits directly on the sheet. */
+.logo {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+  padding: 0 14px 0 16px;
+  font-size: var(--logo);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+.logo svg { width: var(--logo-mark); height: var(--logo-mark); flex: none; }
+.logo-suffix { font-weight: 400; }
+
+/* The product name, section one of the bar on a product page. A label, not a
+   link — it says which surface you are on, so it must not compete with the
+   wordmark beside it. */
+.product-tag {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  padding: 0 4px 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+}
+/* With a product tag ahead of it the wordmark is no longer the first thing in
+   the sheet, so it drops the leading inset the tag now provides. */
+.product-tag + .bar-rule + .logo { padding-left: 0; }
+
+/* Hairline between sections, so the sheet reads as compartments of one object
+   rather than as a row of loose items. */
+.bar-rule {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  width: 1px;
+  height: 22px;
+  margin: 0 2px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.20), transparent);
+}
+
+/* ---------- sections 2 & 3: the link groups ---------- */
+.nav-shell {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  pointer-events: none; /* as with .bar-group: the panes take the clicks */
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nav a {
+  position: relative;
+  z-index: 2; /* above the travelling indicator */
+  display: inline-flex;
+  align-items: center;
+  height: var(--nav-h);
+  padding: 0 15px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: var(--nav);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: color 0.28s ease;
+}
+.nav a:hover { color: #fff; }
+.nav a.is-current { color: #fff; font-weight: 500; }
+.nav a:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+/* ---------- the travelling indicator ----------
+   The MOTION is untouched: it never cuts or fades between states, it moves,
+   and it stretches to the width of whatever it lands on.
+
+   The material changed with the bar's. It used to be a lens on top of a lens,
+   with its own specular highlight and rim riding over the pane's. With the
+   pane flat, that made the indicator the only curved, lit object in the
+   navigation — so it is now what it should be inside frosted glass: a slightly
+   brighter flat fill, one hairline, one soft shadow.
+
+   Still no backdrop-filter of its own. It sits inside the bar's own
+   backdrop-filtered surface, so it could only sample the page a second time
+   and would double the blur under itself. */
+.nav-ind {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  border-radius: 999px;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  /* A spring, not an ease: it overshoots very slightly on arrival, which is
+     what makes the movement read as a physical object with mass. */
+  transition:
+    transform 0.62s cubic-bezier(0.32, 1.36, 0.38, 1),
+    width 0.62s cubic-bezier(0.32, 1.36, 0.38, 1),
+    height 0.3s ease;
+}
+.nav-ind.is-dragging {
+  cursor: grabbing;
+  /* held: the fill brightens and the shadow deepens, so it reads as picked up
+     off the bar rather than as a lens thickening */
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- section 4: the CTA ---------- */
+.header-cta {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  margin-left: 2px;
+}
+
+/* Without backdrop-filter there is nothing to bend, so the 4% fill would leave
+   white-on-near-black links at roughly 1.5:1. Fall back to an opaque sheet. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-bar { background: rgba(19, 21, 29, 0.94); }
+}
+/* Accessibility parity with the platform control: honour a reduced-transparency
+   preference by dropping the sample entirely rather than thickening the blur. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-bar {
+    background: #12141c;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-h);
+  padding: 0 16px;
+  border-radius: 6px;
+  font-size: var(--btn);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease,
+              color 0.35s ease, filter 0.35s ease;
+}
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.45) 48%, transparent 76%);
+  transform: translateX(-130%);
+  transition: transform 0.65s ease;
+}
+.btn:hover::after { transform: translateX(130%); }
+
+.btn-solid {
+  background: linear-gradient(180deg, #ffffff 0%, #e7e7e7 48%, #cfcfcf 100%);
+  color: #111;
+  border: 1px solid #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.btn-solid:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #f3f6ff 42%, #d5def2 100%);
+  border-color: #f2f6ff;
+  box-shadow: inset 0 1px 0 #fff, 0 0 22px rgba(186, 208, 255, 0.35),
+              0 8px 18px rgba(255, 255, 255, 0.12);
+}
+
+.btn-ghost {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.45) 50%, rgba(160, 175, 200, 0.08));
+  color: #fff;
+  border: 1px solid rgba(198, 198, 198, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.btn-ghost:hover {
+  background: linear-gradient(135deg, rgba(210, 225, 255, 0.18), rgba(0, 0, 0, 0.35) 48%, rgba(180, 195, 220, 0.16));
+  border-color: rgba(220, 230, 255, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 20px rgba(170, 200, 255, 0.22);
+}
+
+.header-cta { justify-self: end; }
+
+/* hero-level button variants */
+/* Both hero buttons are pills, matching the badge above them and the nav panes.
+   .btn's own 6px radius is a square corner next to all of that. */
+.hero-actions .btn {
+  height: var(--hero-btn-h);
+  padding: 0 22px;
+  border-radius: 999px;
+}
+.hero-actions .btn-solid:hover {
+  box-shadow: inset 0 1px 0 #fff, 0 0 26px rgba(186, 208, 255, 0.4),
+              0 8px 18px rgba(255, 255, 255, 0.14);
+}
+
+/* The secondary action takes the badge's material exactly — dark underlay for
+   contrast, white film over it, rim light, and the lens — so the badge, the
+   headline and this button read as one set rather than three treatments. */
+.hero-actions .btn-ghost {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05)),
+    rgba(12, 12, 14, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.42),
+    inset 2px 3px 12px rgba(255, 255, 255, 0.14),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.22),
+    0 12px 30px rgba(0, 0, 0, 0.34),
+    0 3px 10px rgba(0, 0, 0, 0.22);
+  /* soft lens — see .badge */
+  backdrop-filter: blur(0.5px) saturate(170%) brightness(1.06) url(#liquid-glass-soft);
+  -webkit-backdrop-filter: blur(12px) saturate(170%) brightness(1.06);
+}
+@supports not (backdrop-filter: url(#liquid-glass-soft)) {
+  .hero-actions .btn-ghost {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+}
+/* rim light, same construction as .badge::after */
+.hero-actions .btn-ghost::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.2px;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.18) 20%,
+    rgba(255, 255, 255, 0) 46%,
+    rgba(255, 255, 255, 0.10) 70%,
+    rgba(255, 255, 255, 0.55) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.hero-actions .btn-ghost:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08)),
+    rgba(16, 16, 19, 0.52);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hero-actions .btn-ghost { background: rgba(18, 18, 20, 0.93); }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hero-actions .btn-ghost { background: rgba(18, 18, 20, 0.92); }
+}
+
+/* ---------- burger ---------- */
+.burger {
+  display: none;
+  place-items: center;
+  /* the default align-content stretches the three auto rows to fill 42px, which
+     puts the bars 15px apart; centring the track keeps them at 1.5 + 5 = 6.5px,
+     which is exactly the translateY the open state uses to collapse them */
+  align-content: center;
+  gap: 5px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  /* the same material as .glass-bar — it stands in for the nav panes on a
+     narrow window, so it cannot be a different kind of glass */
+  border: 1px solid var(--nav-glass-edge);
+  background:
+    linear-gradient(var(--nav-glass-film), var(--nav-glass-film)),
+    var(--nav-glass-tint);
+  backdrop-filter: var(--nav-glass-blur);
+  -webkit-backdrop-filter: var(--nav-glass-blur);
+  box-shadow: var(--nav-glass-shadow);
+  cursor: pointer;
+  z-index: 60;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.burger:hover { border-color: var(--glass-edge-hover); background: var(--glass-fill-hover); }
+.burger:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.7); outline-offset: 3px; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .burger { background: rgba(18, 18, 20, 0.92); }
+}
+.burger span {
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: #fff;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+body.menu-open .burger span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+body.menu-open .burger span:nth-child(2) { opacity: 0; }
+body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* ============================================================
+   the hero — the only rule that places one
+   ============================================================
+   Every hero on the site is this, and nothing overrides it. Four pages render
+   `.hero` inside a `.hero-shell`: /, /calling, /avatar, /webnav.
+
+   Centred, not bottom-aligned. Bottom-aligning it makes the copy's position
+   depend on how tall the copy is, so /calling used to drift against the other
+   three every time a headline wrapped differently or a breakpoint changed the
+   font size. Centred, the position is the same whatever the words are — which
+   is the only way four pages can share one composition.
+
+   min-height: 0 is for the shell's grid: the hero is its 1fr row, and without
+   this it is floored at its content height instead of taking the slack. */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--hero-top) 24px var(--hero-bottom);
+  min-height: 0;
+}
+
+/* ---------- the shell ----------
+   One frame tall, and min-height rather than height — never height. A hard
+   height clips, and the hero centres inside it, so the half of the overflow
+   that goes upward lands under the fixed header and takes the badge and the
+   first headline line with it. Growing past the frame on a short window costs
+   the peek below and keeps the page readable, which is the right way round.
+
+   .page and .callhero both already declare this; .hero-shell is what says the
+   element is a hero frame regardless of which of the two it is, and it is what
+   the pull-up below hangs off. */
+.hero-shell {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: var(--copy-max);
+  width: 100%;
+}
+
+.badge {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 9px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+
+  /* same material as the nav panes: dark underlay for contrast, white film on
+     top for the glass */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.05)),
+    rgba(12, 12, 14, 0.52);
+
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.42),
+    inset 2px 3px 12px rgba(255, 255, 255, 0.14),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.22),
+    0 12px 30px rgba(0, 0, 0, 0.34),
+    0 3px 10px rgba(0, 0, 0, 0.22);
+
+  /* the SOFT lens, not the nav one: at this size the nav filter's 2.2px red
+     dispersion shows up as a red rim rather than as glass */
+  backdrop-filter: blur(0.5px) saturate(170%) brightness(1.06) url(#liquid-glass-soft);
+  -webkit-backdrop-filter: blur(12px) saturate(170%) brightness(1.06);
+
+  color: #f2f2f2;
+  font-size: var(--badge);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/* Engines that reject url() inside backdrop-filter drop the whole declaration,
+   so the plain form is restated rather than assumed. */
+@supports not (backdrop-filter: url(#liquid-glass-soft)) {
+  .badge {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+}
+
+/* Rim light, as on the panes: bright top-left, fading, weak bounce bottom-right. */
+.badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.2px;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.18) 20%,
+    rgba(255, 255, 255, 0) 46%,
+    rgba(255, 255, 255, 0.10) 70%,
+    rgba(255, 255, 255, 0.55) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* the badge text and star sit above the sheen */
+.badge > * { position: relative; z-index: 2; }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .badge { background: rgba(18, 18, 20, 0.93); }
+}
+.badge-star { flex: none; filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.45)); }
+
+.hero h1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--h1);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+  color: #fff;
+}
+.headline-line {
+  display: block;
+  overflow: hidden;
+  padding: 0.06em 0.15em 0.14em;
+}
+/* the animated child is what gets clipped by .headline-line's overflow */
+.headline-text { display: block; }
+.hero h1 em {
+  font-family: "Instrument Serif", "Times New Roman", Times, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.08em;
+  letter-spacing: -0.03em;
+  /* white, not the muted grey: the serif italic already separates it from the
+     sans around it, so it does not need a second cue, and the brighter clip
+     behind now makes grey the weakest thing on the page */
+  color: #ffffff;
+}
+
+.lede {
+  max-width: var(--lede-max);
+  margin-top: 18px;
+  color: #ffffff;
+  font-size: var(--lede);
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+/* ---------- stats ---------- */
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 0 var(--stats-x) var(--stats-y);
+  padding-bottom: max(var(--stats-y), env(safe-area-inset-bottom));
+  color: #ffffff;
+}
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: var(--stat-size);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+.stat-icon { width: 20px; height: 20px; flex: none; color: #e8e8e8; }
+.stat-icon-wide { width: 38px; height: 21px; flex: none; }
+
+/* ---------- menu backdrop ---------- */
+.menu-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(8, 8, 8, 0.42);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease, backdrop-filter 0.28s ease;
+}
+
+/* ============================================================
+   entrance motion
+   ============================================================ */
+.appear {
+  opacity: 1; /* resting state: never blank if animations fail */
+  animation-duration: 1.05s;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-delay: var(--d, 0.08s);
+}
+.appear--scale { animation-name: in-scale; }
+.appear--soft  { animation-name: in-soft; }
+.appear--mask  { animation-name: in-mask; }
+.appear--pop   { animation-name: in-pop; }
+.appear--btn   { animation-name: in-btn; }
+.appear--side  { animation-name: in-side; }
+.appear--stat  { animation-name: in-stat; }
+.lede.appear   { animation-duration: 1.25s; }
+
+.is-in, .hero-photo.is-in {
+  animation: none;
+  opacity: 1;
+  transform: none;
+  clip-path: none;
+  filter: none;
+}
+
+/* .is-in retires an element's entrance effects, and clearing `filter` is part of
+   that. The hero video's darkening is NOT an entrance effect — it is what keeps
+   white type legible over a near-white clip — so it has to be restated for the
+   settled state or it vanishes the moment the animation ends.
+
+   The three numbers are variables ONLY so the temporary tuner panel on the home
+   page can drive them live (see BrightnessTuner.tsx). The fallbacks are the real
+   values: delete the panel and nothing here changes. */
+.hero-photo, .hero-photo.is-in {
+  filter: brightness(var(--hero-bright, 0.8))
+          saturate(var(--hero-sat, 0.75))
+          contrast(var(--hero-contrast, 2));
+}
+
+@keyframes in-scale { from { opacity: 0; transform: scale(0.84); } to { opacity: 1; transform: scale(1); } }
+@keyframes in-soft  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes in-mask  { from { opacity: 0; transform: translateY(40%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes in-pop {
+  0%   { opacity: 0; transform: scale(0.9); }
+  70%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes in-btn  { from { opacity: 0; transform: translateY(18px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes in-side { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes in-stat { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.badge-star {
+  animation: in-star 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
+}
+@keyframes in-star {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-50deg); }
+  65%  { opacity: 1; transform: scale(1.2) rotate(8deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.hero h1 em {
+  animation: in-em 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.72s both;
+}
+@keyframes in-em {
+  from { opacity: 0.35; filter: blur(4px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* the video fades up with the rest of the composition */
+.hero-photo {
+  animation: photo-in 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0s both;
+}
+@keyframes photo-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ============================================================
+   responsive
+   ============================================================ */
+@media (min-width: 1280px) and (max-width: 1599px) {
+  :root { --h1: 54px; --lede: 16px; --header-x: 48px; --stats-x: 80px; --copy-max: 900px; }
+}
+
+@media (min-width: 901px) and (max-width: 1279px) {
+  :root {
+    --logo: 15px; --nav: 13px; --nav-h: 36px; --btn: 13px; --btn-h: 38px;
+    --hero-btn-h: 40px; --h1: 42px; --lede: 15px; --badge: 12px; --stat-size: 12.5px;
+    --header-y: 16px; --header-x: 28px; --stats-y: 36px; --stats-x: 28px;
+    --copy-max: 760px; --lede-max: 440px;
+  }
+  .nav a { padding: 0 14px; }
+  .badge { margin-bottom: 16px; }
+  .lede { margin-top: 14px; }
+  .hero-actions { margin-top: 20px; }
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --logo: 17px; --logo-mark: 24px; --nav: 15px; --nav-h: 44px; --btn: 15px;
+    --btn-h: 44px; --hero-btn-h: 48px; --h1: 64px; --lede: 18px; --badge: 13.5px;
+    --stat-size: 15px; --header-y: 28px; --header-x: 64px; --stats-x: 96px;
+    --stats-y: 44px; --copy-max: 980px; --lede-max: 540px;
+  }
+  .nav a { padding: 0 20px; }
+  .badge { margin-bottom: 26px; }
+  .lede { margin-top: 22px; }
+  .hero-actions { margin-top: 30px; gap: 12px; }
+  .stat-icon { width: 22px; height: 22px; }
+  .stat-icon-wide { width: 45px; height: 24px; }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --logo: 18px; --logo-mark: 26px; --nav: 16px; --nav-h: 48px; --btn: 16px;
+    --btn-h: 48px; --hero-btn-h: 52px; --h1: 76px; --lede: 20px; --badge: 14.5px;
+    --stat-size: 16px; --header-y: 32px; --header-x: 80px; --stats-x: 120px;
+    --stats-y: 52px; --copy-max: 1120px; --lede-max: 620px;
+  }
+  .nav { gap: 10px; }
+  .nav a { padding: 0 22px; }
+  .btn { padding: 0 22px; }
+  .hero-actions .btn { padding: 0 22px; }
+  .badge { padding: 10px 15px; }
+  .stat-icon-wide { width: 48px; height: 26px; }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --h1: 88px; --lede: 22px; --header-x: 120px; --stats-x: 160px;
+    --copy-max: 1280px; --lede-max: 680px;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 850px) {
+  :root { --header-y: 14px; --stats-y: 24px; --h1: 40px; }
+  .badge { margin-bottom: 12px; }
+  .lede { margin-top: 12px; }
+  .hero-actions { margin-top: 16px; }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  :root {
+    --h1: 34px; --lede: 14px; --stats-y: 18px;
+    --nav-h: 30px; --btn-h: 34px; --hero-btn-h: 36px;
+  }
+  .badge { margin-bottom: 8px; }
+}
+
+/* ============================================================
+   breaking the fold — one technique, all four heroes
+   ============================================================
+   A hero that ends exactly at the bottom of the viewport reads as the whole
+   page. Each of these pages puts the thing worth seeing directly under it — the
+   three venue cards on the home page, the live demo on the product ones — and
+   nobody scrolls to something they have no reason to believe is there. So the
+   top edge of what is below has to show: obviously cut off, not readable.
+
+   The hero keeps its full frame and the scrolled content is PULLED UP over it.
+   The alternative — shortening the hero and hoping the next thing lands in the
+   gap — is what the product pages used to do, and it cannot work: the copy
+   centres in the box it is given, so a hero missing 230px off the bottom
+   centres its copy 115px above where the home hero puts it. That is exactly the
+   misalignment this replaces. Pull the content, never shorten the hero.
+
+   `.page { height: 100dvh; overflow: hidden }` used to live here. It was the
+   definite height that made .hero clip rather than grow, which is what the
+   104px product-hero override existed to work around. Both are gone.
+
+   Under 901px none of this applies: the hero grows with its copy and the page
+   simply scrolls, which on a phone is correct. */
+@media (min-width: 901px) {
+  .hero-shell + .scroll {
+    margin-top: var(--hero-pull);
+  }
+  /* The section the pull lands on. No top padding to fight the pull with, and
+     no hairline: the peek sits on open sky, so a border there draws exactly the
+     seam this is avoiding. One number at every viewport height — an earlier
+     version shaved this on short windows, which made how much of the card
+     showed depend on the window and is why the peek appeared sometimes and not
+     others. */
+  .section.section--peek {
+    padding-top: 44px;
+    border-top: 0;
+  }
+}
+
+/* ---------- collapsed nav ----------
+   The wordmark, eight links and the CTA on one sheet need ~1150px; below that
+   the links leave the sheet for a full-screen menu. Deliberately NOT the 900px
+   phone breakpoint below — between the two the page keeps its desktop hero and
+   only the navigation collapses. Keep in sync with the matchMedia queries in
+   the scripts. */
+@media (max-width: 1150px) {
+  /* The sheet shrinks to the wordmark and the burger, and keeps its glass — it
+     is still a floating pane, just a smaller one. */
+  .bar-group { width: 100%; }
+  .glass-bar--brand {
+    width: 100%;
+    justify-content: space-between;
+    padding: 6px 6px 6px 4px;
+  }
+  /* Inside the full-screen menu the panes stop being floating sheets — stacking
+     four blurred panes over a blurred backdrop is both ugly and expensive. */
+  .nav-shell .glass-bar {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  .bar-rule { display: none; }
+  .nav-ind { display: none; } /* nothing to travel between once stacked */
+  .burger { display: grid; }
+  .logo, .burger { z-index: 80; }
+
+  .menu-backdrop { display: block; }
+  body.menu-open .menu-backdrop {
+    opacity: 1;
+    visibility: visible;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  /* The shell leaves the sheet and becomes the full-screen menu; both groups
+     and the CTA stack inside it. */
+  .nav-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 96px 22px 32px;
+    padding-top: max(96px, calc(env(safe-area-inset-top) + 88px));
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+  }
+  body.menu-open .nav-shell { opacity: 1; visibility: visible; pointer-events: auto; }
+
+  .nav {
+    width: 100%;
+    max-width: 420px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* On the menu the links become the glass items floating on the backdrop,
+     which is now the surface. */
+  .nav a {
+    width: 100%;
+    height: 56px;
+    justify-content: center;
+    font-size: 19px;
+    border-radius: 14px;
+    border: 1px solid var(--glass-edge);
+    background: var(--glass-fill);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.24);
+  }
+  .nav a:hover { background: var(--glass-fill-hover); }
+  .nav a.is-current { background: rgba(255, 255, 255, 0.16); }
+
+  .header-cta {
+    width: 100%;
+    max-width: 420px;
+    height: 56px;
+    font-size: 17px;
+    border-radius: 14px;
+    margin-left: 0;
+  }
+
+  body.menu-open { overflow: hidden; }
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 900px) {
+  html, body { height: auto; overflow-y: auto; }
+
+  :root {
+    --logo: 16px; --btn: 15px; --btn-h: 46px; --hero-btn-h: 48px; --h1: 36px;
+    --lede: 16.5px; --badge: 13.5px; --stat-size: 15px;
+    --header-y: 16px; --header-x: 18px; --stats-y: 28px; --stats-x: 20px;
+    /* The hero is no longer one frame here — it grows with its copy and the page
+       scrolls — so the copy sits at the bottom of what it needs with room under
+       it, and these are the two numbers that say so. The rule in .hero is not
+       restated; only the tokens change, so the phone hero cannot drift away from
+       the desktop one. */
+    --hero-top: 20px;
+    --hero-bottom: 64px;
+  }
+
+  .hero { align-items: flex-end; padding-left: 20px; padding-right: 20px; }
+  .hero-copy, .lede { max-width: 100%; }
+
+  .stats { flex-direction: column; align-items: center; gap: 16px; }
+  .stat { white-space: normal; }
+}
+
+@media (max-width: 560px) {
+  :root { --h1: 34px; --lede: 16px; --header-x: 16px; }
+  /* .hero-actions is a centred flex item, so it sizes to max-content and the
+     buttons' width:100% would resolve against that rather than the column. */
+  .hero-actions { flex-direction: column; width: 100%; }
+  .hero-actions .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  .appear, .hero-photo, .hero h1 em, .badge-star {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+    filter: none;
+  }
+}
+
+/* ============================================================
+   scrolled content
+   ------------------------------------------------------------
+   Everything below the hero. .hero-photo is position:fixed, so it would
+   otherwise sit behind this copy for the whole scroll. .scroll therefore
+   carries its own opaque floor, fading in over the first 220px so the hero
+   still ends on video rather than on a hard seam.
+   ============================================================ */
+.scroll {
+  position: relative;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0, #000 220px),
+    #000;
+}
+
+.section {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--sec-y) var(--header-x);
+  border-top: 1px solid var(--border-soft);
+}
+.section:first-child { border-top: 0; }
+
+/* The header is fixed, so an anchor jump would otherwise put the section's own
+   title underneath it. Clears the bar plus a little breathing room. */
+.section[id], .masthead, .os[id], .case[id] { scroll-margin-top: 104px; }
+
+.section-head { max-width: 720px; margin-bottom: var(--sec-head); }
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 18px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section-title {
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+.section-title em {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.section-lede {
+  margin-top: 18px;
+  max-width: 560px;
+  font-size: var(--lede);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---------- the rhythm inside a section ----------
+   Two classes, so a section never has to carry a one-off margin. A block that
+   follows another block takes .section-block; a link that closes a section
+   takes .section-tail. Both were previously written inline, per section, at
+   whatever number looked right at the time — 30px here, 34px there, 44px
+   somewhere else — which is exactly what made the sections stop lining up.
+
+   Declared AFTER .section-lede on purpose: the closing link on several
+   sections is a .section-lede, both selectors are one class, so whichever is
+   written last wins the margin-top. This has to be the one that does. */
+.section-block { margin-top: var(--sec-block); }
+.section-tail { margin-top: var(--sec-tail); }
+
+/* ---------- logo wall ----------
+   Client marks are supplied at wildly different aspect ratios and internal
+   padding, so they are normalised by HEIGHT, not width, and greyed back to the
+   page's own palette -- a wall of full-colour logos always reads as clip art.
+   Colour returns on hover. */
+.logo-wall {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 26px 54px;
+  /* No padding of its own. It used to add 34px on top of the section head's
+     own margin, which put the work section's first content 86px below its
+     head where every other section put it at 52 — the single largest reason
+     the sections read as sitting at different heights. */
+  padding: 0;
+}
+.logo-wall img {
+  height: 44px;
+  width: auto;
+  max-width: 190px;
+  object-fit: contain;
+  opacity: 0.62;
+  filter: grayscale(1) brightness(1.9) contrast(0.85);
+  transition: opacity 0.35s ease, filter 0.35s ease;
+}
+.logo-wall img:hover { opacity: 1; filter: none; }
+
+/* Crest-shaped marks (near square) measure the same height as the wide
+   wordmarks but read half their size, so they get their own height to match
+   optically rather than arithmetically. */
+.logo-wall img.logo-crest { height: 58px; }
+.case-id img.logo-crest { height: 74px; }
+/* Two marks need their own exposure rather than the wall's default lift.
+   .logo-fine is fine dark linework that disappears without extra brightness;
+   .logo-solid is a filled mid-tone crest, which the default lift blows out to
+   a white blob, so it gets barely any. */
+:is(.logo-wall, .case-id, .quote-by) img.logo-fine {
+  filter: grayscale(1) brightness(2.5) contrast(0.75);
+}
+:is(.logo-wall, .case-id, .quote-by) img.logo-solid {
+  filter: grayscale(1) brightness(1.12) contrast(1.08);
+  opacity: 0.7;
+}
+:is(.logo-wall, .case-id, .quote-by) img.logo-solid:hover { filter: none; opacity: 1; }
+
+/* Marks supplied as solid black artwork (Echobotics) disappear into a dark wall
+   under the standard grayscale-and-lift, so they are inverted to white instead.
+   Hover lifts them the same amount the others gain by losing their filter. */
+.logo-wall img.logo-invert,
+.case-id img.logo-invert {
+  filter: grayscale(1) invert(1) brightness(1.05);
+}
+.logo-wall img.logo-invert:hover { filter: grayscale(1) invert(1) brightness(1.25); opacity: 1; }
+
+/* Named client with no logo file yet: set as a wordmark in the site's own type
+   so the wall reads as deliberate rather than as a broken image. */
+.logo-word {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.35s ease;
+}
+.logo-word:hover { color: #fff; }
+
+/* Hovering a mark names it. Not a browser tooltip and not a boxed one either:
+   the name is set in the same small-caps the section eyebrows use and simply
+   rises into place above the logo, so it reads as part of the page rather than
+   as chrome sitting on top of it. */
+.logo-tip { position: relative; display: inline-flex; align-items: center; }
+.logo-tip::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translate(-50%, 6px);
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.66);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.logo-tip:hover::after,
+.logo-tip:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+/* A hairline under the name, drawn from the middle out, so the label has an
+   edge without needing a box around it. */
+.logo-tip::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  width: 26px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateX(-50%) scaleX(0);
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.logo-tip:hover::before { transform: translateX(-50%) scaleX(1); }
+@media (prefers-reduced-motion: reduce) {
+  .logo-tip::after, .logo-tip::before { transition: none; }
+}
+
+/* The glyph and the heading share the top line instead of stacking. Taking the
+   glyph out of the flow is what does it — the heading rows keep their own
+   rhythm and simply clear the icon's column, which returns roughly 45px of
+   height to every card in the grid without touching any card's markup. */
+.card, .step, .tile { position: relative; }
+.card > .sicon, .step > .sicon, .tile > .sicon { position: absolute; margin: 0; }
+.card > .sicon { left: 24px; top: 26px; }
+.step > .sicon { left: 22px; top: 25px; }
+.tile > .sicon { left: 22px; top: 24px; }
+/* Only the first heading shares the line with the glyph. A card usually has
+   two — the kicker naming the client and the title naming the work — and
+   pulling both up beside the icon read as one heading broken in half, so the
+   title drops back to the full width it always had. The kicker's box is given
+   the glyph's own height so the two sit on the same centre line and the title
+   clears the icon underneath. */
+.card > .sicon ~ .card-kicker,
+.card > .sicon ~ .card-title,
+.tile > .sicon ~ .tile-kicker,
+.tile > .sicon ~ .tile-title {
+  padding-left: 46px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+}
+/* A card whose kicker already took the line: the title is back below it. */
+.card > .sicon ~ .card-kicker ~ .card-title,
+.tile > .sicon ~ .tile-kicker ~ .tile-title {
+  padding-left: 0;
+  min-height: 0;
+  display: block;
+}
+.step > .sicon ~ .step-t { padding-left: 46px; min-height: 34px; display: flex; align-items: center; }
+
+/* ---------- glass cards ----------
+   Same material as .nav, and for the same reason one blur surface is used per
+   card rather than per element inside it. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 18px;
+}
+
+.card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 24px 28px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-lift);
+  transition: border-color 0.35s ease, background 0.35s ease, transform 0.35s ease;
+}
+.card:hover {
+  border-color: var(--glass-edge-hover);
+  background: var(--glass-fill-hover);
+  transform: translateY(-3px);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card { background: rgba(18, 18, 20, 0.92); }
+}
+
+.card-kicker {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+.card-title {
+  font-size: 17.5px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.card-body {
+  font-size: 14px;
+  line-height: 1.62;
+  color: var(--muted);
+}
+.card-body em { font-style: italic; color: #d8d8d8; }
+.card-link {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+  transition: color 0.3s ease;
+}
+.card-link:hover { color: #fff; }
+.card-link::after { content: " \2192"; }
+
+/* ---------- testimonials ---------- */
+.quotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 34px 32px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-edge);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-lift);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .quote { background: rgba(18, 18, 20, 0.92); }
+}
+
+.quote-mark {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  font-size: 46px;
+  line-height: 0.6;
+  color: rgba(255, 255, 255, 0.28);
+}
+.quote p {
+  font-size: 16px;
+  line-height: 1.66;
+  letter-spacing: -0.012em;
+  color: #ededed;
+}
+.quote-by {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+.quote-by img {
+  height: 34px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  opacity: 0.8;
+  filter: grayscale(1) brightness(1.9);
+}
+.quote-by img.logo-crest { height: 44px; }
+.quote-by img.logo-invert { filter: grayscale(1) invert(1) brightness(1.05); }
+/* Both are spans inside one wrapper, so they need an explicit block: as inline
+   boxes the role runs on after the name and its margin-top is ignored. */
+.quote-name { display: block; font-size: 13.5px; font-weight: 600; letter-spacing: -0.02em; }
+.quote-role { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.quote-role a { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(255, 255, 255, 0.3); }
+.quote-role a:hover { color: #fff; text-decoration-color: rgba(255, 255, 255, 0.7); }
+
+/* Placeholder for content that is genuinely not written yet. Deliberately
+   visible: an unfilled slot must look unfilled, never like finished copy. */
+.pending {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+.pending-tag {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.pending .card-body, .pending p { color: rgba(255, 255, 255, 0.42); }
+
+/* ---------- about ---------- */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 56px;
+  align-items: start;
+}
+.about-copy p {
+  font-size: 15.5px;
+  line-height: 1.72;
+  color: #cfcfcf;
+}
+.about-copy p + p { margin-top: 16px; }
+
+.facts {
+  display: grid;
+  gap: 1px;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.fact {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  padding: 17px 20px;
+  background: #000;
+}
+.fact-k { font-size: 12.5px; letter-spacing: 0.04em; color: var(--muted); }
+.fact-v { font-size: 13.5px; font-weight: 500; text-align: right; letter-spacing: -0.02em; }
+
+/* ---------- closing CTA ---------- */
+/* Centred, and that is the only thing it does differently. It used to run a
+   116px floor and a 34px head gap against the site's 104 and 52; the closing
+   section is not a special case vertically, so it now takes both from the
+   tokens like everything else. */
+.cta { text-align: center; }
+.cta .section-head { margin: 0 auto var(--sec-head); text-align: center; }
+.cta .section-lede { margin-left: auto; margin-right: auto; }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.cta-actions .btn { height: var(--hero-btn-h); padding: 0 20px; }
+
+/* ---------- site footer ---------- */
+.site-foot {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px var(--header-x) 44px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 30px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.site-foot nav { display: flex; flex-wrap: wrap; gap: 22px; }
+.site-foot a { transition: color 0.3s ease; }
+.site-foot a:hover { color: #fff; }
+
+/* ---------- scroll reveal ----------
+   .appear fires once on load and is wrong below the fold. .rise starts hidden
+   and is released by an IntersectionObserver. It is opt-in via a class the
+   script adds to <html> (js-rise), so with JS disabled the content is simply
+   visible rather than permanently transparent. */
+.js-rise .rise { opacity: 0; transform: translateY(22px); }
+.js-rise .rise.in-view {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--rd, 0s),
+              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--rd, 0s);
+}
+
+/* ---------- off-screen sections stop moving ----------
+   Set and cleared by the observer in useReveal; see the comment there for the
+   reasoning. Several pages carry looping demo panels that used to animate
+   forever whether or not they were anywhere near the viewport, which spends the
+   scroll's frame budget on things nobody is looking at.
+
+   `animation-play-state` and not `animation: none`: none resets an animation to
+   its first keyframe, so scrolling back to a 13-second demo would restart it
+   mid-read. Paused holds it and it carries on.
+
+   This deliberately does NOT need !important. `.anim-idle *` is one class and a
+   universal, so anything that must keep running while its section is off-screen
+   only has to be one class more specific than that — which is also why the
+   .rise reveals are unaffected: they are transitions, and this property does
+   not touch transitions. */
+.anim-idle,
+.anim-idle *,
+.anim-idle *::before,
+.anim-idle *::after { animation-play-state: paused; }
+
+@media (max-width: 1100px) {
+  .about-grid { grid-template-columns: 1fr; gap: 38px; }
+}
+@media (max-width: 900px) {
+  /* The rhythm scales down as one set of numbers. Nothing here restates a
+     section rule — the tokens are the only thing that changes, so the sections
+     stay in step with each other at every width. */
+  :root {
+    --sec-y: 74px;
+    --sec-head: 38px;
+    --sec-block: 32px;
+    --sec-tail: 24px;
+  }
+  .section { padding: var(--sec-y) 24px; }
+  .section-title { font-size: 29px; }
+  .logo-wall { gap: 22px 34px; }
+  .logo-wall img { height: 27px; }
+  .quote { padding: 28px 24px; }
+  .site-foot { padding: 26px 24px 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js-rise .rise { opacity: 1; transform: none; }
+  .card:hover { transform: none; }
+}
+
+/* ============================================================
+   Contact page
+   ------------------------------------------------------------
+   Two columns on desktop: the form, and a column of standing facts that
+   answer the questions people ask before they send anything.
+   ============================================================ */
+.contact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr);
+  gap: 52px;
+  align-items: start;
+}
+
+.contact-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 20px;
+}
+.field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.field--wide { grid-column: 1 / -1; }
+
+.field label {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea {
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  outline: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.field textarea { resize: vertical; line-height: 1.6; }
+.field select { appearance: none; cursor: pointer; }
+/* the native option list is drawn by the OS, which does not inherit the dark
+   page — set it explicitly or the text is white on white */
+.field select option { background: #121214; color: #fff; }
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.06);
+}
+/* :user-invalid, not :invalid — an empty required field with no placeholder
+   matches :not(:placeholder-shown) and would be flagged red before the person
+   has typed anything. :user-invalid waits until they have actually interacted. */
+.field input:user-invalid { border-color: rgba(255, 120, 120, 0.5); }
+
+/* .fact-v is space-between inside .fact; in the aside it is a plain column and
+   must not drift to the right edge. */
+.aside-block .fact-v { align-self: flex-start; font-size: 14px; }
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.form-note { font-size: 12.5px; color: var(--muted); }
+
+.contact-aside { display: flex; flex-direction: column; gap: 26px; }
+.aside-block { display: flex; flex-direction: column; gap: 7px; }
+.aside-body { font-size: 14px; line-height: 1.7; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .contact-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .contact-form { grid-template-columns: minmax(0, 1fr); }
+}
+
+
+/* ============================================================
+   the solid CTAs, on a pane
+   ============================================================
+   "Start for free" and "Contact us" are the only two things in the chrome that
+   sat straight on the aurora with nothing between them and it. A white pill on
+   a moving photograph has no edge — it floats, and on the bright part of the
+   sky it loses its shape entirely.
+
+   The pane is a box-shadow ring, not a ::before, and both halves of that matter.
+   .btn already carries `overflow: hidden` (for the sweep) and `isolation:
+   isolate`, so a pseudo-element is clipped to the button box AND — because the
+   isolation makes the button its own stacking context — a z-index:-1 child
+   paints ON TOP of the button's own background rather than behind it. That is
+   what turned the white pill grey. A spread shadow is neither clipped by the
+   element's overflow nor part of its stacking context: it sits outside the
+   border, under everything, and leaves the white gradient completely alone.
+   Two rings — an opaque one for the pane, a wider soft one for the lift. */
+.hero-actions .btn-solid,
+.header-cta > .btn {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 5px rgba(10, 12, 14, 0.46),
+    0 0 0 6px rgba(255, 255, 255, 0.12),
+    0 10px 26px rgba(0, 0, 0, 0.34);
+}
+.hero-actions .btn-solid:hover,
+.header-cta > .btn:hover {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 5px rgba(14, 16, 19, 0.5),
+    0 0 0 6px rgba(255, 255, 255, 0.26),
+    0 0 26px rgba(186, 208, 255, 0.34),
+    0 10px 26px rgba(0, 0, 0, 0.34);
+}
+
+
+/* The product heroes used to reserve 104px of top padding here — the fixed
+   header's full box — so that centring could not push the copy up under the
+   nav on a short window. It was a real problem and this was the wrong fix for
+   it: it is what put those three heroes 115–139px higher than the home one.
+
+   The overflow it was defending against came from `.page { height: 100dvh }`,
+   a definite height that clips. That is gone; the shells are min-height with
+   height auto, so a copy block taller than the frame grows the frame and there
+   is no overflow to split. See .hero and --hero-top. */
+
+/* ============================================================
+   the "try it" step lists, and the grid modifiers
+   ------------------------------------------------------------
+   Shared by /calling and /avatar. Both pages carry their own copy of the base
+   .steps / .cards / .numbers rules in their page stylesheet; these modifiers
+   live here once, because keeping two copies of them in step by hand is how
+   the two lists drift apart.
+
+   Every selector is doubled (.steps.steps--try) so it outranks the single-class
+   base rule regardless of which stylesheet the browser applied last — this file
+   is a <link> in the head and the route stylesheets are injected after it.
+   ============================================================ */
+
+/* Six of them, held at three across at desk widths. auto-fit alone gives four
+   then two on a 1180px row, which reads as a ragged list rather than a grid. */
+@media (min-width: 900px) {
+  .steps.steps--try { grid-template-columns: repeat(3, 1fr); }
+  .cards.cards--three { grid-template-columns: repeat(3, 1fr); }
+  .cards.cards--two { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Each card is a link up to the demo. The anchor covers the card rather than
+   wrapping it, so the text stays selectable and the <li> keeps its own layout —
+   and the whole surface still takes the click. */
+.steps--try .step { position: relative; cursor: pointer; transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease; }
+.steps--try .step:hover,
+.steps--try .step:focus-within {
+  border-color: var(--glass-edge-hover, rgba(255, 255, 255, 0.22));
+  background: rgba(255, 255, 255, 0.055);
+  transform: translateY(-3px);
+}
+.step-try {
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 12.8px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
+  transition: color 0.3s ease;
+}
+.step-try em { font-style: italic; color: rgba(255, 255, 255, 0.85); }
+.steps--try .step:hover .step-try { color: rgba(255, 255, 255, 0.86); }
+/* The arrow marks it as somewhere to go, and points up because that is where
+   the demo is. It appears only on the hover that says so. */
+.step-try::after { content: " \2191"; opacity: 0; transition: opacity 0.3s ease; }
+.steps--try .step:hover .step-try::after,
+.steps--try .step:focus-within .step-try::after { opacity: 1; }
+
+.step-go { position: absolute; inset: 0; border-radius: inherit; z-index: 1; }
+.step-go:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: 2px; }
+
+/* ---------- number rows that are not four wide ---------- */
+.num-note { font-size: 12px; font-style: italic; line-height: 1.5; color: rgba(255, 255, 255, 0.42); }
+
+/* A single figure, so it is given the room four of them had to share. */
+.numbers.numbers--one { grid-template-columns: 1fr; }
+.numbers--one .num { gap: 12px; padding: 40px 34px 42px; }
+.numbers--one .num-v { font-size: 64px; }
+.numbers--one .num-u { font-size: 28px; }
+.numbers--one .num-k { font-size: 14.5px; color: rgba(255, 255, 255, 0.78); }
+@media (max-width: 640px) {
+  .numbers--one .num { padding: 30px 22px 32px; }
+  .numbers--one .num-v { font-size: 46px; }
+  .numbers--one .num-u { font-size: 21px; }
+}
+
+/* Two, each given half the row rather than a quarter of it. */
+@media (min-width: 700px) {
+  .numbers.numbers--two { grid-template-columns: repeat(2, 1fr); }
+}
+.numbers--two .num { padding: 34px 26px 36px; }
+.numbers--two .num-v { font-size: 46px; }
+.numbers--two .num-u { font-size: 22px; }
+.numbers--two .num-k { font-size: 13.5px; color: rgba(255, 255, 255, 0.74); }

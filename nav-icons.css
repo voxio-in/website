@@ -1,0 +1,302 @@
+/* nav-icons.css — icon-first navigation.
+   Every nav link collapses to its icon; the link for the page you are on keeps
+   its label open, and hovering any other one opens ITS label inline, pushing
+   the items after it along. Loaded after each page's inline <style>, so
+   equal-specificity rules here win.
+   Also styles the Products flyout: a glass pane that opens out of the row, to
+   the right of the nav pane, while the Products trigger is hovered. */
+
+.nav a,
+.nav .nav-trigger {
+  gap: 0;
+}
+
+/* The icon is the permanent part of a link: fixed box, never squeezed. */
+.nav-ico {
+  flex: none;
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+}
+.nav-ico svg { display: block; width: 100%; height: 100%; }
+
+/* One overshoot and settle, shared by everything in the bar that changes size.
+   The old curve (0.32, 1.14, 0.38, 1) overshoots by about 2% — technically a
+   bounce, invisible in practice, so the nav read as sliding rather than
+   springing. This one carries a real single wave and comes back to rest without
+   a second: the labels and the products pane push the row along, and a row that
+   lands with a little weight feels like it moved rather than like it was
+   redrawn. Kept to ONE wave — a second reads as a toy, not as material. */
+:root { --nav-spring: cubic-bezier(0.34, 1.45, 0.5, 1); }
+
+/* The label is the part that opens. max-width (not width) is what can be
+   animated here — the text keeps its natural size and is simply clipped to
+   zero, so no measuring is needed. */
+.nav-label {
+  display: block;
+  overflow: hidden;
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  white-space: nowrap;
+  transition:
+    max-width 0.5s var(--nav-spring),
+    margin-left 0.5s var(--nav-spring),
+    opacity 0.26s ease;
+}
+
+/* Open: the current link, whatever is hovered or focused, the Products trigger
+   while its pane is out, and every item inside that pane — there an icon on
+   its own would say nothing. */
+.nav a.is-current .nav-label,
+.nav a:hover .nav-label,
+.nav a:focus-visible .nav-label,
+.nav .nav-trigger:hover .nav-label,
+.nav .nav-trigger:focus-visible .nav-label,
+.nav .nav-trigger[aria-expanded="true"] .nav-label,
+.nav-flyout a .nav-label {
+  max-width: 220px;
+  margin-left: 8px;
+  opacity: 1;
+}
+
+/* ---------- expanded over the hero ----------
+   At the top of a page there is nothing to save space for, so every label is
+   open and the bar reads as words. Past the hero it squeezes back to icons,
+   where the room matters and the icons are already familiar.
+
+   The Products pane is NOT included: expanded means the labels are readable,
+   not that the menu is hanging open. It still opens on hover only. */
+.nav-shell.is-expanded .nav a .nav-label,
+.nav-shell.is-expanded .nav .nav-trigger .nav-label {
+  max-width: 220px;
+  margin-left: 8px;
+  opacity: 1;
+}
+
+/* Collapsed to icons the links no longer need link-sized padding. */
+.nav a,
+.nav .nav-trigger { padding: 0 12px; }
+
+/* ---------- the Products trigger ----------
+   A button, not a link: it opens the pane rather than going anywhere, and
+   nav-glass.js only ever tracks <a> elements, so it is left out of the pill. */
+.nav .nav-trigger {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  height: var(--nav-h);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font: inherit;
+  font-size: var(--nav);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.28s ease;
+}
+.nav .nav-trigger:hover,
+.nav .nav-trigger[aria-expanded="true"] { color: #fff; }
+.nav .nav-trigger:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+/* ---------- the Products pane ----------
+   It stays a pane in the row rather than a sheet floating over one: closed it
+   is clipped to nothing, open it widens to its contents and pushes the Contact
+   pane along, the same way an opening label pushes the links after it. The
+   negative margin swallows the row's 10px gap while it is shut, so the closed
+   pane leaves no hole between the nav and the CTA. */
+.glass-bar--flyout {
+  max-width: 0;
+  padding: 6px 0;
+  margin-left: -10px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    max-width 0.54s var(--nav-spring),
+    padding 0.54s var(--nav-spring),
+    margin-left 0.54s var(--nav-spring),
+    opacity 0.3s ease;
+}
+.glass-bar--flyout.is-open {
+  max-width: 640px;
+  padding: 6px;
+  margin-left: 0;
+  opacity: 1;
+  pointer-events: auto;
+}
+.nav-flyout { display: flex; align-items: center; gap: 2px; flex: none; }
+
+/* ---------- collapsed nav ----------
+   In the full-screen menu the links are big glass rows, so every label stays
+   open and the products pane simply joins the stack. */
+@media (max-width: 1150px) {
+  .nav a .nav-label,
+  .nav .nav-trigger .nav-label {
+    max-width: 320px;
+    margin-left: 10px;
+    opacity: 1;
+  }
+  .nav a, .nav .nav-trigger { padding: 0 15px; }
+  .nav .nav-trigger { display: none; } /* the products are already listed below */
+
+  .glass-bar--flyout {
+    max-width: 100%;
+    padding: 0;
+    margin-left: 0;
+    overflow: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .nav-flyout { flex-direction: column; width: 100%; max-width: 420px; gap: 12px; }
+  .nav-ico { width: 20px; height: 20px; }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --nav-spring: ease; }
+}
+
+/* ---------- the icons themselves ----------
+   Every icon has one moving part, and the whole set is driven by a single
+   inherited switch: --on is 0 at rest and 1 while the link is the current page,
+   hovered or focused. Each part's transform reads that switch, so the SAME
+   declaration describes both directions — flipping --on back to 0 re-computes
+   the transform and the transition carries the part home. Nothing is a
+   keyframe animation, which is the point: a keyframe would have to play out
+   before it could be reversed, and pulling the pointer away halfway through
+   would look like a stutter. This way the motion is always interruptible and
+   always lands back exactly where it started.
+
+   One idea per icon, and a small one — the roof lifts, the needle swings, the
+   tiles spread. At 18px anything more is noise. */
+.nav-ico {
+  --on: 0;
+  --ico-t: 0.42s;
+}
+.nav-ico svg * {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform var(--ico-t) var(--nav-spring);
+}
+
+/* The switch. Same set of states the labels open on, so an icon never moves
+   without its word arriving with it. The flyout's own links are permanently
+   open, so they animate on hover alone rather than sitting held-on. */
+.nav a.is-current .nav-ico,
+.nav a:hover .nav-ico,
+.nav a:focus-visible .nav-ico,
+.nav .nav-trigger:hover .nav-ico,
+.nav .nav-trigger:focus-visible .nav-ico,
+.nav .nav-trigger[aria-expanded="true"] .nav-ico {
+  --on: 1;
+}
+
+/* home — the roof lifts off and the door opens up under it. */
+[data-icon="home"] .i-roof { transform: translateY(calc(var(--on) * -1.3px)); }
+[data-icon="home"] .i-door {
+  transform-origin: bottom;
+  transform: scaleY(calc(1 + var(--on) * 0.34));
+}
+
+/* work — the briefcase handle picks up. */
+[data-icon="work"] .i-handle { transform: translateY(calc(var(--on) * -1.4px)); }
+
+/* quote — the lines of speech arrive into the bubble. */
+[data-icon="quote"] .i-lines {
+  transform: translateX(calc(var(--on) * 1.4px));
+  opacity: calc(0.55 + var(--on) * 0.45);
+  transition:
+    transform var(--ico-t) var(--nav-spring),
+    opacity var(--ico-t) ease;
+}
+
+/* users — the second figure steps up beside the first. */
+[data-icon="users"] .i-mate { transform: translateX(calc(var(--on) * 1.1px)); }
+
+/* info — the i draws itself up to its dot. */
+[data-icon="info"] .i-stem {
+  transform-origin: bottom;
+  transform: scaleY(calc(1 + var(--on) * 0.18));
+}
+[data-icon="info"] .i-dot {
+  transform-box: view-box;
+  transform: translateY(calc(var(--on) * -0.9px));
+}
+
+/* grid — the products spread apart, which is the whole gesture of the pane
+   this icon opens. */
+[data-icon="grid"] .i-tl { transform: translate(calc(var(--on) * -0.9px), calc(var(--on) * -0.9px)); }
+[data-icon="grid"] .i-tr { transform: translate(calc(var(--on) * 0.9px), calc(var(--on) * -0.9px)); }
+[data-icon="grid"] .i-bl { transform: translate(calc(var(--on) * -0.9px), calc(var(--on) * 0.9px)); }
+[data-icon="grid"] .i-br { transform: translate(calc(var(--on) * 0.9px), calc(var(--on) * 0.9px)); }
+
+/* phone — the handset comes off the hook. */
+[data-icon="phone"] .i-handset {
+  transform: rotate(calc(var(--on) * -14deg)) scale(calc(1 + var(--on) * 0.06));
+}
+
+/* avatar — the head lifts clear of the shoulders. */
+[data-icon="avatar"] .i-head { transform: translateY(calc(var(--on) * -0.9px)); }
+[data-icon="avatar"] .i-shoulders {
+  transform-origin: bottom;
+  transform: scaleX(calc(1 + var(--on) * 0.08));
+}
+
+/* compass — the needle swings and settles, the one place the spring reads. */
+[data-icon="compass"] .i-needle {
+  transform-box: view-box;
+  transform-origin: 10px 10px;
+  transform: rotate(calc(var(--on) * 100deg));
+  transition: transform calc(var(--ico-t) * 1.5) var(--nav-spring);
+}
+
+/* gear — an eighth turn, which is exactly one tooth. */
+[data-icon="gear"] .i-teeth {
+  transform-box: view-box;
+  transform-origin: 10px 10px;
+  transform: rotate(calc(var(--on) * 45deg));
+  transition: transform calc(var(--ico-t) * 1.4) var(--nav-spring);
+}
+
+/* globe — the meridian turns round the sphere. */
+[data-icon="globe"] .i-meridian {
+  transform-box: view-box;
+  transform-origin: 10px 10px;
+  transform: scaleX(calc(1 - var(--on) * 0.72));
+}
+
+/* face — it looks up and smiles. */
+[data-icon="face"] .i-eyes { transform: translateY(calc(var(--on) * -0.7px)); }
+[data-icon="face"] .i-smile {
+  transform-origin: top;
+  transform: scale(calc(1 + var(--on) * 0.16));
+}
+
+/* target — the sight closes in on the pin. */
+[data-icon="target"] .i-ring { transform: scale(calc(1 - var(--on) * 0.22)); }
+[data-icon="target"] .i-pin { transform: scaleY(calc(1 - var(--on) * 0.3)); }
+
+/* flag — the cloth catches. */
+[data-icon="flag"] .i-cloth {
+  transform-origin: left;
+  transform: scaleX(calc(1 + var(--on) * 0.1));
+}
+
+/* In the full-screen menu every row is already open, so the icons rest. */
+@media (max-width: 1150px) {
+  .nav a.is-current .nav-ico { --on: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-ico { --on: 0 !important; }
+  .nav-ico svg * { transition: none; }
+}

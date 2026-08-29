@@ -1,0 +1,10 @@
+/* Ported from the <style> block in about.html — page-specific rules only; everything shared is in site.css. */
+
+.masthead { max-width: 1180px; margin: 0 auto; padding: 148px var(--header-x) 8px; }
+.masthead h1 { font-size: 54px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.02; }
+.masthead h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; }
+.masthead .section-lede { margin-top: 22px; font-size: 16.5px; }
+@media (max-width: 900px) {
+  .masthead { padding: 118px 24px 4px; }
+  .masthead h1 { font-size: 36px; }
+}

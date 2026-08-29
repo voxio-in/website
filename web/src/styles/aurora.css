@@ -1,0 +1,163 @@
+/* aurora.css — the site-wide hero backdrop, and the day/night palette. Replaces the fixed hero video on every page. Palette: #006161 from the brief, with the aurora photograph's navy as the ground. */
+
+.aur {
+  --teal:      #006161;
+  --teal-lit:  #0fd6ad;
+  --teal-pale: #7ef2d2;
+  --night:     #03171c;
+  --night-2:   #041b2b;
+
+  --aur-photo-filter: brightness(0.78) saturate(1.05) contrast(1.06);
+  --aur-ground: var(--night);
+  --aur-wash-1: rgba(15, 214, 173, 0.10);
+  --aur-wash-2: rgba(0, 97, 97, 0.18);
+  --aur-wash-3: rgba(0, 97, 97, 0.15);
+  --aur-wash-floor: var(--night-2);
+  --aur-wash-blend: screen;
+  --aur-stars: 0.5;
+  --aur-curtains: 0.42;
+  --aur-vignette-1: rgba(3, 12, 16, 0.34);
+  --aur-vignette-2: rgba(3, 12, 16, 0.66);
+  --aur-vignette-3: rgba(3, 12, 16, 0.48);
+  --aur-wire: var(--teal-pale);
+  --aur-wire-op: 0.35;
+
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--aur-ground);
+}
+
+.aur-photo,
+.aur-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: var(--aur-photo-filter);
+  transform: scale(1.06);
+  border: 0;
+}
+.aur-photo {
+  background: url("/assets/aurora.webp") center / cover no-repeat;
+}
+.aur-photo { animation: aur-drift 46s ease-in-out infinite alternate; }
+@keyframes aur-drift {
+  from { transform: scale(1.06) translate3d(-1.1%, -0.7%, 0); }
+  to   { transform: scale(1.12) translate3d(1.1%,  0.7%, 0); }
+}
+
+.aur-wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 70% at 50% 2%, var(--aur-wash-1), transparent 58%),
+    radial-gradient(90% 58% at 14% 22%, var(--aur-wash-2), transparent 66%),
+    radial-gradient(80% 54% at 88% 16%, var(--aur-wash-3), transparent 68%),
+    linear-gradient(180deg, transparent 34%, var(--aur-wash-floor) 84%, var(--aur-ground) 100%);
+  mix-blend-mode: var(--aur-wash-blend);
+}
+
+.aur-stars {
+  position: absolute;
+  inset: -10%;
+  background-image:
+    radial-gradient(1.4px 1.4px at 20% 14%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1.1px 1.1px at 68% 8%,  rgba(255,255,255,0.65), transparent),
+    radial-gradient(1.6px 1.6px at 41% 31%, rgba(210,255,245,0.75), transparent),
+    radial-gradient(1px   1px   at 88% 24%, rgba(255,255,255,0.55), transparent);
+  background-size: 340px 260px, 470px 300px, 610px 420px, 260px 210px;
+  opacity: var(--aur-stars);
+  animation: aur-twinkle 7s ease-in-out infinite alternate;
+  transition: opacity 0.6s ease;
+}
+@keyframes aur-twinkle { from { opacity: 0.34; } to { opacity: 0.62; } }
+
+.aur-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.aur-curtains { mix-blend-mode: screen; opacity: var(--aur-curtains); }
+
+.aur-wave { transform-origin: 50% 40%; }
+.aur-wave--1 { animation: aur-sway-1 19s ease-in-out infinite alternate; }
+.aur-wave--2 { animation: aur-sway-2 27s ease-in-out infinite alternate; opacity: 0.82; }
+.aur-wave--3 { animation: aur-sway-3 34s ease-in-out infinite alternate; opacity: 0.6; }
+
+@keyframes aur-sway-1 {
+  from { transform: translate3d(-4%, 0, 0)   scaleY(1);    }
+  to   { transform: translate3d(5%, -3%, 0)  scaleY(1.14); }
+}
+@keyframes aur-sway-2 {
+  from { transform: translate3d(6%, 2%, 0)   scaleY(1.1);  }
+  to   { transform: translate3d(-5%, -2%, 0) scaleY(0.92); }
+}
+@keyframes aur-sway-3 {
+  from { transform: translate3d(-7%, 1%, 0)  scaleY(0.96); }
+  to   { transform: translate3d(4%, 3%, 0)   scaleY(1.2);  }
+}
+
+.aur-inf { fill: none; stroke-linecap: round; }
+
+.aur-inf-wire {
+  stroke: var(--aur-wire);
+  stroke-width: 1.8;
+  opacity: var(--aur-wire-op);
+}
+
+.aur-inf-trail {
+  stroke-width: 2.6;
+  stroke-dasharray: 520 2880;
+  animation: aur-run 9s linear infinite;
+}
+.aur-inf-head {
+  stroke: var(--teal-pale);
+  stroke-width: 3.4;
+  stroke-dasharray: 42 3358;
+  filter: drop-shadow(0 0 9px var(--teal-lit));
+  animation: aur-run 9s linear infinite;
+}
+.aur-inf-head { animation-delay: -1.38s; }
+
+@keyframes aur-run {
+  from { stroke-dashoffset: 3400; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.aur-inf { animation: aur-breathe 13s ease-in-out infinite alternate; transform-origin: 50% 50%; }
+@keyframes aur-breathe {
+  from { opacity: 0.75; transform: scale(0.985) rotate(-0.7deg); }
+  to   { opacity: 1;    transform: scale(1.015) rotate(0.7deg); }
+}
+
+.aur-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(64% 52% at 50% 40%, var(--aur-vignette-1) 0%, transparent 70%),
+    radial-gradient(78% 64% at 50% 46%, transparent 38%, var(--aur-vignette-2) 100%),
+    linear-gradient(180deg, var(--aur-vignette-3) 0%, transparent 24%);
+}
+
+.aur--idle .aur-photo,
+.aur--idle .aur-stars,
+.aur--idle .aur-wave,
+.aur--idle .aur-inf,
+.aur--idle .aur-inf-trail,
+.aur--idle .aur-inf-head { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aur-photo, .aur-stars, .aur-wave, .aur-inf,
+  .aur-inf-trail, .aur-inf-head { animation: none; }
+}
+
+.scroll {
+  background: linear-gradient(
+    180deg,
+    rgba(3, 20, 25, 0) 0px,
+    rgba(3, 20, 25, 0) 200px,
+    rgba(3, 20, 25, 0.42) 380px,
+    rgba(3, 20, 25, 0.72) 520px,
+    rgba(3, 20, 25, 0.88) 660px
+  );
+}

@@ -1,0 +1,538 @@
+/* demo.css — the try-it panel, shared by all three product pages. */
+
+.dcard {
+  --dcard-edge: rgba(255, 255, 255, 0.16);
+  --dcard-in: rgba(255, 255, 255, 0.05);
+
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 24px 22px;
+  border-radius: 18px;
+  border: 1px solid var(--dcard-edge);
+  background: rgba(10, 17, 20, 0.82);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.3);
+  color: #eef2f3;
+  text-align: left;
+}
+.dcard--wide { max-width: 560px; }
+.dcard--stage { max-width: 860px; }
+
+.dstep {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 18px 0 9px;
+}
+.dstep:first-child { margin-top: 0; }
+.dstep-n {
+  flex: none;
+  width: 18px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.34);
+  font-variant-numeric: tabular-nums;
+}
+.dstep-t {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #eef2f3;
+}
+.dopt {
+  margin-left: 6px;
+  font-weight: 400;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.38);
+}
+.dhint {
+  margin: 9px 0 0;
+  padding-left: 27px;
+  font-size: 12.6px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+.seg-o {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease;
+}
+.seg-o:hover { background: rgba(255, 255, 255, 0.06); color: #eef2f3; }
+.seg-o.is-on {
+  background: #f2f5f6;
+  color: #0b1416;
+  font-weight: 500;
+}
+
+.segstrip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.segstrip .seg-o:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.segstrip .seg-o {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  text-align: left;
+}
+.segstrip .seg-o.is-on { border-color: transparent; }
+.seg-sub {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+}
+.seg-o.is-on .seg-sub { color: rgba(11, 20, 22, 0.62); }
+
+.numrow {
+  display: flex;
+  gap: 8px;
+}
+.numcc,
+.numin,
+.softin {
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font: inherit;
+  transition: border-color 0.22s ease, background 0.22s ease;
+}
+.numcc:focus,
+.numin:focus,
+.softin:focus {
+  outline: none;
+  border-color: rgba(126, 242, 210, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+.numcc {
+  width: 74px;
+  flex: none;
+  height: 56px;
+  padding: 0 12px;
+  font-size: 17px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+.numin {
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  padding: 0 16px;
+  font-size: 20px;
+  letter-spacing: 0.01em;
+}
+.numin::placeholder { color: rgba(255, 255, 255, 0.26); }
+
+.softin {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.softin::placeholder { color: rgba(255, 255, 255, 0.24); }
+
+.dgo {
+  width: 100%;
+  height: 52px;
+  margin-top: 20px;
+  border-radius: 12px;
+  border: 1px solid #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #e9ecec 52%, #d3d8d8 100%);
+  color: #0b1416;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px rgba(0, 0, 0, 0.3);
+  transition: filter 0.22s ease, transform 0.12s ease;
+}
+.dgo:hover { filter: brightness(1.04); }
+.dgo:active { transform: scale(0.995); }
+.dgo:disabled { opacity: 0.55; cursor: default; }
+.dgo--quiet {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.82);
+  box-shadow: none;
+}
+.dgo--quiet:hover { background: rgba(255, 255, 255, 0.1); }
+
+.dnote {
+  margin: 10px 0 0;
+  font-size: 12.6px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dexpect {
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+  font-size: 12.6px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.dexpect summary {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.62);
+  list-style: none;
+}
+.dexpect summary::-webkit-details-marker { display: none; }
+.dexpect summary::before {
+  content: "+ ";
+  color: rgba(255, 255, 255, 0.34);
+}
+.dexpect[open] summary::before { content: "− "; }
+.dexpect p { margin: 8px 0 0; line-height: 1.6; }
+
+.dlive-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 4px;
+}
+.dlive-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffd479;
+  animation: dlive-pulse 0.85s ease-in-out infinite;
+}
+.dlive-dot.is-done { background: rgba(255, 255, 255, 0.3); animation: none; }
+@keyframes dlive-pulse {
+  0%, 100% { transform: scale(0.72); opacity: 0.5; }
+  50%      { transform: scale(1);    opacity: 1; }
+}
+.dlive-status {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.dlive-clock {
+  margin-left: auto;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dasks {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+}
+.dasks-k {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+.dasks ul { margin: 0; padding-left: 17px; }
+.dasks li {
+  margin: 5px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dfeed {
+  margin-top: 16px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dfeed-empty { margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.4); }
+.dturn { display: flex; flex-direction: column; gap: 3px; }
+.dturn-who {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.38);
+}
+.dturn-text {
+  margin: 0;
+  font-size: 13.4px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
+}
+.dturn--agent .dturn-text { color: #cdeee3; }
+
+@media (max-width: 560px) {
+  .dcard { padding: 20px 16px 18px; border-radius: 15px; }
+  .seg { flex-wrap: wrap; }
+  .seg-o { flex: 1 1 calc(50% - 4px); }
+  .numrow { flex-wrap: wrap; }
+  .numcc { width: 68px; }
+  .numin { flex: 1 1 140px; }
+  .dhint { padding-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlive-dot { animation: none; }
+}
+
+.iface {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 13px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(80% 90% at 50% 18%, color-mix(in srgb, var(--iface-tint, #0fd6ad) 22%, transparent), transparent 70%),
+    linear-gradient(180deg, #0d1a1f, #070f12);
+}
+@supports not (background: color-mix(in srgb, red 20%, transparent)) {
+  .iface { background: linear-gradient(180deg, #0d1a1f, #070f12); }
+}
+
+.iface-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.iface-head {
+  transform-origin: 60px 44px;
+  animation: iface-breathe 5.5s ease-in-out infinite;
+}
+@keyframes iface-breathe {
+  0%, 100% { transform: scale(1)      translateY(0); }
+  50%      { transform: scale(1.014)  translateY(0.6px); }
+}
+
+.iface-lids path {
+  transform-origin: center;
+  animation: iface-blink 5.2s ease-in-out infinite;
+}
+.iface-lids path:last-child { animation-delay: 0.04s; }
+@keyframes iface-blink {
+  0%, 92%, 100% { opacity: 0; transform: scaleY(0.1); }
+  94%, 96%      { opacity: 1; transform: scaleY(1); }
+}
+
+.iface-id {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+.iface-name { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; color: #fff; }
+.iface-role { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+
+.dcard .room,
+.dcard .wa {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.dcard .wa-preview {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.dcard .wastage .wa-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+}
+.dcard .room-stage,
+.dcard .wa-stage {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  min-height: 0;
+}
+.dcard .room-state {
+  margin: 10px 0 0;
+  font-size: 12.6px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.dcard .room-clock {
+  margin: 4px 0 0;
+  font-size: 12.6px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.42);
+}
+.dcard .room-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+.dcard .room-actions .btn {
+  flex: 1;
+  height: 52px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.dcard .room-actions .form-note {
+  flex: 1 0 100%;
+  font-size: 12.6px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.dcard .stage {
+  border-radius: 13px;
+  overflow: hidden;
+}
+.dcard .layouts { margin-top: 10px; }
+
+.wastage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0b1216;
+}
+
+.wachrome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wachrome i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+.wachrome-url {
+  margin-left: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wastage-body {
+  position: absolute;
+  inset: 33px 0 0 0;
+  overflow: hidden;
+}
+
+.wacap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 13px;
+  background: linear-gradient(180deg, rgba(6, 12, 14, 0), rgba(6, 12, 14, 0.92) 46%);
+  color: #dff4ec;
+  font-size: 12.6px;
+  line-height: 1.4;
+}
+.wacap-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0fd6ad;
+  animation: dlive-pulse 0.85s ease-in-out infinite;
+}
+.wacap-empty { color: rgba(255, 255, 255, 0.45); }
+
+.wachips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.wachip {
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 12.4px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.wachip:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #fff;
+}
+.wachips-k {
+  flex: 1 0 100%;
+  margin-bottom: 2px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+@media (max-width: 700px) {
+  .dcard--stage { max-width: 100%; }
+  .wachips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .wachips::-webkit-scrollbar { display: none; }
+  .wachips-k { flex: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iface-head, .iface-lids path, .wacap-dot { animation: none; }
+  .iface-lids path { opacity: 0; }
+}

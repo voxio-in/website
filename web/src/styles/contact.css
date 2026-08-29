@@ -1,0 +1,17 @@
+/* Ported from the <style> block in contact.html — page-specific rules only; everything shared is in site.css. */
+
+.masthead { max-width: 1180px; margin: 0 auto; padding: 132px var(--header-x) 8px; text-align: center; }
+.masthead h1 { font-size: 54px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.02; }
+.masthead h1 em { font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-weight: 400; }
+.masthead .section-lede { margin: 22px auto 0; font-size: 16.5px; max-width: 620px; }
+@media (max-width: 900px) {
+  .masthead { padding: 112px 24px 4px; }
+  .masthead h1 { font-size: 34px; }
+}
+
+.contact-scroll {
+  position: relative;
+  z-index: 2;
+  background: none;
+  padding-bottom: 60px;
+}
