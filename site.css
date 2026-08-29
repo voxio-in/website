@@ -1076,12 +1076,31 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
   .logo, .burger { z-index: 80; }
 
   .menu-backdrop { display: block; }
+  /* The menu needs a floor, not a tint. At 42% the page underneath stayed
+     legible straight through the links, and blur alone does not fix that —
+     blurred body copy is still a field of light behind white text, and on
+     phones the blur is the first thing the browser drops. So the backdrop is
+     opaque enough to stand on its own, and the blur is what is left over: a
+     hint of the aurora moving behind it rather than the page's own text. */
   body.menu-open .menu-backdrop {
     opacity: 1;
     visibility: visible;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(0, 97, 97, 0.22), transparent 70%),
+      rgba(7, 9, 11, 0.955);
+    backdrop-filter: blur(28px) saturate(130%);
+    -webkit-backdrop-filter: blur(28px) saturate(130%);
   }
+  /* No backdrop-filter (older Firefox, and anything that has switched it off):
+     the floor has to carry the whole job. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    body.menu-open .menu-backdrop {
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(0, 97, 97, 0.2), transparent 70%),
+        #06080a;
+    }
+  }
+
 
   /* The shell leaves the sheet and becomes the full-screen menu; both groups
      and the CTA stack inside it. */
@@ -1119,11 +1138,13 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
     font-size: 19px;
     border-radius: 14px;
     border: 1px solid var(--glass-edge);
-    background: var(--glass-fill);
+    /* Its own contrast, not the desktop sheet's translucency: on the menu floor
+       there is nothing behind these to borrow light from. */
+    background: rgba(255, 255, 255, 0.055);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.24);
   }
-  .nav a:hover { background: var(--glass-fill-hover); }
+  .nav a:hover { background: rgba(255, 255, 255, 0.1); }
   .nav a.is-current { background: rgba(255, 255, 255, 0.16); }
 
   .header-cta {
@@ -1858,3 +1879,36 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 .numbers--two .num-v { font-size: 46px; }
 .numbers--two .num-u { font-size: 22px; }
 .numbers--two .num-k { font-size: 13.5px; color: rgba(255, 255, 255, 0.74); }
+
+/* ============================================================
+   logo walls, case marks and card heads on small screens
+   ------------------------------------------------------------
+   The desktop sizes are set for a wall that gets a full row to itself. On a
+   phone the same wall wraps to three or four rows, so everything comes down a
+   step and the gaps close with it.
+   ============================================================ */
+@media (max-width: 900px) {
+  .logo-wall { gap: 22px 36px; }
+  .logo-wall img { height: 36px; max-width: 150px; }
+  .logo-wall img.logo-crest { height: 46px; }
+
+  .case-id img.logo-crest { height: 56px; }
+
+  .quote-by img { height: 30px; }
+  .quote-by img.logo-crest { height: 38px; }
+}
+
+@media (max-width: 560px) {
+  .logo-wall { gap: 20px 26px; }
+  .logo-wall img { height: 30px; max-width: 120px; }
+  .logo-wall img.logo-crest { height: 40px; }
+
+  .case-id img.logo-crest { height: 48px; }
+}
+
+/* A hover label cannot be dismissed by a finger — on touch it would latch on
+   after a tap and sit over the next thing the reader looks at. The marks carry
+   their names in alt text, which is what a touch reader actually gets. */
+@media (hover: none), (pointer: coarse) {
+  .logo-tip::after, .logo-tip::before { content: none; }
+}

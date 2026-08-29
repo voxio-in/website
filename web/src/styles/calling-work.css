@@ -27,4 +27,13 @@
 @media (max-width: 900px) {
   .case { grid-template-columns: 1fr; gap: 24px; }
   .case-id { position: static; flex-direction: row; align-items: center; gap: 16px; flex-wrap: wrap; }
+  /* Paired with the desktop height above: the case column becomes a row here,
+     so the marks come down a step with it. Lives in this file because the
+     desktop height does — site.css only carries the crest exceptions. */
+  .case-id img { height: 44px; max-width: 160px; }
+
+}
+
+@media (max-width: 560px) {
+  .case-id img { height: 38px; }
 }

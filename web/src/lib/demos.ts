@@ -20,6 +20,8 @@ export type Demo = {
   blurb: string
   /** what to say once it picks up */
   asks: string[]
+  /** the first thing to say, shown while the room waits for you to speak */
+  opener?: string
   greeting: string
   systemPrompt: string
   /** whether the room negotiates video in both directions */
@@ -45,6 +47,7 @@ const INTERVIEW: Demo = {
     'Give a deliberately vague answer and watch it dig.',
     'Interrupt it mid-question — it stops.',
   ],
+  opener: '“Hi — happy to be here. Where would you like me to start?”',
   greeting:
     'Hi! Thanks for making the time. I am going to keep this fairly short. To start, tell me a little about yourself and something you have built recently.',
   systemPrompt: `You are a first-round technical interviewer at a software company, talking to a candidate over a voice call. You are warm but not soft: you are here to find out what this person can actually do.
@@ -103,6 +106,7 @@ const MUTHU: Demo = {
     'Acknowledge the mother and the bills before anything else.',
     'Talk over him — he stops.',
   ],
+  opener: '“Good morning Mr Muthu. Take a seat — tell me what happened.”',
   greeting: '',
   systemPrompt: '',
   video: true,
@@ -120,6 +124,7 @@ const CHERYL: Demo = {
     'Refuse the refund outright and see where it goes.',
     'Offer an exchange instead.',
   ],
+  opener: '“Hi there — what can I help you with today?”',
   greeting: '',
   systemPrompt: '',
   video: true,
@@ -137,6 +142,7 @@ const NAIR: Demo = {
     'Let a silence run rather than filling it.',
     'Ask about his feet.',
   ],
+  opener: '“Good to see you again, Mr Nair. How have you been keeping?”',
   greeting: '',
   systemPrompt: '',
   video: true,
@@ -145,7 +151,9 @@ const NAIR: Demo = {
 
 export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, CHERYL, NAIR]
 
-export const DEFAULT_DEMO: DemoId = 'interview'
+/* Muthu is the demo that shows the thing that is actually hard — a face the
+   model chooses, turn by turn — so it is the one the page opens on. */
+export const DEFAULT_DEMO: DemoId = 'mm'
 
 export function demoById(id: string): Demo {
   return DEMOS.find((d) => d.id === id) ?? DEMOS[0]!

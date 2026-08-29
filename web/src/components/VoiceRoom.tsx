@@ -46,6 +46,12 @@ export default function VoiceRoom({
   const [layout, setLayout] = useState<Layout>('focus')
   const [hasAgentVideo, setHasAgentVideo] = useState(false)
   const [hasOwnVideo, setHasOwnVideo] = useState(false)
+  /* The roleplays do not greet you — they wait, and a face waiting in silence
+     reads as broken rather than as your turn. `opened` is the moment either
+     side actually makes a sound; until then the room says whose turn it is. */
+  const [youSpeaking, setYouSpeaking] = useState(false)
+  const [opened, setOpened] = useState(false)
+  const [cueReady, setCueReady] = useState(false)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -53,12 +59,12 @@ export default function VoiceRoom({
   const agentVideoRef = useRef<HTMLVideoElement>(null)
   const ownVideoRef = useRef<HTMLVideoElement>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
-  const rafRef = useRef<number | null>(null)
+  const rafRef = useRef<number[]>([])
   const sessionRef = useRef<{ id: string; startedAt: number } | null>(null)
 
   const hangUp = useCallback((next: Phase = 'ended') => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    rafRef.current = null
+    rafRef.current.forEach(cancelAnimationFrame)
+    rafRef.current = []
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
     pcRef.current?.close()
@@ -82,6 +88,9 @@ export default function VoiceRoom({
       }).catch(() => {})
     }
     setAgentSpeaking(false)
+    setYouSpeaking(false)
+    setOpened(false)
+    setCueReady(false)
     setLeft(null)
     setPhase(next)
   }, [])
@@ -98,24 +107,30 @@ export default function VoiceRoom({
     return () => clearTimeout(t)
   }, [phase, left, hangUp])
 
-  const watchLevel = useCallback((stream: MediaStream) => {
-    const ctx = audioCtxRef.current ?? new AudioContext()
-    audioCtxRef.current = ctx
-    const analyser = ctx.createAnalyser()
-    analyser.fftSize = 512
-    analyser.smoothingTimeConstant = 0.7
-    ctx.createMediaStreamSource(stream).connect(analyser)
+  /* One meter per stream: the agent's, so the orb moves, and yours, so the
+     room knows the moment you have taken your turn. */
+  const watchLevel = useCallback(
+    (stream: MediaStream, onLevel: (speaking: boolean) => void, gate = 10) => {
+      const ctx = audioCtxRef.current ?? new AudioContext()
+      audioCtxRef.current = ctx
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 512
+      analyser.smoothingTimeConstant = 0.7
+      ctx.createMediaStreamSource(stream).connect(analyser)
 
-    const data = new Uint8Array(analyser.frequencyBinCount)
-    const tick = () => {
-      analyser.getByteFrequencyData(data)
-      let sum = 0
-      for (const v of data) sum += v
-      setAgentSpeaking(sum / data.length > 10)
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-  }, [])
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      const slot = rafRef.current.length
+      const tick = () => {
+        analyser.getByteFrequencyData(data)
+        let sum = 0
+        for (const v of data) sum += v
+        onLevel(sum / data.length > gate)
+        rafRef.current[slot] = requestAnimationFrame(tick)
+      }
+      rafRef.current[slot] = requestAnimationFrame(tick)
+    },
+    [],
+  )
 
   const connect = useCallback(
     async (config: Extract<RoomStart, { ok: true }>, wantsVideo: boolean) => {
@@ -150,7 +165,7 @@ export default function VoiceRoom({
           if (e.track.kind === 'audio' && audioRef.current) {
             audioRef.current.srcObject = stream
             void audioRef.current.play().catch(() => {})
-            watchLevel(stream)
+            watchLevel(stream, setAgentSpeaking)
           }
           if (e.track.kind === 'video' && agentVideoRef.current) {
             agentVideoRef.current.srcObject = stream
@@ -214,6 +229,9 @@ export default function VoiceRoom({
         stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       }
       streamRef.current = stream
+      /* Your own level, on a higher gate than the agent's: this only has to
+         catch you actually speaking, not the room you are sitting in. */
+      watchLevel(stream, setYouSpeaking, 16)
       if (stream.getVideoTracks().length && ownVideoRef.current) {
         ownVideoRef.current.srcObject = stream
         void ownVideoRef.current.play().catch(() => {})
@@ -259,6 +277,22 @@ export default function VoiceRoom({
   const live = phase === 'live'
   const busy = phase === 'asking' || phase === 'connecting'
 
+  /* Either side making a sound is the session having started. */
+  useEffect(() => {
+    if (agentSpeaking || youSpeaking) setOpened(true)
+  }, [agentSpeaking, youSpeaking])
+
+  /* The cue waits a beat before appearing. The demos that DO greet you start
+     talking within that beat, so they never show it; the ones that wait in
+     silence are exactly the ones left holding it. */
+  useEffect(() => {
+    if (!live) return
+    const t = setTimeout(() => setCueReady(true), 1100)
+    return () => clearTimeout(t)
+  }, [live])
+
+  const cue = live && cueReady && !opened
+
   return (
     <div className="room">
       <audio ref={audioRef} hidden />
@@ -289,11 +323,22 @@ export default function VoiceRoom({
             <span />
           </div>
         )}
+        {cue ? (
+          <div className="room-cue" role="status">
+            <span className="room-cue-k">Your turn — say something</span>
+            {demo.opener ? <span className="room-cue-l">{demo.opener}</span> : null}
+          </div>
+        ) : null}
         <p className="room-state" role="status" aria-live="polite">
           {phase === 'idle' && `${demo.role} — press start and talk.`}
           {phase === 'asking' && 'Asking for your microphone…'}
           {phase === 'connecting' && 'Connecting…'}
-          {live && (agentSpeaking ? 'Speaking' : 'Listening — go ahead.')}
+          {live &&
+            (agentSpeaking
+              ? 'Speaking'
+              : opened
+                ? 'Listening — go ahead.'
+                : 'Listening — it is waiting for you to start.')}
           {phase === 'ended' && 'Session ended.'}
           {phase === 'failed' && (error ?? 'That did not work.')}
         </p>
