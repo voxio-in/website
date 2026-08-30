@@ -1,5 +1,6 @@
-// The footer every page ends with, lifted out of the page markup so the nine
-// links live in one place.
+// The footer every page ends with, lifted out of the page markup so the links
+// live in one place. Privacy and Terms sit at the end: a reader looking for them
+// looks last, and they should not push the product links down.
 
 import { Link } from '@tanstack/react-router'
 
@@ -17,6 +18,8 @@ export default function SiteFooter() {
           <Link to="/avatar">3d Avatar Agents</Link>
           <Link to="/webnav">Website Navigation</Link>
           <Link to="/contact">Contact us</Link>
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
         </nav>
       </footer>
   )

@@ -1,0 +1,12 @@
+/* One stylesheet instead of six.
+   Every file below is loaded on every route, so shipping them as separate
+   <link>s bought nothing and cost six round trips on a connection that is
+   still HTTP/1.1. Vite inlines these @imports at build time, so this compiles
+   down to a single request. Order is the old link order and matters: site.css
+   holds the base layer that the others override. */
+@import '../../../site.css';
+@import '../../../nav-icons.css';
+@import './aurora.css';
+@import './glyphs.css';
+@import './home.css';
+@import './loading.css';

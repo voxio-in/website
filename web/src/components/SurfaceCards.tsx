@@ -80,7 +80,10 @@ const SURFACES: Surface[] = [
         <div className="ctrans">
           {CALL_LINES.map((l, i) => (
             <span key={i} className={`ctrans-l ctrans-l--${i + 1}`}>
-              <b>{l.who}</b>
+              {/* A speaker label, not emphasis. <b> here was presentational and
+                  repeating it five times dilutes what a real <b> on the page
+                  means; the weight now comes from .ctrans-who in CSS. */}
+              <span className="ctrans-who">{l.who}</span>
               {l.text}
             </span>
           ))}

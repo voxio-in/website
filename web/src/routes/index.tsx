@@ -44,7 +44,7 @@ function Home() {
                 system, it works it. */}
             <h1>
               <span className="headline-line">
-                <span className="headline-text appear appear--mask" style={{ "--d": "0.42s" }}>Agents that talk, type</span>
+                <span className="headline-text appear appear--mask" style={{ "--d": "0.42s" }}>Agents that talk, type{' '}</span>
               </span>
               <span className="headline-line">
                 <span className="headline-text appear appear--mask" style={{ "--d": "0.62s" }}>and <em>get it done</em>.</span>
@@ -52,9 +52,10 @@ function Home() {
             </h1>
 
             <p className="lede appear appear--soft" style={{ "--d": "0.82s" }}>
-              Voxio Agents puts one intelligent agent on every line your customer already uses
-              &mdash; the phone, the chat window, a message thread, or face-to-face on a
-              screen. It does not explain your system to them. It works it while they talk.
+              Wherever your customer shows up, it&rsquo;s already there &mdash; on the phone,
+              in the chat window, or face-to-face on a screen. Whether they talk or type, it
+              does not explain your system to them. It reads the room, works the system, and
+              gets it done while the conversation turns.
             </p>
 
             <div className="hero-actions">

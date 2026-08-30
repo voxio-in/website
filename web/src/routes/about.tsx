@@ -5,6 +5,53 @@ import { useReveal } from '#/components/useReveal'
 
 import '#/styles/about.css'
 
+/* Short answers on purpose. Anything that needs a paragraph is a conversation,
+   and the conversation is what the contact form is for. */
+const FAQ = [
+  {
+    q: 'How long does it take to get an agent running?',
+    a: 'A working demo of your own conversation in days, not months. A production deployment depends on how much of your system the agent has to touch — reading a schedule is quick, writing into a case management system takes longer because it has to be right every time.',
+  },
+  {
+    q: 'What does it connect to?',
+    a: 'Anything with an API. The agent works your system through the same interfaces your own software uses — calendars, CRMs, case systems, ticketing, internal databases. Where there is no API, we look at what else the workflow can hang off before we promise it.',
+  },
+  {
+    q: 'Which languages does it speak?',
+    a: 'English is what every deployment on this site runs in today, including Singapore English with its own rhythm and vocabulary. Other languages are a configuration change rather than a rebuild, but we test a language properly before we put it in front of your customers.',
+  },
+  {
+    q: 'Does it replace our people?',
+    a: 'No, and the deployments here are the evidence. The training work makes existing officers better at the conversations they already have. The calling work takes the calls nobody had capacity for. The agent hands over the moment a person should be on the line.',
+  },
+  {
+    q: 'What happens when it does not know the answer?',
+    a: 'It says so and hands over, rather than inventing something. Where a handover target exists — a person, a queue, a callback — that is where the conversation goes. The transcript goes with it, so whoever picks it up is not starting from nothing.',
+  },
+  {
+    q: 'Where does our data go?',
+    a: 'Into your systems and the services needed to run the conversation, and nowhere else. We do not train models on your conversations. For a deployment, the data handling is written into the agreement we sign, and it is a question we expect to be asked hard.',
+  },
+  {
+    q: 'What does it cost?',
+    a: 'It depends on the volume of conversations and how deep the system integration goes, so there is no list price that would be honest. Tell us the conversation you want handled and we will scope it.',
+  },
+  {
+    q: 'How do we start?',
+    a: 'Describe one conversation your people keep getting wrong, or keep not having because there is no time. That is how every engagement on this site started.',
+  },
+]
+
+const FAQ_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+}
+
 export const Route = createFileRoute('/about')({
   head: () => ({
     meta: [
@@ -76,6 +123,31 @@ function About() {
               that is what the stack is tuned to hold.
             </p>
           </div>
+        </section>
+
+        {/* The questions that arrive in the first reply to almost every enquiry.
+            Answering them here shortens that exchange, and it is the one block
+            on the site a search engine or an assistant can quote back verbatim
+            — which is why it also emits FAQPage structured data. */}
+        <section className="section" id="faq">
+          <div className="section-head rise">
+            <span className="eyebrow">Common questions</span>
+            <h2 className="section-title">Asked <em>every time</em>.</h2>
+          </div>
+
+          <div className="faq rise">
+            {FAQ.map((f) => (
+              <details className="faq-item" key={f.q}>
+                <summary>{f.q}</summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
+          </div>
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_LD) }}
+          />
         </section>
 
         <section className="section cta">

@@ -1,0 +1,95 @@
+/* legal.css — privacy policy and terms of service.
+   These two pages are read, not scanned, so they get a single narrow measure
+   and nothing else: no cards, no glass, no reveal choreography competing with
+   a paragraph someone is actually trying to parse. Everything here rides on
+   the site's existing type scale and colour tokens. */
+
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 22px 96px;
+}
+
+.legal-updated {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 44px;
+}
+
+.legal h2 {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 52px 0 14px;
+}
+
+.legal h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 30px 0 10px;
+}
+
+.legal p,
+.legal li {
+  font-size: 15.5px;
+  line-height: 1.72;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.legal p { margin: 0 0 16px; }
+
+.legal ul {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+.legal li { margin-bottom: 9px; }
+
+.legal strong { color: rgba(255, 255, 255, 0.92); font-weight: 600; }
+
+.legal a {
+  color: var(--teal-lit, #7fe3d6);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The one place these pages carry a visual device: the table of what we store
+   and why. A rule between rows is enough — a bordered table would read as a
+   different site. */
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 22px;
+}
+
+.legal-table th,
+.legal-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.legal-table th {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.legal-table td { color: rgba(255, 255, 255, 0.72); }
+
+/* A table cannot reflow, so on a phone it scrolls inside its own box rather
+   than pushing the page sideways. */
+.legal-scroll { overflow-x: auto; }
+
+@media (max-width: 640px) {
+  .legal h2 { font-size: 19px; margin-top: 42px; }
+  .legal p, .legal li { font-size: 15px; }
+  .legal-table { min-width: 460px; }
+}

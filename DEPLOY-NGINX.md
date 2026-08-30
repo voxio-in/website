@@ -106,3 +106,30 @@ location = /index.html {
   Start at `p=none` and only tighten once the reports come back clean.
 * **Analytics and a Facebook pixel** need an account and a decision about
   consent. Neither is installed, deliberately.
+
+## Security headers and the version banner
+
+Three audit findings that are one block of config between them. HSTS and
+`server_tokens` are flagged by every checker; the version banner is the
+"web server version is sent within the HTTP header" error.
+
+```nginx
+# In the https server block.
+
+# Stops nginx announcing "nginx/1.24.0 (Ubuntu)" in every response. Put this
+# in the http {} block instead if you want it site-wide.
+server_tokens off;
+
+# HSTS. Start WITHOUT preload and with a short max-age, confirm nothing on the
+# domain still needs plain http, then raise it. Once a browser has seen this
+# header it will refuse http for the whole max-age, and there is no way to call
+# that back — which is why includeSubDomains is the line to think hardest about
+# if anything under voxio.in is not yet on https.
+add_header Strict-Transport-Security "max-age=300" always;
+# After a week of no surprises:
+# add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+```
+
+Note `interview.dashboard.voxio.in` shares the certificate with `voxio.in`, so
+`includeSubDomains` will cover it. Confirm it is https-only before switching the
+long header on.

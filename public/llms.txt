@@ -64,6 +64,8 @@ does mid-conversation inside their systems, which differs every time.
   other companies' products.
 - [About](https://voxio.in/about): who builds it.
 - [Contact](https://voxio.in/contact): describe a conversation and we build it.
+- [Privacy Policy](https://voxio.in/privacy): what the site and its demos record.
+- [Terms of Service](https://voxio.in/terms): the rules for the site and the demos.
 
 ## Contact
 

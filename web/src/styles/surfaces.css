@@ -567,7 +567,7 @@ body.wa-open .hero-photo { display: none; }
   opacity: 0;
   color: rgba(255, 255, 255, 0.68);
 }
-.ctrans-l b {
+.ctrans-l .ctrans-who {
   color: rgba(255, 255, 255, 0.4);
   font-weight: 600;
   margin-right: 6px;

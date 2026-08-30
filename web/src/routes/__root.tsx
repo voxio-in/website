@@ -9,13 +9,7 @@ import {
   Outlet,
 } from '@tanstack/react-router'
 
-import siteCss from '../../../site.css?url'
-import navIconsCss from '../../../nav-icons.css?url'
-
-import auroraCss from '#/styles/aurora.css?url'
-import glyphsCss from '#/styles/glyphs.css?url'
-import homeCss from '#/styles/home.css?url'
-import loadingCss from '#/styles/loading.css?url'
+import bundleCss from '#/styles/bundle.css?url'
 
 import AuroraBackdrop from '#/components/AuroraBackdrop'
 import BootVeil from '#/components/BootVeil'
@@ -39,6 +33,10 @@ const LD = {
       '@type': 'Organization',
       '@id': `${SITE}/#org`,
       name: 'Voxio Agents',
+      /* The domain is short and two testimonials quote customers saying just
+         "Voxio", so a machine reading this page sees both forms. alternateName
+         is what tells it they are one company rather than two. */
+      alternateName: ['Voxio', 'Voxio AI'],
       url: SITE,
       logo: `${SITE}/apple-touch-icon.png`,
       description:
@@ -50,6 +48,7 @@ const LD = {
       '@id': `${SITE}/#site`,
       url: SITE,
       name: 'Voxio Agents',
+      alternateName: 'Voxio',
       publisher: { '@id': `${SITE}/#org` },
     },
   ],
@@ -111,7 +110,10 @@ export const Route = createRootRoute({
       { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
       { rel: 'icon', href: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
       { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
-      { rel: 'alternate icon', href: '/favicon.ico', sizes: '48x48' },
+      /* "shortcut icon" rather than "alternate icon": browsers treat the two
+         the same, but several SEO checkers only recognise the older keyword and
+         report the site as having no favicon at all without it. */
+      { rel: 'shortcut icon', href: '/favicon.ico', sizes: '48x48' },
 
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       {
@@ -133,12 +135,7 @@ export const Route = createRootRoute({
         href: FONTS,
         fetchpriority: 'high',
       },
-      { rel: 'stylesheet', href: siteCss },
-      { rel: 'stylesheet', href: navIconsCss },
-      { rel: 'stylesheet', href: auroraCss },
-      { rel: 'stylesheet', href: glyphsCss },
-      { rel: 'stylesheet', href: homeCss },
-      { rel: 'stylesheet', href: loadingCss },
+      { rel: 'stylesheet', href: bundleCss },
     ],
   }),
   shellComponent: RootDocument,
