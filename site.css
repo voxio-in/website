@@ -1369,6 +1369,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
    under the standard grayscale-and-lift, so they are inverted to white instead.
    Hover lifts them the same amount the others gain by losing their filter. */
 .logo-wall img.logo-invert,
+.logo-quiet img.logo-invert,
 .case-id img.logo-invert {
   filter: grayscale(1) invert(1) brightness(1.05);
 }
@@ -2066,7 +2067,12 @@ html.perf-lite :is(.glow, .pulse, .shimmer, .orbit, .float) { animation: none; }
 .logo-quiet img {
   height: 44px;
   width: auto;
-  opacity: 0.62;
+  /* Higher than the wall's marks. There is no name under it and no case beside
+     it, so the mark has to carry itself. */
+  opacity: 0.74;
   transition: opacity 0.25s ease, filter 0.25s ease;
 }
-.logo-quiet img:hover { opacity: 1; filter: none; }
+/* A near-square mark set to a wordmark's height reads as half the size of the
+   wordmarks beside it, because the eye measures area rather than cap height. */
+.logo-quiet img.logo-crest { height: 78px; }
+.logo-quiet img:hover { opacity: 1; }

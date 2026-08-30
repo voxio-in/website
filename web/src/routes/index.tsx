@@ -159,7 +159,7 @@ function Home() {
             <p className="section-lede">
               Hiring OS for the recruiter screening. Career OS for the candidate trying to earn
               the role. Training OS for the student being prepared for it. Placement OS for the
-              institution doing the preparing. Four products on one engine, with Voxio as the
+              institution doing the preparing. Four products on one engine, with Voxio Agents as the
               voice inside it &mdash; the same engine as the calling agents and the 3D avatars,
               pointed at interviews.
             </p>

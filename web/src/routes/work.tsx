@@ -24,7 +24,7 @@ function Work() {
             A pattern runs through everything below. The work happens in a conversation &mdash;
             a student who has to face a frightened patient, a caller who wants an answer now,
             someone who needs a system to do something and shouldn&rsquo;t have to learn it
-            first. Voxio is the voice on the other side. None of the deployments here was a
+            first. Voxio Agents is the voice on the other side. None of the deployments here was a
             pilot that stayed a pilot, and the two still being built are marked as such.
           </p>
         </div>
@@ -318,7 +318,7 @@ function Work() {
             <div className="case-copy">
               <p>
                 A Singapore client running Voxio Agents as the conversational layer inside their own
-                product &mdash; the same engine as the training deployments, without the Voxio
+                product &mdash; the same engine as the training deployments, without the Voxio Agents
                 name on it.
               </p>
               <div className="case-tags">
@@ -337,7 +337,7 @@ function Work() {
               rather than to a broken icon. */}
           <div className="logo-quiet rise">
             <img
-              className="logo-fine"
+              className="logo-invert logo-crest"
               src="/assets/straits-interactive.png"
               alt="Straits Interactive"
               onError={(e) => { e.currentTarget.style.display = 'none' }}

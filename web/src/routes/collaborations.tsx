@@ -61,7 +61,7 @@ function Collaborations() {
               <h3 className="os-name">Hiring OS</h3>
               <p className="os-for">The recruiter &middot; N candidates → 1 shortlist</p>
               <div className="os-ours">
-                <span className="os-ours-k">Voxio inside it</span>
+                <span className="os-ours-k">Voxio Agents inside it</span>
                 <ul>
                   <li>The whole calling stack &mdash; inbound, outbound and scheduled, on real numbers</li>
                   <li>Turn-taking and barge-in: it stops when the candidate cuts in, and finishes the lines that must be said in full</li>
@@ -104,7 +104,7 @@ function Collaborations() {
               <h3 className="os-name">Career OS</h3>
               <p className="os-for">The candidate &middot; 1 candidate → N openings</p>
               <div className="os-ours">
-                <span className="os-ours-k">Voxio inside it</span>
+                <span className="os-ours-k">Voxio Agents inside it</span>
                 <ul>
                   <li>The interview the candidate practises against, aimed at the specific job they are applying for</li>
                   <li>The same roleplay engine as Training OS and the SIT and MSF deployments &mdash; different room, one engine</li>
@@ -152,7 +152,7 @@ function Collaborations() {
               <h3 className="os-name">Training OS</h3>
               <p className="os-for">The student &middot; rehearsal under real pressure</p>
               <div className="os-ours">
-                <span className="os-ours-k">Voxio inside it</span>
+                <span className="os-ours-k">Voxio Agents inside it</span>
                 <ul>
                   <li>The interview agent itself &mdash; the same roleplay engine as the SIT and MSF deployments</li>
                   <li>Under 500ms before it answers, which is what stops the student performing for it</li>
@@ -208,7 +208,7 @@ function Collaborations() {
               <h3 className="os-name">Placement OS</h3>
               <p className="os-for">The educator &amp; placement officer &middot; N students → 1 drive</p>
               <div className="os-ours">
-                <span className="os-ours-k">Voxio inside it</span>
+                <span className="os-ours-k">Voxio Agents inside it</span>
                 <ul>
                   <li>Per-student and per-class configuration of what the agent weights, set by the teacher before the session</li>
                   <li>Accommodations that change how the agent behaves, not just how it scores &mdash; it can be told not to probe or counter on eye contact</li>

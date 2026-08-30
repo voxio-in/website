@@ -480,7 +480,7 @@ export default function WebActionRoom() {
                 </g>
               </svg>
             </span>
-            <span className="wa-room-k">Voxio is driving</span>
+            <span className="wa-room-k">Voxio Agents is driving</span>
             <span className="wa-room-site">{surface.site}</span>
             <span className="wa-room-right">
               {left !== null ? (
