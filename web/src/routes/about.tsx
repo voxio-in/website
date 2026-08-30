@@ -11,7 +11,7 @@ export const Route = createFileRoute('/about')({
       { title: 'About Us — Voxio Agents' },
       { name: 'description', content: 'Who builds Voxio Agents, and why every deployment starts with somebody describing a conversation their people keep getting wrong.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/about' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/about' }],
   }),
   component: About,
 })

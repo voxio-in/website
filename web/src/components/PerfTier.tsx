@@ -25,6 +25,21 @@ export default function PerfTier() {
   useEffect(() => {
     const root = document.documentElement
 
+    // A switch, so the reduced backdrop can be looked at directly instead of
+    // waited for: ?lite forces it on, ?lite=0 forces it off, and the choice is
+    // remembered for the session so it survives a click through to another
+    // page. Reading it is also the only way to tell, on a machine where one
+    // browser drags and another does not, whether the glass is the reason.
+    const q = new URLSearchParams(window.location.search)
+    const asked = q.has('lite') ? q.get('lite') !== '0' : null
+    if (asked !== null) sessionStorage.setItem('perf-lite', asked ? '1' : '0')
+    const held = sessionStorage.getItem('perf-lite')
+    if (held !== null) {
+      if (held === '1') root.classList.add('perf-lite')
+      root.classList.add('perf-measured')
+      return
+    }
+
     // An explicit ask always wins over anything we measure.
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       root.classList.add('perf-lite')

@@ -84,14 +84,31 @@
    worth making — it promotes the blurred result to its own layer, so the three
    sway animations underneath move a finished texture instead of asking for a
    new one sixty times a second. */
+/* The wrapper holds the blend, the opacity and the blur, so the three curtains
+   inside it read as one sky. The blur is a CSS filter rather than the SVG
+   feGaussianBlur this used to be: an SVG filter is not on the compositor's
+   path, so a transform anywhere inside it re-rasterised the whole drawing every
+   frame. */
 .aur-curtains {
+  position: absolute;
+  inset: 0;
   mix-blend-mode: screen;
   opacity: var(--aur-curtains);
   filter: blur(34px);
-  will-change: filter;
 }
 
-.aur-wave { transform-origin: 50% 40%; }
+/* Each curtain is a positioned element of its own, which is what lets its sway
+   run on the compositor instead of the main thread. `will-change: transform`
+   is the promotion; without it Blink decides per-frame and often decides no. */
+.aur-wave {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 40%;
+  will-change: transform;
+}
+
 .aur-wave--1 { animation: aur-sway-1 19s ease-in-out infinite alternate; }
 .aur-wave--2 { animation: aur-sway-2 27s ease-in-out infinite alternate; opacity: 0.82; }
 .aur-wave--3 { animation: aur-sway-3 34s ease-in-out infinite alternate; opacity: 0.6; }

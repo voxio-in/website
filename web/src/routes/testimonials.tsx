@@ -11,7 +11,7 @@ export const Route = createFileRoute('/testimonials')({
       { title: 'Testimonials — Voxio Agents' },
       { name: 'description', content: 'What the people running these deployments say about them, in their own words.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/testimonials' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/testimonials' }],
   }),
   component: Testimonials,
 })
@@ -46,7 +46,7 @@ function Testimonials() {
                 </p>
               </blockquote>
               <figcaption className="quote-by">
-                <img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" />
+                <img src="/assets/silver-wings-xr-logo.png" width={267} height={68} alt="SilverWings XR" />
                 <span>
                   <span className="quote-name">Kapil Chabria</span>
                   <span className="quote-role">CEO &amp; Founder, SilverWings XR</span>

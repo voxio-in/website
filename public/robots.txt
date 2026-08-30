@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /test
 
-Sitemap: https://voxioagents.com/sitemap.xml
+Sitemap: https://voxio.in/sitemap.xml

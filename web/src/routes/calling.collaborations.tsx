@@ -12,7 +12,7 @@ export const Route = createFileRoute('/calling/collaborations')({
       { title: 'Collaborations — Voxio Agents Calling' },
       { name: 'description', content: 'The calling agent running inside products that are not ours.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/calling/collaborations' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/calling/collaborations' }],
   }),
   component: CallingCollaborations,
 })

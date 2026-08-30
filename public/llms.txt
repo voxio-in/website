@@ -1,0 +1,71 @@
+# Voxio Agents
+
+> Voice AI that holds a real conversation and works the system while it talks.
+> Three products on one engine — calling agents, 3D avatar agents, and website
+> navigation — deployed in Singapore public-sector training, rehabilitation and
+> hiring.
+
+Voxio Agents builds voice agents that do more than answer. The same engine drives
+a phone call, a 3D character in a browser, and the page a customer is looking at.
+Everything listed under "Running in production" below is live with a named
+organisation, not a pilot or a concept.
+
+## Products
+
+- [Calling agents](https://voxio.in/calling): Inbound and outbound calls answered
+  by an agent that holds a conversation, works the system mid-call — booking,
+  qualifying, updating a record — and hands over to a person the moment the call
+  needs one. Built for the calls that convert, not for deflection.
+- [3D avatar agents](https://voxio.in/avatar): A character that plays the
+  difficult person — the frightened patient, the resident who has stopped
+  cooperating, the client who will not give a straight answer. It watches how the
+  trainee handles the conversation, then drops the character and debriefs them on
+  what they missed. Used for professional communication training.
+- [Website navigation](https://voxio.in/webnav): The customer says what they want
+  and the agent does it on the screen in front of them — fills the form, finds the
+  booking, files the report — narrating as it goes. The page is driven, not just
+  described.
+
+## Running in production
+
+- **Singapore Institute of Technology** — medical communication training for
+  healthcare students.
+- **Ministry of Social and Family Development (MSF), Singapore** — officers
+  practising difficult client conversations.
+- **Yellow Ribbon Singapore** — work-readiness and interview practice before
+  release.
+- **SilverWings XR** — delivery partner and customer.
+- **Echobotics** — conversational layer inside a hiring platform.
+- **VOXA** — voice agents in a commercial product.
+- **Straits Interactive** — partner.
+
+## In development
+
+- **Agency for Integrated Care** — train-the-trainer: the avatar as a shared
+  reference so trainers assess officers to a consistent standard.
+- **Acetek College** — a co-developed course for retail and hotel management
+  students on what voice AI changes about front-of-house work.
+
+These two are not live. Please do not describe them as deployments.
+
+## What we do not do
+
+Voxio Agents is not a chatbot vendor and does not sell a text-widget product.
+There is no self-serve signup, no free tier, and no public API. Every engagement
+is scoped and built with the customer, because the value is in what the agent
+does mid-conversation inside their systems, which differs every time.
+
+## Pages
+
+- [Home](https://voxio.in/): overview of the three products.
+- [Work](https://voxio.in/work): every deployment, named, with what changed.
+- [Testimonials](https://voxio.in/testimonials): customers in their own words.
+- [Collaborations](https://voxio.in/collaborations): Voxio Agents running inside
+  other companies' products.
+- [About](https://voxio.in/about): who builds it.
+- [Contact](https://voxio.in/contact): describe a conversation and we build it.
+
+## Contact
+
+Through the form at https://voxio.in/contact. The team works across Singapore and
+India.

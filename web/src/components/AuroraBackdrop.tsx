@@ -9,6 +9,43 @@ const TEAL = '#006161'
 const TEAL_LIT = '#0fd6ad'
 const TEAL_PALE = '#7ef2d2'
 
+/* Vertical falloff: a curtain is bright where it is thin at the top and dies
+   out at the floor, which is what keeps these from reading as flat wallpaper
+   stripes. Each curtain carries its own gradient because each is now its own
+   <svg> and cannot reach into a shared <defs>. */
+const FALLOFF_A: Array<[string, string, string]> = [
+  ['0', TEAL_PALE, '0'],
+  ['0.28', TEAL_LIT, '0.75'],
+  ['0.62', TEAL, '0.55'],
+  ['1', TEAL, '0'],
+]
+const FALLOFF_B: Array<[string, string, string]> = [
+  ['0', TEAL_LIT, '0'],
+  ['0.4', TEAL_PALE, '0.5'],
+  ['1', TEAL, '0'],
+]
+
+const CURTAINS = [
+  {
+    cls: 'aur-wave--1',
+    grad: 'aur-curtain-1',
+    stops: FALLOFF_A,
+    d: 'M-200 250 C 160 120, 420 400, 760 260 S 1360 90, 1800 250 L1800 900 L-200 900 Z',
+  },
+  {
+    cls: 'aur-wave--2',
+    grad: 'aur-curtain-2',
+    stops: FALLOFF_B,
+    d: 'M-200 400 C 240 250, 520 540, 880 380 S 1420 240, 1800 400 L1800 900 L-200 900 Z',
+  },
+  {
+    cls: 'aur-wave--3',
+    grad: 'aur-curtain-3',
+    stops: FALLOFF_A,
+    d: 'M-200 560 C 300 430, 640 700, 980 540 S 1500 420, 1800 560 L1800 900 L-200 900 Z',
+  },
+]
+
 export default function AuroraBackdrop({
   variant = 'ribbons',
   photo = true,
@@ -20,30 +57,46 @@ export default function AuroraBackdrop({
 }) {
   const showRibbons = variant === 'ribbons' || variant === 'both'
   const showInfinity = variant === 'infinity' || variant === 'both'
+  const wantsVideo = useWantsVideo()
   const root = useIdleBelowTheFold()
 
   return (
     <div className="aur" aria-hidden="true" ref={root}>
-      {photo && (video ? <AuroraVideo src={video} /> : <div className="aur-photo" />)}
+      {photo && (wantsVideo && video ? <AuroraVideo src={video} /> : <div className="aur-photo" />)}
       <div className="aur-wash" />
       <div className="aur-stars" />
 
+      {/* Each curtain is its own <svg>, and the sway is on that element rather
+          than on a <path> inside one. Blink only composites a transform
+          animation when it runs on an element with its own layer, and an SVG
+          child is not one: animating the paths meant re-rasterising the whole
+          drawing every frame on the main thread, which is what Lighthouse was
+          reporting as non-composited animations. Moved out to the <svg>, the
+          same three animations run on the compositor and cost nothing per
+          frame. The blur and the blend stay on the wrapper, so the three read
+          as one sky rather than three overlapping pictures. */}
+      {showRibbons && (
+        <div className="aur-curtains">
+          {CURTAINS.map((c) => (
+            <svg
+              key={c.cls}
+              className={`aur-wave ${c.cls}`}
+              viewBox="0 0 1600 900"
+              preserveAspectRatio="xMidYMid slice"
+            >
+              <linearGradient id={c.grad} x1="0" y1="0" x2="0" y2="1">
+                {c.stops.map((st, i) => (
+                  <stop key={i} offset={st[0]} stopColor={st[1]} stopOpacity={st[2]} />
+                ))}
+              </linearGradient>
+              <path fill={`url(#${c.grad})`} d={c.d} />
+            </svg>
+          ))}
+        </div>
+      )}
+
       <svg className="aur-svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
         <defs>
-          {/* Vertical falloff: a curtain is bright where it is thin at the top
-              these reading as flat wallpaper stripes. */}
-          <linearGradient id="aur-curtain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={TEAL_PALE} stopOpacity="0" />
-            <stop offset="0.28" stopColor={TEAL_LIT} stopOpacity="0.75" />
-            <stop offset="0.62" stopColor={TEAL} stopOpacity="0.55" />
-            <stop offset="1" stopColor={TEAL} stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="aur-curtain-2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={TEAL_LIT} stopOpacity="0" />
-            <stop offset="0.4" stopColor={TEAL_PALE} stopOpacity="0.5" />
-            <stop offset="1" stopColor={TEAL} stopOpacity="0" />
-          </linearGradient>
-
           {/* The travelling light on the lemniscate: a hard bright core that
               uniformly glowing wire. */}
           <linearGradient id="aur-trail" x1="0" y1="0" x2="1" y2="0">
@@ -54,24 +107,6 @@ export default function AuroraBackdrop({
           </linearGradient>
 
         </defs>
-
-        {/* The softening is a CSS filter on the group, not an SVG one.
-            feGaussianBlur is not on the compositor's path: any transform inside
-            a filtered subtree invalidates the filter, so the swaying curtains
-            re-rasterised a full-viewport blur on the CPU every frame, on every
-            browser, on every page of the site. The same blur expressed in CSS
-            is a composited layer the sway then moves for free. Radius lives in
-            aurora.css, in screen pixels rather than viewBox units. */}
-        {showRibbons && (
-          <g className="aur-curtains">
-            <path className="aur-wave aur-wave--1" fill="url(#aur-curtain)"
-              d="M-200 250 C 160 120, 420 400, 760 260 S 1360 90, 1800 250 L1800 900 L-200 900 Z" />
-            <path className="aur-wave aur-wave--2" fill="url(#aur-curtain-2)"
-              d="M-200 400 C 240 250, 520 540, 880 380 S 1420 240, 1800 400 L1800 900 L-200 900 Z" />
-            <path className="aur-wave aur-wave--3" fill="url(#aur-curtain)"
-              d="M-200 560 C 300 430, 640 700, 980 540 S 1500 420, 1800 560 L1800 900 L-200 900 Z" />
-          </g>
-        )}
 
         {showInfinity && (
           <g className="aur-inf">
@@ -189,6 +224,48 @@ function AuroraVideo({ src }: { src: string }) {
   )
 }
 
+/* Whether this device should be sent the video at all.
+ *
+ * The clip is 1.2MB that cannot be compressed further, it decodes continuously
+ * for as long as the page is open, and roughly seventy backdrop-filters sit
+ * over it and re-sample every time it produces a frame. On a desktop that is
+ * affordable and it is the best thing on the page. On a phone it is most of the
+ * download and most of the main thread, and the still it falls back to is not a
+ * degradation — it is the same picture, and it is what the design already shows
+ * whenever the video will not play.
+ *
+ * Decided after mount rather than during render, for two reasons: the server
+ * has no idea what it is rendering for, and starting from the still means the
+ * video never competes with the first paint on any device.
+ */
+function useWantsVideo() {
+  const [ok, setOk] = useState(false)
+
+  useEffect(() => {
+    // A phone-shaped viewport with a coarse pointer. Both, not either: a small
+    // window on a laptop is still a laptop, and a tablet can afford it.
+    const small =
+      window.matchMedia('(max-width: 820px)').matches &&
+      window.matchMedia('(pointer: coarse)').matches
+    if (small) return
+
+    // An explicit ask, and a connection that has told us it is slow. Chrome is
+    // the only engine that reports either, which is fine — it is also the one
+    // that honours them.
+    const conn = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string }
+    }).connection
+    if (conn?.saveData) return
+    if (conn?.effectiveType && /^(slow-)?2g$|^3g$/.test(conn.effectiveType)) return
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    setOk(true)
+  }, [])
+
+  return ok
+}
+
 function useIdleBelowTheFold() {
   const ref = useRef<HTMLDivElement>(null)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -211,27 +288,7 @@ function useIdleBelowTheFold() {
       else void video.play().catch(() => {})
     }
 
-    // Scrolling is the one thing the page has to be good at, and while it
-    // happens the video is the most expensive thing on the screen — not to
-    // draw, but because a backdrop-filter re-samples whenever what it samples
-    // changes, and the site has roughly seventy of them stacked over this one
-    // element. A playing video invalidates all of them thirty times a second
-    // whether or not anyone is scrolling. Holding it still for the length of a
-    // scroll gives those frames back to the scroll, and nobody has ever
-    // noticed a blurred aurora behind glass stop moving for a third of a
-    // second while the page was travelling.
-    let resume = 0
-    const holdVideo = () => {
-      if (!video || idle) return
-      if (!video.paused) video.pause()
-      window.clearTimeout(resume)
-      resume = window.setTimeout(() => {
-        if (!idle) void video.play().catch(() => {})
-      }, 220)
-    }
-
     const onScroll = () => {
-      holdVideo()
       if (ticking) return
       ticking = true
       requestAnimationFrame(() => {
@@ -245,7 +302,6 @@ function useIdleBelowTheFold() {
     window.addEventListener('resize', onScroll, { passive: true })
     document.addEventListener('visibilitychange', apply)
     return () => {
-      window.clearTimeout(resume)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
       document.removeEventListener('visibilitychange', apply)

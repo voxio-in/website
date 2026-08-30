@@ -11,7 +11,7 @@ export const Route = createFileRoute('/work')({
       { title: 'Work — Voxio Agents' },
       { name: 'description', content: 'Voice agents running in Singapore public-sector training, rehabilitation and hiring — the Singapore Institute of Technology, MSF, Yellow Ribbon, SilverWings XR and Echobotics. What was built, and what it changed.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/work' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/work' }],
   }),
   component: Work,
 })
@@ -53,7 +53,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img src="/assets/SIT.png" alt="Singapore Institute of Technology" />
+              <img src="/assets/SIT.png" width={1200} height={549} alt="Singapore Institute of Technology" />
               <span className="case-name">Singapore Institute of Technology</span>
               <span className="case-meta">Higher education<br />Medical communication training</span>
             </div>
@@ -90,7 +90,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img src="/assets/MSF.png" alt="Ministry of Social and Family Development, Singapore" />
+              <img src="/assets/MSF.png" width={250} height={123} alt="Ministry of Social and Family Development, Singapore" />
               <span className="case-name">Ministry of Social and Family Development</span>
               <span className="case-meta">Government of Singapore<br />Frontline officer training</span>
             </div>
@@ -120,7 +120,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" alt="Yellow Ribbon Singapore" />
+              <img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" width={661} height={320} alt="Yellow Ribbon Singapore" />
               <span className="case-name">Yellow Ribbon Singapore</span>
               <span className="case-meta">Rehabilitation &amp; reintegration<br />Work readiness before release</span>
             </div>
@@ -168,7 +168,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img className="logo-crest" src="/assets/agency-for-integrated-care.png" alt="Agency for Integrated Care" />
+              <img className="logo-crest" src="/assets/agency-for-integrated-care.png" width={324} height={228} alt="Agency for Integrated Care" />
               <span className="case-name">Agency for Integrated Care</span>
               <span className="case-stage">In development</span>
               <span className="case-meta">Care sector, Singapore<br />Training the trainers</span>
@@ -197,7 +197,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img className="logo-fine" src="/assets/acetek-college.png" alt="Acetek College" />
+              <img className="logo-fine" src="/assets/acetek-college.png" width={385} height={159} alt="Acetek College" />
               <span className="case-name">Acetek College</span>
               <span className="case-stage">In development</span>
               <span className="case-meta">Co-developed course<br />Retail &amp; hotel management</span>
@@ -297,7 +297,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" />
+              <img src="/assets/silver-wings-xr-logo.png" width={267} height={68} alt="SilverWings XR" />
               <span className="case-name">SilverWings XR</span>
               <span className="case-meta">Extended reality<br />Delivery partner &amp; customer</span>
             </div>
@@ -317,7 +317,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img src="/assets/voxa.png" alt="VOXA" />
+              <img src="/assets/voxa.png" width={1024} height={271} alt="VOXA" />
               <span className="case-name">VOXA</span>
               <span className="case-meta">Singapore<br />Product integration</span>
             </div>

@@ -24,7 +24,7 @@ export const Route = createFileRoute('/avatar')({
       { property: 'og:title', content: 'Practice the conversation that goes wrong' },
       { property: 'og:description', content: 'A 3D character plays the difficult person — the frightened patient, the resident who has stopped cooperating — and refuses to make it easy. It watches how your people answer, then drops the character and tells them what they missed.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/avatar' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/avatar' }],
   }),
   component: Avatar,
 })
@@ -181,18 +181,18 @@ function Avatar() {
           </div>
 
           <div className="logo-wall rise" style={{ "--rd": "0.06s" }}>
-            <span className="logo-tip" data-label="Singapore Institute of Technology"><img src="/assets/SIT.png" alt="Singapore Institute of Technology" /></span>
-            <span className="logo-tip" data-label="Ministry of Social &amp; Family Development"><img src="/assets/MSF.png" alt="Ministry of Social and Family Development, Singapore" /></span>
-            <span className="logo-tip" data-label="SilverWings XR"><img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" /></span>
-            <span className="logo-tip" data-label="Yellow Ribbon Singapore"><img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" alt="Yellow Ribbon Singapore" /></span>
+            <span className="logo-tip" data-label="Singapore Institute of Technology"><img src="/assets/SIT.png" width={1200} height={549} alt="Singapore Institute of Technology" /></span>
+            <span className="logo-tip" data-label="Ministry of Social &amp; Family Development"><img src="/assets/MSF.png" width={250} height={123} alt="Ministry of Social and Family Development, Singapore" /></span>
+            <span className="logo-tip" data-label="SilverWings XR"><img src="/assets/silver-wings-xr-logo.png" width={267} height={68} alt="SilverWings XR" /></span>
+            <span className="logo-tip" data-label="Yellow Ribbon Singapore"><img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" width={661} height={320} alt="Yellow Ribbon Singapore" /></span>
           </div>
 
           {/* Kept out of the wall above rather than mixed into it. A logo wall
               is read as a customer list, and these two are being built. */}
           <div className="logo-soon rise" style={{ "--rd": "0.09s" }}>
             <span className="logo-soon-k">In development</span>
-            <span className="logo-tip" data-label="Agency for Integrated Care"><img className="logo-crest" src="/assets/agency-for-integrated-care.png" alt="Agency for Integrated Care" /></span>
-            <span className="logo-tip" data-label="Acetek College"><img className="logo-fine" src="/assets/acetek-college.png" alt="Acetek College" /></span>
+            <span className="logo-tip" data-label="Agency for Integrated Care"><img className="logo-crest" src="/assets/agency-for-integrated-care.png" width={324} height={228} alt="Agency for Integrated Care" /></span>
+            <span className="logo-tip" data-label="Acetek College"><img className="logo-fine" src="/assets/acetek-college.png" width={385} height={159} alt="Acetek College" /></span>
           </div>
 
           {/* Three, filling the grid exactly. .split is auto-fit minmax(300px, 1fr),

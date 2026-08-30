@@ -27,7 +27,10 @@ import PullToHome from '#/components/PullToHome'
 // Where the site is served from. Link previews are fetched by a scraper with no
 // page context, so og:image and og:url have to be absolute — a leading slash
 // resolves against the scraper, not against us.
-const SITE = 'https://voxioagents.com'
+const SITE = 'https://voxio.in'
+
+const FONTS =
+  'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900&family=Instrument+Serif:ital@1&display=swap'
 
 const LD = {
   '@context': 'https://schema.org',
@@ -68,7 +71,7 @@ export const Route = createRootRoute({
       {
         name: 'description',
         content:
-          'Three agents on one engine: a caller that books and closes, a 3D avatar that trains your people on the conversations they get wrong, and an agent that drives your website while it talks. Running in production, not in a demo.',
+          'Calling agents, 3D avatar agents and website navigation on one engine — voice AI that books and closes, trains your people, and drives the page while it talks.',
       },
 
       /* Open Graph and Twitter, which the site had none of. Without them Slack,
@@ -83,7 +86,7 @@ export const Route = createRootRoute({
       {
         property: 'og:description',
         content:
-          'A caller that books and closes, a 3D avatar that trains your people, and an agent that drives your website while it talks.',
+          'Calling agents, 3D avatar agents and website navigation on one engine — voice AI that books and closes, trains your people, and drives the page while it talks.',
       },
       { property: 'og:image', content: `${SITE}/assets/og-card.png` },
       { property: 'og:image:width', content: '1200' },
@@ -116,9 +119,19 @@ export const Route = createRootRoute({
         href: 'https://fonts.gstatic.com',
         crossOrigin: 'anonymous',
       },
+      /* Fetched early but NOT render-blocking. As a plain stylesheet this was
+         a third-party request standing between the browser and the first
+         pixel, on a document that already has six local sheets to parse — it
+         was most of a 3.3s first contentful paint. `as="style"` starts the
+         download at the same moment it would have started anyway; the inline
+         script below promotes it to a stylesheet once it lands. The swap it
+         causes is the reason BootVeil exists, and BootVeil already waits on
+         document.fonts.ready, so nothing flashes. */
       {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900&family=Instrument+Serif:ital@1&display=swap',
+        rel: 'preload',
+        as: 'style',
+        href: FONTS,
+        fetchpriority: 'high',
       },
       { rel: 'stylesheet', href: siteCss },
       { rel: 'stylesheet', href: navIconsCss },
@@ -146,6 +159,20 @@ function RootDocument() {
         />
         {/* Paint the backdrop's ground before anything external can arrive. */}
         <style>{`html,body{background:#03171c;color:#fff}`}</style>
+        {/* Turns the preloaded font sheet into a real stylesheet once it has
+            arrived, and leaves a <noscript> copy for the crawlers and the
+            handful of people with scripting off. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              `(function(){var l=document.querySelector('link[rel="preload"][as="style"]');` +
+              `if(l){l.addEventListener('load',function(){l.rel='stylesheet'});` +
+              `if(l.sheet)l.rel='stylesheet'}})()`,
+          }}
+        />
+        <noscript>
+          <link rel="stylesheet" href={FONTS} />
+        </noscript>
       </head>
       <body>
         {/* Measures the browser and stands the costly effects down if it

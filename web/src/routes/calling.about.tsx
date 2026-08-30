@@ -11,7 +11,7 @@ export const Route = createFileRoute('/calling/about')({
       { title: 'About — Voxio Agents Calling' },
       { name: 'description', content: 'How the calling agent works: how it holds a conversation, works your system mid-call, and hands over the moment a person should take it.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/calling/about' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/calling/about' }],
   }),
   component: CallingAbout,
 })

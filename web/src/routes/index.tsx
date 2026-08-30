@@ -15,7 +15,7 @@ export const Route = createFileRoute('/')({
   // Title and description come from __root, which is written for this page.
   // The canonical is what stops the same page being indexed twice over a
   // trailing slash, a utm tag or a www host.
-  head: () => ({ links: [{ rel: 'canonical', href: 'https://voxioagents.com/' }] }),
+  head: () => ({ links: [{ rel: 'canonical', href: 'https://voxio.in/' }] }),
   component: Home,
 })
 
@@ -100,11 +100,11 @@ function Home() {
           {/* Logos we hold files for are images; the rest are wordmarks until the
                marks are supplied, so the wall never shows a broken image. */}
           <div className="logo-wall rise" style={{ "--rd": "0.06s" }}>
-            <span className="logo-tip" data-label="Singapore Institute of Technology"><img src="/assets/SIT.png" alt="Singapore Institute of Technology" /></span>
-            <span className="logo-tip" data-label="Ministry of Social &amp; Family Development"><img src="/assets/MSF.png" alt="Ministry of Social and Family Development, Singapore" /></span>
-            <span className="logo-tip" data-label="SilverWings XR"><img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" /></span>
-            <span className="logo-tip" data-label="VOXA"><img src="/assets/voxa.png" alt="VOXA" /></span>
-            <span className="logo-tip" data-label="Yellow Ribbon Singapore"><img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" alt="Yellow Ribbon Singapore" /></span>
+            <span className="logo-tip" data-label="Singapore Institute of Technology"><img src="/assets/SIT.png" width={1200} height={549} alt="Singapore Institute of Technology" /></span>
+            <span className="logo-tip" data-label="Ministry of Social &amp; Family Development"><img src="/assets/MSF.png" width={250} height={123} alt="Ministry of Social and Family Development, Singapore" /></span>
+            <span className="logo-tip" data-label="SilverWings XR"><img src="/assets/silver-wings-xr-logo.png" width={267} height={68} alt="SilverWings XR" /></span>
+            <span className="logo-tip" data-label="VOXA"><img src="/assets/voxa.png" width={1024} height={271} alt="VOXA" /></span>
+            <span className="logo-tip" data-label="Yellow Ribbon Singapore"><img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" width={661} height={320} alt="Yellow Ribbon Singapore" /></span>
             <span className="logo-tip" data-label="Echobotics"><img className="logo-invert logo-crest" src="/assets/echobotics.svg" alt="Echobotics" /></span>
           </div>
 
@@ -112,8 +112,8 @@ function Home() {
               is read as a customer list, and these two are being built. */}
           <div className="logo-soon rise" style={{ "--rd": "0.09s" }}>
             <span className="logo-soon-k">In development</span>
-            <span className="logo-tip" data-label="Agency for Integrated Care"><img className="logo-crest" src="/assets/agency-for-integrated-care.png" alt="Agency for Integrated Care" /></span>
-            <span className="logo-tip" data-label="Acetek College"><img className="logo-fine" src="/assets/acetek-college.png" alt="Acetek College" /></span>
+            <span className="logo-tip" data-label="Agency for Integrated Care"><img className="logo-crest" src="/assets/agency-for-integrated-care.png" width={324} height={228} alt="Agency for Integrated Care" /></span>
+            <span className="logo-tip" data-label="Acetek College"><img className="logo-fine" src="/assets/acetek-college.png" width={385} height={159} alt="Acetek College" /></span>
           </div>
 
           <div className="cards rise section-block" style={{ "--rd": "0.12s" }}>
@@ -197,7 +197,7 @@ function Home() {
                 </p>
               </blockquote>
               <figcaption className="quote-by">
-                <img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" />
+                <img src="/assets/silver-wings-xr-logo.png" width={267} height={68} alt="SilverWings XR" />
                 <span>
                   <span className="quote-name">Kapil Chabria</span>
                   <span className="quote-role">CEO &amp; Founder,

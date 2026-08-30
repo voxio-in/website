@@ -26,7 +26,7 @@ export const Route = createFileRoute('/calling/')({
       { property: 'og:title', content: 'A caller that books and closes' },
       { property: 'og:description', content: 'Inbound and outbound calls answered by an agent that holds a real conversation, works your system while it talks, and hands over the moment a person should take it. Call one yourself from this page.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/calling' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/calling' }],
   }),
   component: CallingHome,
 })

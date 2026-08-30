@@ -14,7 +14,7 @@ export const Route = createFileRoute('/collaborations')({
       { title: 'Collaborations — Voxio Agents' },
       { name: 'description', content: 'Voxio Agents as the conversational layer inside somebody else’s product — the voice, the face, or an agent that drives the page while it talks.' },
     ],
-    links: [{ rel: 'canonical', href: 'https://voxioagents.com/collaborations' }],
+    links: [{ rel: 'canonical', href: 'https://voxio.in/collaborations' }],
   }),
   component: Collaborations,
 })
