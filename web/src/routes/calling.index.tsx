@@ -19,7 +19,15 @@ import '#/styles/demo.css'
 const MEASURED_CALLS = 1200
 
 export const Route = createFileRoute('/calling/')({
-  head: () => ({ meta: [{ title: 'Calling Agents — Voxio Agents' }] }),
+  head: () => ({
+    meta: [
+      { title: 'Calling Agents — A Caller That Books and Closes' },
+      { name: 'description', content: 'Inbound and outbound calls answered by an agent that holds a real conversation, works your system while it talks, and hands over the moment a person should take it. Call one yourself from this page.' },
+      { property: 'og:title', content: 'A caller that books and closes' },
+      { property: 'og:description', content: 'Inbound and outbound calls answered by an agent that holds a real conversation, works your system while it talks, and hands over the moment a person should take it. Call one yourself from this page.' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://voxioagents.com/calling' }],
+  }),
   component: CallingHome,
 })
 

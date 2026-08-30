@@ -7,7 +7,13 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/calling-collaborations.css'
 
 export const Route = createFileRoute('/calling/collaborations')({
-  head: () => ({ meta: [{ title: 'Collaborations — Voxio Agents Calling' }] }),
+  head: () => ({
+    meta: [
+      { title: 'Collaborations — Voxio Agents Calling' },
+      { name: 'description', content: 'The calling agent running inside products that are not ours.' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://voxioagents.com/calling/collaborations' }],
+  }),
   component: CallingCollaborations,
 })
 

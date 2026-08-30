@@ -20,14 +20,11 @@
     0 26px 60px rgba(0, 0, 0, 0.44),
     0 4px 14px rgba(0, 0, 0, 0.24);
 
-  backdrop-filter: blur(0.5px) saturate(170%) brightness(1.06) url(#liquid-glass-nav);
-  -webkit-backdrop-filter: blur(14px) saturate(170%) brightness(1.06);
-}
-@supports not (backdrop-filter: url(#liquid-glass-nav)) {
-  .glass-panel {
-    backdrop-filter: blur(18px) saturate(180%);
-    -webkit-backdrop-filter: blur(18px) saturate(180%);
-  }
+  /* Plain blur, not the liquid-glass SVG lens. The lens ran a displacement-map
+     filter chain over the sampled backdrop, and this panel is the largest
+     sampling surface on the site. See the note on .badge in site.css. */
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass-panel { background: rgba(18, 18, 20, 0.93); }

@@ -1,0 +1,6 @@
+# The workbench page is not something a search result should ever carry.
+User-agent: *
+Allow: /
+Disallow: /test
+
+Sitemap: https://voxioagents.com/sitemap.xml

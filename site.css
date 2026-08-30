@@ -611,15 +611,10 @@ body {
     inset 0 -8px 18px rgba(0, 0, 0, 0.22),
     0 12px 30px rgba(0, 0, 0, 0.34),
     0 3px 10px rgba(0, 0, 0, 0.22);
-  /* soft lens — see .badge */
-  backdrop-filter: blur(0.5px) saturate(170%) brightness(1.06) url(#liquid-glass-soft);
-  -webkit-backdrop-filter: blur(12px) saturate(170%) brightness(1.06);
-}
-@supports not (backdrop-filter: url(#liquid-glass-soft)) {
-  .hero-actions .btn-ghost {
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-  }
+  /* Was the soft lens — an SVG displacement-map filter run INSIDE
+     backdrop-filter. See the note on .badge for why it is gone. */
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 /* rim light, same construction as .badge::after */
 .hero-actions .btn-ghost::after {
@@ -768,24 +763,26 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
     0 12px 30px rgba(0, 0, 0, 0.34),
     0 3px 10px rgba(0, 0, 0, 0.22);
 
-  /* the SOFT lens, not the nav one: at this size the nav filter's 2.2px red
-     dispersion shows up as a red rim rather than as glass */
-  backdrop-filter: blur(0.5px) saturate(170%) brightness(1.06) url(#liquid-glass-soft);
-  -webkit-backdrop-filter: blur(12px) saturate(170%) brightness(1.06);
+  /* This used to run the liquid-glass SVG lens through backdrop-filter: two
+     feImage loads, two feDisplacementMaps, three feOffsets, three
+     feColorMatrices and two feBlends, applied to the SAMPLED PAGE BEHIND the
+     element. A backdrop sample is redone whenever what it samples changes, and
+     what it samples here is a playing full-screen video, so that whole chain
+     re-ran about thirty times a second for as long as the page was open,
+     whether or not anyone scrolled.
+
+     `url()` inside backdrop-filter is also the one part of this the engines
+     disagree about, which is why the site felt fine in Edge and dragged in
+     Chrome: Edge was already falling through to the plain blur below, and
+     Chrome was the only one actually paying for the lens. So this is now what
+     Edge has been showing all along. */
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
 
   color: #f2f2f2;
   font-size: var(--badge);
   font-weight: 400;
   letter-spacing: -0.01em;
-}
-
-/* Engines that reject url() inside backdrop-filter drop the whole declaration,
-   so the plain form is restated rather than assumed. */
-@supports not (backdrop-filter: url(#liquid-glass-soft)) {
-  .badge {
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-  }
 }
 
 /* Rim light, as on the panes: bright top-left, fading, weak bounce bottom-right. */
@@ -1980,11 +1977,8 @@ html.perf-lite {
   --nav-glass-tint: rgba(16, 18, 26, 0.93);
 }
 
-/* The liquid-glass surfaces run an SVG displacement map over the sampled
-   backdrop, which is a second full pass on top of the blur. Stand it down to
-   the plain blur — the refraction is a detail nobody reads at 30fps anyway.
-   Named selectors rather than a universal one: a `*` rule here would cost more
-   in style recalculation than it saves in paint. */
+/* The liquid-glass lens these two used to carry is gone for every tier now, so
+   what is left to save here is blur radius. */
 html.perf-lite :is(.badge, .hero-actions .btn-ghost) {
   backdrop-filter: blur(10px) brightness(1.06);
   -webkit-backdrop-filter: blur(10px) brightness(1.06);

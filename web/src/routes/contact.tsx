@@ -15,7 +15,13 @@ import '#/styles/forms.css'
 import '#/styles/contact.css'
 
 export const Route = createFileRoute('/contact')({
-  head: () => ({ meta: [{ title: 'Contact us — Voxio Agents' }] }),
+  head: () => ({
+    meta: [
+      { title: 'Contact us — Voxio Agents' },
+      { name: 'description', content: 'Describe the conversation your people find hardest and we will build it into an agent you can talk to. We reply with questions, not a deck.' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://voxioagents.com/contact' }],
+  }),
   component: Contact,
 })
 

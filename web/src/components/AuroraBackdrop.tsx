@@ -211,7 +211,27 @@ function useIdleBelowTheFold() {
       else void video.play().catch(() => {})
     }
 
+    // Scrolling is the one thing the page has to be good at, and while it
+    // happens the video is the most expensive thing on the screen — not to
+    // draw, but because a backdrop-filter re-samples whenever what it samples
+    // changes, and the site has roughly seventy of them stacked over this one
+    // element. A playing video invalidates all of them thirty times a second
+    // whether or not anyone is scrolling. Holding it still for the length of a
+    // scroll gives those frames back to the scroll, and nobody has ever
+    // noticed a blurred aurora behind glass stop moving for a third of a
+    // second while the page was travelling.
+    let resume = 0
+    const holdVideo = () => {
+      if (!video || idle) return
+      if (!video.paused) video.pause()
+      window.clearTimeout(resume)
+      resume = window.setTimeout(() => {
+        if (!idle) void video.play().catch(() => {})
+      }, 220)
+    }
+
     const onScroll = () => {
+      holdVideo()
       if (ticking) return
       ticking = true
       requestAnimationFrame(() => {
@@ -225,6 +245,7 @@ function useIdleBelowTheFold() {
     window.addEventListener('resize', onScroll, { passive: true })
     document.addEventListener('visibilitychange', apply)
     return () => {
+      window.clearTimeout(resume)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
       document.removeEventListener('visibilitychange', apply)

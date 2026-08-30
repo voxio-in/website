@@ -21,21 +21,84 @@ import AuroraBackdrop from '#/components/AuroraBackdrop'
 import BootVeil from '#/components/BootVeil'
 import PerfTier from '#/components/PerfTier'
 import RouteProgress from '#/components/RouteProgress'
-import GlassDefs from '#/components/GlassDefs'
 import Navbar from '#/components/Navbar'
 import PullToHome from '#/components/PullToHome'
+
+// Where the site is served from. Link previews are fetched by a scraper with no
+// page context, so og:image and og:url have to be absolute — a leading slash
+// resolves against the scraper, not against us.
+const SITE = 'https://voxioagents.com'
+
+const LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE}/#org`,
+      name: 'Voxio Agents',
+      url: SITE,
+      logo: `${SITE}/apple-touch-icon.png`,
+      description:
+        'Voice agents that hold a real conversation and work the system while they talk — on the phone, behind a 3D face, and driving a website.',
+      areaServed: ['Singapore', 'India'],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE}/#site`,
+      url: SITE,
+      name: 'Voxio Agents',
+      publisher: { '@id': `${SITE}/#org` },
+    },
+  ],
+}
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Voxio Agents — Operational AI Infrastructure' },
+      /* The browser chrome on mobile picks this up, so the address bar sits in
+         the same world as the page instead of a white band above it. */
+      { name: 'theme-color', content: '#03171c' },
+      /* The title names the category first and the products second, because
+         the category is what anyone is searching for and the products are what
+         separates us once they are looking. Kept under sixty characters so it
+         survives a search result without being cut mid-word. */
+      { title: 'Voxio Agents — Voice AI That Sells, Trains and Navigates' },
       {
         name: 'description',
         content:
-          'Voice agents that adapt to the room. On the phone, in the browser, and behind a face.',
+          'Three agents on one engine: a caller that books and closes, a 3D avatar that trains your people on the conversations they get wrong, and an agent that drives your website while it talks. Running in production, not in a demo.',
       },
+
+      /* Open Graph and Twitter, which the site had none of. Without them Slack,
+         WhatsApp, LinkedIn and X have nothing to read and fall back to whatever
+         they scraped years ago — which is why the old "Voxio AI · Intelligent
+         Chat & Voice Bots" line kept reappearing in previews long after it had
+         left the code. Absolute URL on the image because every one of those
+         scrapers fetches it out of context. */
+      { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: 'Voxio Agents' },
+      { property: 'og:title', content: 'Voice agents that sell, train and drive the page.' },
+      {
+        property: 'og:description',
+        content:
+          'A caller that books and closes, a 3D avatar that trains your people, and an agent that drives your website while it talks.',
+      },
+      { property: 'og:image', content: `${SITE}/assets/og-card.png` },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      { property: 'og:image:alt', content: 'Voxio Agents — voice agents that sell, train and drive the page.' },
+      { property: 'og:url', content: SITE },
+
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'Voice agents that sell, train and drive the page.' },
+      {
+        name: 'twitter:description',
+        content:
+          'A caller that books and closes, a 3D avatar that trains your people, and an agent that drives your website while it talks.',
+      },
+      { name: 'twitter:image', content: `${SITE}/assets/og-card.png` },
     ],
     links: [
       /* SVG first, so a browser that understands one takes it and never fetches
@@ -73,6 +136,14 @@ function RootDocument() {
     <html lang="en">
       <head>
         <HeadContent />
+        {/* Organization and WebSite, so a search engine has something to
+            attach the name, the logo and the three products to rather than
+            inferring them from the copy. Kept in the shell because a JSON-LD
+            block is a <script>, which the route head's `links` cannot carry. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(LD) }}
+        />
         {/* Paint the backdrop's ground before anything external can arrive. */}
         <style>{`html,body{background:#03171c;color:#fff}`}</style>
       </head>
@@ -82,7 +153,6 @@ function RootDocument() {
         <PerfTier />
         <BootVeil />
         <RouteProgress />
-        <GlassDefs />
         {/* The site background, for every route. Here rather than per page:
             the component was four chances for them to drift apart. */}
         <AuroraBackdrop />

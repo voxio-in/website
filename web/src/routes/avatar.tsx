@@ -17,7 +17,15 @@ import '#/styles/avatar.css'
 import '#/styles/demo.css'
 
 export const Route = createFileRoute('/avatar')({
-  head: () => ({ meta: [{ title: '3D Avatar Agents — Voxio Agents' }] }),
+  head: () => ({
+    meta: [
+      { title: '3D Avatar Agents — Practice the Conversation That Goes Wrong' },
+      { name: 'description', content: 'A 3D character plays the difficult person — the frightened patient, the resident who has stopped cooperating — and refuses to make it easy. It watches how your people answer, then drops the character and tells them what they missed.' },
+      { property: 'og:title', content: 'Practice the conversation that goes wrong' },
+      { property: 'og:description', content: 'A 3D character plays the difficult person — the frightened patient, the resident who has stopped cooperating — and refuses to make it easy. It watches how your people answer, then drops the character and tells them what they missed.' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://voxioagents.com/avatar' }],
+  }),
   component: Avatar,
 })
 

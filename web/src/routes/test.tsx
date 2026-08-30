@@ -10,7 +10,13 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/test.css'
 
 export const Route = createFileRoute('/test')({
-  head: () => ({ meta: [{ title: 'Backdrop test — Voxio Agents' }] }),
+  head: () => ({
+    meta: [
+      { title: 'Backdrop test — Voxio Agents' },
+      // A workbench page. It says nothing a search result should ever carry.
+      { name: 'robots', content: 'noindex, nofollow' },
+    ],
+  }),
   component: Test,
 })
 

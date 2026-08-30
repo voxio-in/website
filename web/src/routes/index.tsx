@@ -11,7 +11,13 @@ import SiteFooter from '#/components/SiteFooter'
 import SurfaceCards from '#/components/SurfaceCards'
 import { useReveal } from '#/components/useReveal'
 
-export const Route = createFileRoute('/')({ component: Home })
+export const Route = createFileRoute('/')({
+  // Title and description come from __root, which is written for this page.
+  // The canonical is what stops the same page being indexed twice over a
+  // trailing slash, a utm tag or a www host.
+  head: () => ({ links: [{ rel: 'canonical', href: 'https://voxioagents.com/' }] }),
+  component: Home,
+})
 
 function Home() {
   useReveal()

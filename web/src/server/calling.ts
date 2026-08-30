@@ -78,7 +78,7 @@ export const requestDemoCall = createServerFn({ method: "POST" })
     if (!GATEWAY || !FROM_NUMBER || !USER_API_KEY || !flowKey) {
       return {
         ok: false,
-        reason: `The ${desk.label.toLowerCase()} desk is not connected to this page yet. Write to hello@voxio.ai and we will set up a call.`,
+        reason: `The ${desk.label.toLowerCase()} desk is not connected to this page yet. Tell us on the contact page and we will set up a call.`,
       };
     }
 

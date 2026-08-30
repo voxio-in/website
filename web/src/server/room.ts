@@ -58,8 +58,8 @@ export const startRoomSession = createServerFn({ method: 'POST' })
       return {
         ok: false,
         reason: video
-          ? 'The avatar demos are not connected to this page yet. Write to hello@voxio.ai for a live one.'
-          : 'The demo line is not connected right now. Write to hello@voxio.ai and we will set one up.',
+          ? 'The avatar demos are not connected to this page yet. Ask us on the contact page for a live one.'
+          : 'The demo line is not connected right now. Tell us on the contact page and we will set one up.',
       }
     }
 

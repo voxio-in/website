@@ -18,7 +18,15 @@ import '#/styles/surfaces.css'
 import '#/styles/demo.css'
 
 export const Route = createFileRoute('/webnav')({
-  head: () => ({ meta: [{ title: 'Website Navigation — Voxio Agents' }] }),
+  head: () => ({
+    meta: [
+      { title: 'Website Navigation — An Agent That Drives the Page' },
+      { name: 'description', content: 'Your customer says what they want and the agent does it on the screen in front of them — fills the form, finds the booking, files the report. Five real systems on this page, and you can watch it work them.' },
+      { property: 'og:title', content: 'An agent that drives the page while it talks' },
+      { property: 'og:description', content: 'Your customer says what they want and the agent does it on the screen in front of them — fills the form, finds the booking, files the report. Five real systems on this page, and you can watch it work them.' },
+    ],
+    links: [{ rel: 'canonical', href: 'https://voxioagents.com/webnav' }],
+  }),
   component: Webnav,
 })
 
