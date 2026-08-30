@@ -37,7 +37,7 @@ export default function BootVeil() {
   return (
     <div className={`boot${lifting ? ' is-lifting' : ''}`} aria-hidden="true">
       <div className="boot-mark">
-        <span className="boot-word">voxio</span>
+        <span className="boot-word">voxio agents</span>
         <span className="boot-track">
           <span className="boot-run" />
         </span>

@@ -1,6 +1,6 @@
 // The pages the navigator demo can drive on /webnav.
 
-export type SurfaceId = 'clinic' | 'university' | 'rail' | 'shop'
+export type SurfaceId = 'clinic' | 'university' | 'rail' | 'shop' | 'care'
 
 export type Surface = {
   id: SurfaceId
@@ -86,6 +86,30 @@ export const SURFACES: Surface[] = [
       'I need running shoes under four thousand.',
       'Something for a two year old, not plastic.',
       'Add the cheapest one that is in stock.',
+    ],
+  },
+
+  /* The odd one out, deliberately. The other four are an agent getting a
+     visitor through a page written badly; this one is an agent doing the
+     writing. A care worker who speaks Japanese but cannot write a legal
+     record in it describes a fall out loud, and the report comes out in the
+     Japanese the facility is required to file. The language barrier stops
+     being the thing that breaks the demo and becomes the thing it is about. */
+  {
+    id: 'care',
+    label: 'A Japanese care record',
+    task: 'File an incident report',
+    site: 'かわぐち介護記録システム',
+    host: 'kaigo.kawaguchi-shisetsu.jp/kiroku',
+    hard:
+      'A legal record that has to be filed in formal written Japanese within twenty four hours — by a care worker from Manila or Hanoi who speaks Japanese perfectly well and cannot write it. Filing one takes forty minutes and a colleague.',
+    dare: 'Try filling in the 発生状況 box yourself.',
+    blurb:
+      'Nine required fields, all of them in Japanese, on a report that is legally due within a day. Describe the fall in your own language and watch correct 敬体 Japanese appear in the boxes — including the distinction between 転倒 and 転落 that nobody outside the building knows.',
+    asks: [
+      'Tanaka-san fell. About seven forty, in his room.',
+      'He came off the bed. Small cut on the arm.',
+      'He says his hip hurts but that it is fine.',
     ],
   },
 ]

@@ -6,7 +6,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/calling-work.css'
 
 export const Route = createFileRoute('/calling/work')({
-  head: () => ({ meta: [{ title: 'Work — VoxioAgents Calling' }] }),
+  head: () => ({ meta: [{ title: 'Work — Voxio Agents Calling' }] }),
   component: CallingWork,
 })
 
@@ -39,7 +39,7 @@ function CallingWork() {
             </div>
             <div className="case-copy">
               <p>
-                Voxio is the voice on the Echobotics line. Everything a caller hears is ours
+                Voxio Agents is the voice on the Echobotics line. Everything a caller hears is ours
                 &mdash; the turn-taking, the barge-in, the recovery when someone talks over it
                 &mdash; running on a real number that answers every call, rings people back,
                 works a booked list on a schedule, and writes up what happened the moment each

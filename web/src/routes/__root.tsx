@@ -30,7 +30,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Voxio — Operational AI Infrastructure' },
+      { title: 'Voxio Agents — Operational AI Infrastructure' },
       {
         name: 'description',
         content:
@@ -38,6 +38,15 @@ export const Route = createRootRoute({
       },
     ],
     links: [
+      /* SVG first, so a browser that understands one takes it and never fetches
+         the rasters. The 32px PNG and the .ico are for the engines that do not:
+         the .ico last, because a few of them stop at the first icon they can
+         parse and it is the worst-looking of the three. */
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      { rel: 'icon', href: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
+      { rel: 'alternate icon', href: '/favicon.ico', sizes: '48x48' },
+
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       {
         rel: 'preconnect',

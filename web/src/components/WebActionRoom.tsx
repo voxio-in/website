@@ -3,7 +3,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { ClinicSurface, RailSurface, ShopSurface, UniversitySurface } from '#/components/surfaces'
+import {
+  CareSurface,
+  ClinicSurface,
+  RailSurface,
+  ShopSurface,
+  UniversitySurface,
+} from '#/components/surfaces'
 import { DEFAULT_SURFACE, SURFACES, surfaceById, type SurfaceId } from '#/lib/surfaces'
 import { endRoomSession, startRoomSession, type RoomStart } from '#/server/room'
 
@@ -12,6 +18,7 @@ const SURFACE_VIEWS: Record<SurfaceId, () => React.ReactElement> = {
   university: UniversitySurface,
   rail: RailSurface,
   shop: ShopSurface,
+  care: CareSurface,
 }
 
 type Phase = 'idle' | 'asking' | 'connecting' | 'live' | 'ended' | 'failed'

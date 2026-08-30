@@ -56,3 +56,29 @@
 @media (max-width: 560px) {
   .case-id img { height: 38px; }
 }
+
+
+/* The one thing separating an engagement being built from one that is running.
+   It sits in the identity column beside the client name rather than in the
+   copy, because that is where a reader checks who a case is about — and a
+   caveat that only appears in the third sentence has already been skipped. */
+.case-stage {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 214, 138, 0.42);
+  background: rgba(255, 196, 92, 0.08);
+  color: #ffd08a;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  /* .case-id is a 14px-gap column; this belongs to the name above it. */
+  margin-top: -6px;
+}
+
+@media (max-width: 900px) {
+  /* .case-id turns into a wrapping row here, so the badge stops being a block
+     under the name and just flows with it. */
+  .case-stage { margin-top: 0; }
+}

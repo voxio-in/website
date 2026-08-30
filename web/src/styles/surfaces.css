@@ -828,3 +828,272 @@ body.wa-open .hero-photo { display: none; }
   color: #6a6f78;
   font-size: 9.5px;
 }
+
+
+/* ---------- 介護記録 ----------
+
+   Not styled as a bad site. The other four surfaces earn their difficulty from
+   design — buried menus, station codes, a filter rail that hides things. This
+   one is a perfectly competent Japanese enterprise form, and it is only hard
+   because of who has to fill it in. So it gets the real idiom: the grey-blue
+   government-adjacent header, the red 必須 markers, the boxed 【重要】 notice,
+   the dense two-column grid. Nothing here is a joke at the form's expense. */
+
+.surface--care {
+  background: #eef0f2;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP",
+    "Meiryo", ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.cr-top {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #2f4f6e, #26415c);
+  color: #fff;
+}
+.cr-mark {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 16px;
+  font-weight: 700;
+}
+.cr-name { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+.cr-sub { margin: 1px 0 0; font-size: 11px; color: rgba(255, 255, 255, 0.66); }
+.cr-who {
+  margin-left: auto;
+  display: grid;
+  justify-items: end;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.66);
+}
+.cr-who strong { color: #fff; font-size: 12.5px; }
+
+.cr-tabs {
+  display: flex;
+  gap: 1px;
+  padding: 0 10px;
+  background: #dfe3e7;
+  border-bottom: 2px solid #2f4f6e;
+}
+.cr-tabs button {
+  appearance: none;
+  border: 1px solid #c3cad1;
+  border-bottom: 0;
+  background: #f2f4f6;
+  color: #3a4550;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 7px 14px;
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+  margin-top: 5px;
+}
+.cr-tabs button:hover { background: #fff; }
+.cr-tabs button.is-on {
+  background: #2f4f6e;
+  border-color: #2f4f6e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.cr-notice {
+  margin: 9px 12px 0;
+  padding: 8px 11px;
+  background: #fff6f4;
+  border: 1px solid #e0b3ab;
+  border-left: 4px solid #c0392b;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #4a2c27;
+}
+.cr-notice strong { color: #c0392b; }
+
+.cr-body {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  padding: 12px;
+  align-items: start;
+}
+
+.cr-side,
+.cr-main {
+  background: #fff;
+  border: 1px solid #ccd3da;
+  border-radius: 3px;
+  padding: 11px;
+}
+
+.cr-step {
+  margin: 0 0 9px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e6ea;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2f4f6e;
+}
+.cr-sub-step {
+  margin: 13px 0 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #55606b;
+}
+
+.cr-residents { display: grid; gap: 5px; }
+.cr-resident {
+  appearance: none;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  padding: 7px 9px;
+  border: 1px solid #d3d9df;
+  border-radius: 3px;
+  background: #fafbfc;
+  font: inherit;
+  color: #1f2a33;
+  cursor: pointer;
+}
+.cr-resident:hover { background: #f0f5fa; border-color: #9fb4c7; }
+.cr-resident.is-on {
+  background: #e8f1f9;
+  border-color: #2f4f6e;
+  box-shadow: inset 3px 0 0 #2f4f6e;
+}
+.cr-resident-name { font-size: 13.5px; font-weight: 700; }
+.cr-resident-meta { font-size: 10.5px; color: #6b7783; }
+
+.cr-empty {
+  margin: 0;
+  padding: 34px 12px;
+  text-align: center;
+  color: #7b858f;
+  font-size: 12.5px;
+}
+
+.cr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 12px;
+}
+.cr-grid--three { grid-template-columns: repeat(3, 1fr); }
+
+.cr-field { display: grid; gap: 4px; }
+.cr-field--wide { margin-top: 11px; }
+.cr-field > span {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #46525d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cr-field > span em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: #c0392b;
+  color: #fff;
+}
+.cr-field input,
+.cr-field select,
+.cr-field textarea {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #b9c2cb;
+  border-radius: 2px;
+  background: #fcfdfe;
+  color: #1f2a33;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cr-field textarea { resize: vertical; line-height: 1.65; }
+.cr-field input:focus,
+.cr-field select:focus,
+.cr-field textarea:focus {
+  outline: 2px solid #4a7fb0;
+  outline-offset: -1px;
+  background: #fff;
+}
+.cr-field ::placeholder { color: #a4adb6; }
+
+.cr-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 11px;
+  font-size: 12.5px;
+  color: #46525d;
+}
+
+.cr-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid #e2e6ea;
+}
+.cr-actions button {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 3px;
+  border: 1px solid #2f4f6e;
+  background: #2f4f6e;
+  color: #fff;
+  cursor: pointer;
+}
+.cr-actions button:hover { background: #3a6187; }
+.cr-ghost {
+  background: #fff !important;
+  color: #2f4f6e !important;
+  font-weight: 500 !important;
+}
+.cr-warn { font-size: 11.5px; color: #c0392b; margin-left: auto; }
+
+.cr-done { padding: 22px 6px; }
+.cr-done-head {
+  margin: 0 0 7px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e6b4f;
+}
+.cr-done-body { margin: 0; font-size: 13px; line-height: 1.8; color: #35404a; }
+.cr-done-en {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #e2e6ea;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  color: #6b7783;
+}
+
+.cr-foot {
+  padding: 9px 14px;
+  background: #dfe3e7;
+  border-top: 1px solid #c9d0d7;
+  font-size: 10.5px;
+  color: #6b7783;
+}
+
+@media (max-width: 720px) {
+  .cr-body { grid-template-columns: 1fr; }
+  .cr-grid,
+  .cr-grid--three { grid-template-columns: 1fr; }
+  .cr-tabs { overflow-x: auto; }
+}

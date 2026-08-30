@@ -19,10 +19,12 @@ model ContactSubmission {
   email     String
   surface   String?
   message   String?
+  ip        String?
   userAgent String?
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+  @@index([ip, createdAt])
 }
 
 model CallRequest {
@@ -58,6 +60,10 @@ model RoomSession {
   id         String    @id @default(cuid())
   demo       String
   transcript Json?
+  // The roleplay beats — face changes, physical actions and the running score
+  // — appended as the voice server posts them, so the live room can poll them
+  // back and draw the scene. See webhookPayload.sceneBeats.
+  scene      Json?
   seconds    Int?
   endedAt    DateTime?
   ip         String?

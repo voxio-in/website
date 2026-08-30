@@ -19,7 +19,7 @@ import '#/styles/demo.css'
 const MEASURED_CALLS = 1200
 
 export const Route = createFileRoute('/calling/')({
-  head: () => ({ meta: [{ title: 'Calling Agents — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'Calling Agents — Voxio Agents' }] }),
   component: CallingHome,
 })
 

@@ -3,6 +3,11 @@
 export type VoiceSettings = {
   preFire?: boolean
   inactivityMessage?: string
+  /** How long to leave a silence before nudging. Tan-san needs a long one:
+      holding a pause is the move his scenario is built to reward, and an agent
+      that fills it has answered the trainee's question for them. */
+  inactivityPeriod?: number
+  inactivityTimes?: number
   ttsModel?: string
   sttModel?: string
   sttLanguage?: string
@@ -23,8 +28,8 @@ export function buildVoiceCustoms(settings: VoiceSettings = {}) {
     'pre-fire-config': preFire ? { min: 5, max: 5000, current: 10 } : {},
     inactivity: true,
     'inactivity-metadata': {
-      'time-period': 1000,
-      'max-times': 3,
+      'time-period': settings.inactivityPeriod ?? 1000,
+      'max-times': settings.inactivityTimes ?? 3,
       'inactivity-type': 'static',
       message:
         settings.inactivityMessage ??

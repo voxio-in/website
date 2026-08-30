@@ -339,7 +339,9 @@ body {
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  /* Tighter than the 9px the icon needed: these are three pieces of type on one
+     baseline, and the hairline does the separating that the space used to. */
+  gap: 8px;
   flex: none;
   padding: 0 14px 0 16px;
   font-size: var(--logo);
@@ -348,7 +350,45 @@ body {
   color: #fff;
 }
 .logo svg { width: var(--logo-mark); height: var(--logo-mark); flex: none; }
-.logo-suffix { font-weight: 400; }
+
+/* The mark is the initials, set in the page's own face rather than drawn. Two
+   letters at nav size are too small to read as a monogram on their own, so they
+   are given the weight and the tracking that a monogram would have had: heavier
+   than the name beside them, and opened up so the pair reads as a unit rather
+   than as the first syllable of the word after it. */
+.logo-initials {
+  flex: none;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+/* The same hairline the bar uses between its own compartments, at the height of
+   the type rather than the bar — it separates two parts of one wordmark here,
+   not two sections of the sheet. */
+.logo-rule {
+  flex: none;
+  width: 1px;
+  height: 1em;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Lighter than the initials on purpose. The monogram is the mark and the name
+   is the gloss on it, so the pair has a hierarchy instead of reading as four
+   words of equal weight. */
+.logo-name {
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* Under about 420px the bar has to hold the mark, the burger and — on a product
+   page — the product tag as well. The name is the part that can go: the
+   initials still identify the site, and the tag beside them still says which
+   product you are on. */
+@media (max-width: 420px) {
+  .logo-rule, .logo-name { display: none; }
+}
 
 /* The product name, section one of the bar on a product page. A label, not a
    link — it says which surface you are on, so it must not compete with the
@@ -1316,14 +1356,14 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
    .logo-fine is fine dark linework that disappears without extra brightness;
    .logo-solid is a filled mid-tone crest, which the default lift blows out to
    a white blob, so it gets barely any. */
-:is(.logo-wall, .case-id, .quote-by) img.logo-fine {
+:is(.logo-wall, .logo-soon, .logo-quiet, .case-id, .quote-by) img.logo-fine {
   filter: grayscale(1) brightness(2.5) contrast(0.75);
 }
-:is(.logo-wall, .case-id, .quote-by) img.logo-solid {
+:is(.logo-wall, .logo-soon, .logo-quiet, .case-id, .quote-by) img.logo-solid {
   filter: grayscale(1) brightness(1.12) contrast(1.08);
   opacity: 0.7;
 }
-:is(.logo-wall, .case-id, .quote-by) img.logo-solid:hover { filter: none; opacity: 1; }
+:is(.logo-wall, .logo-soon, .logo-quiet, .case-id, .quote-by) img.logo-solid:hover { filter: none; opacity: 1; }
 
 /* Marks supplied as solid black artwork (Echobotics) disappear into a dark wall
    under the standard grayscale-and-lift, so they are inverted to white instead.
@@ -1957,3 +1997,76 @@ html.perf-lite .grain { opacity: 0.02; }
 /* Decorative motion, off. Entrances (`appear`) stay — they run once and they
    carry the reading order. */
 html.perf-lite :is(.glow, .pulse, .shimmer, .orbit, .float) { animation: none; }
+
+
+/* ---------- the in-development row ----------
+
+   Deliberately quieter than .logo-wall and deliberately not part of it. The
+   wall is read as a customer list, so a mark placed in it is a claim that the
+   thing is running. These two are being built, and the label carries that —
+   which means the label has to survive on its own, without the marks beside it
+   doing the explaining. Smaller marks, lower opacity, and a rule that runs the
+   length of the row so it reads as a separate register rather than a stray
+   second line of the wall. */
+
+.logo-soon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 34px;
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-soft);
+}
+.logo-soon-k {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  /* Holds the label off the first mark by more than the flex gap, so the row
+     reads as "label, then a set" rather than three items in a line. */
+  padding-right: 8px;
+}
+.logo-soon img {
+  /* Taller and less faded than the first pass. Both of these marks carry a
+     tagline line under the wordmark, which turns to mud below about 40px and
+     reads as a smudge rather than a logo. Quieter than the wall, still legible. */
+  height: 40px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  opacity: 0.58;
+  filter: grayscale(1) brightness(1.9) contrast(0.85);
+  transition: opacity 0.35s ease, filter 0.35s ease;
+}
+.logo-soon img.logo-crest { height: 50px; }
+.logo-soon img:hover { opacity: 1; filter: none; }
+
+@media (max-width: 700px) {
+  .logo-soon { gap: 14px 24px; margin-top: 24px; padding-top: 20px; }
+  .logo-soon img { height: 32px; }
+  .logo-soon img.logo-crest { height: 40px; }
+  /* The label takes its own line rather than being squeezed to two words. */
+  .logo-soon-k { flex: 0 0 100%; padding-right: 0; }
+}
+
+
+/* ---------- a mark with no words ----------
+
+   Sits under the partner cases at the same optical weight the marks inside
+   them carry, so it reads as one more of them rather than as a stray image.
+   Centred and alone on its line: a logo with nothing beside it needs the room
+   to be obviously deliberate. */
+.logo-quiet {
+  display: flex;
+  justify-content: center;
+  padding: 26px 0 6px;
+}
+.logo-quiet img {
+  height: 44px;
+  width: auto;
+  opacity: 0.62;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+.logo-quiet img:hover { opacity: 1; filter: none; }

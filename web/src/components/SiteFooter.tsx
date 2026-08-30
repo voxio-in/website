@@ -6,7 +6,7 @@ import { Link } from '@tanstack/react-router'
 export default function SiteFooter() {
   return (
       <footer className="site-foot">
-        <span>&copy; 2026 Voxio. All rights reserved.</span>
+        <span>&copy; 2026 Voxio Agents. All rights reserved.</span>
         <nav aria-label="Footer">
           <Link to="/">Home</Link>
           <Link to="/work">Work</Link>

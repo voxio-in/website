@@ -166,3 +166,27 @@
   .contact-form { grid-template-columns: minmax(0, 1fr); }
   .glass-panel { padding: 24px 20px 22px; border-radius: 20px; }
 }
+
+/* The confirmation stands in the form's column, so the panel keeps its shape
+   when the fields are replaced. Padded down the left with a hairline rather
+   than boxed: it is the same conversation continuing, not a system alert. */
+.contact-sent {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0 6px 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+.contact-sent-head {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.contact-sent-body { font-size: 15px; line-height: 1.62; color: rgba(255, 255, 255, 0.72); }
+.contact-sent-foot { font-size: 13.5px; line-height: 1.6; color: rgba(255, 255, 255, 0.5); }
+
+/* A failed send has to read differently from the resting hint that sits in the
+   same slot, or the message changes and nobody notices. */
+.form-note--bad { color: #ffb4a2; }

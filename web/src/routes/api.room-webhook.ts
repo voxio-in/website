@@ -7,8 +7,10 @@ import { db } from '#/server/db'
 import {
   isFinished,
   nextTranscript,
+  sceneBeats,
   sessionIdOf,
   type Payload,
+  type SceneBeat,
   type Turn,
 } from '#/server/voice/webhookPayload'
 
@@ -38,11 +40,18 @@ export const Route = createFileRoute('/api/room-webhook')({
         const existing = Array.isArray(row.transcript) ? (row.transcript as Turn[]) : []
         const transcript = nextTranscript(body, existing)
 
+        /* The scene is append-only and numbered from wherever it left off, so
+           a room that polls "after n" never re-reads what it has already drawn
+           and never misses a beat that landed between two polls. */
+        const scene = Array.isArray(row.scene) ? (row.scene as SceneBeat[]) : []
+        const beats = sceneBeats(body, scene.length ? scene[scene.length - 1]!.n : 0)
+
         await db.roomSession.update({
           where: { id },
           data: {
             endedAt: isFinished(body) ? (row.endedAt ?? new Date()) : row.endedAt,
             ...(transcript ? { transcript } : {}),
+            ...(beats.length ? { scene: [...scene, ...beats] } : {}),
           },
         })
 

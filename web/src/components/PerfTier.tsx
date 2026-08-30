@@ -66,12 +66,69 @@ export default function PerfTier() {
 
     // Measuring during the entrance animations would condemn every browser, so
     // start once the page has settled.
-    const begin = window.setTimeout(() => {
-      raf = requestAnimationFrame(tick)
-    }, 1200)
+    let begin = 0
+    const startWhenVisible = () => {
+      // A tab that is not on screen gets no rAF at all, so starting the sample
+      // there does not produce a slow reading — it produces no reading, and the
+      // page stays on the expensive tier for the whole of its life. Opening the
+      // site in a background tab is ordinary (a middle-click, a restored
+      // session), so wait for the tab rather than measuring into the void.
+      if (document.hidden) return
+      document.removeEventListener('visibilitychange', startWhenVisible)
+      begin = window.setTimeout(() => {
+        raf = requestAnimationFrame(tick)
+      }, 1200)
+    }
+    document.addEventListener('visibilitychange', startWhenVisible)
+    startWhenVisible()
+
+    // The one sample above is taken at rest, and at rest almost everything
+    // passes. What people actually feel is the scroll, where the pinned glass
+    // is re-sampled every frame. So keep a cheap watchdog running afterwards:
+    // if three frames inside one second run long, the machine has told us more
+    // than the benchmark did. It only ever moves in one direction — dropping
+    // back out on a single good second would flicker the whole backdrop.
+    let longFrames = 0
+    let windowStart = 0
+    let prev = 0
+    let watchRaf = 0
+    const watch = (t: number) => {
+      watchRaf = requestAnimationFrame(watch)
+      if (prev) {
+        if (t - windowStart > 1000) {
+          longFrames = 0
+          windowStart = t
+        }
+        if (t - prev > 34) longFrames++
+        if (longFrames >= 3) {
+          root.classList.add('perf-lite')
+          cancelAnimationFrame(watchRaf)
+          window.removeEventListener('scroll', arm)
+          return
+        }
+      } else {
+        windowStart = t
+      }
+      prev = t
+    }
+    // Armed by scrolling, because that is the only time the question matters,
+    // and disarmed as soon as it answers itself.
+    const arm = () => {
+      if (root.classList.contains('perf-lite') || watchRaf) return
+      prev = 0
+      watchRaf = requestAnimationFrame(watch)
+      window.setTimeout(() => {
+        cancelAnimationFrame(watchRaf)
+        watchRaf = 0
+      }, 2500)
+    }
+    window.addEventListener('scroll', arm, { passive: true })
 
     return () => {
       window.clearTimeout(begin)
+      document.removeEventListener('visibilitychange', startWhenVisible)
+      window.removeEventListener('scroll', arm)
+      cancelAnimationFrame(watchRaf)
       cancelAnimationFrame(raf)
     }
   }, [])

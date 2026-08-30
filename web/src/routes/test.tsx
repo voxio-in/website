@@ -10,7 +10,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/test.css'
 
 export const Route = createFileRoute('/test')({
-  head: () => ({ meta: [{ title: 'Backdrop test — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'Backdrop test — Voxio Agents' }] }),
   component: Test,
 })
 

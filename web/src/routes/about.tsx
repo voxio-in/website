@@ -6,7 +6,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/about.css'
 
 export const Route = createFileRoute('/about')({
-  head: () => ({ meta: [{ title: 'About Us — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'About Us — Voxio Agents' }] }),
   component: About,
 })
 
@@ -29,7 +29,7 @@ function About() {
           <div className="about-grid">
             <div className="about-copy rise">
               <p>
-                Voxio turns a phone call or a browser tab into a real-time speech-to-speech
+                Voxio Agents turns a phone call or a browser tab into a real-time speech-to-speech
                 conversation with an AI agent. Audio streams in, a streaming transcriber turns it
                 into text, a configurable workflow graph decides what to say and do, and a
                 streaming synthesiser speaks it back.

@@ -9,7 +9,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/collaborations.css'
 
 export const Route = createFileRoute('/collaborations')({
-  head: () => ({ meta: [{ title: 'Collaborations — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'Collaborations — Voxio Agents' }] }),
   component: Collaborations,
 })
 
@@ -24,7 +24,7 @@ function Collaborations() {
           <span className="eyebrow">Collaborations</span>
           <h1>One hiring conversation, <em>four sides of the table</em>.</h1>
           <p className="section-lede">
-            Echobotics is a hiring platform. Voxio is the voice inside it &mdash; the same engine
+            Echobotics is a hiring platform. Voxio Agents is the voice inside it &mdash; the same engine
             that runs the calling agents and the 3D avatars, pointed at interviews instead of
             consultations. Four products sit on one engine because the hiring journey is really
             one long conversation seen from four positions.
@@ -276,7 +276,7 @@ function Collaborations() {
             <span className="eyebrow">Also with Echobotics</span>
             <h2 className="section-title">AI calling agents</h2>
             <p className="section-lede">
-              Beyond the four OS products, Echobotics runs the Voxio AI calling agent itself.
+              Beyond the four OS products, Echobotics runs the Voxio Agents calling agent itself.
               <Link className="card-link" to="/calling/work" hash="echobotics">See the deployment</Link>
             </p>
           </div>

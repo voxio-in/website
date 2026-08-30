@@ -53,20 +53,17 @@ export default function AuroraBackdrop({
             <stop offset="1" stopColor={TEAL_PALE} stopOpacity="0" />
           </linearGradient>
 
-          <filter id="aur-soft" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="38" />
-          </filter>
-          <filter id="aur-glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feGaussianBlur stdDeviation="7" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
+        {/* The softening is a CSS filter on the group, not an SVG one.
+            feGaussianBlur is not on the compositor's path: any transform inside
+            a filtered subtree invalidates the filter, so the swaying curtains
+            re-rasterised a full-viewport blur on the CPU every frame, on every
+            browser, on every page of the site. The same blur expressed in CSS
+            is a composited layer the sway then moves for free. Radius lives in
+            aurora.css, in screen pixels rather than viewBox units. */}
         {showRibbons && (
-          <g filter="url(#aur-soft)" className="aur-curtains">
+          <g className="aur-curtains">
             <path className="aur-wave aur-wave--1" fill="url(#aur-curtain)"
               d="M-200 250 C 160 120, 420 400, 760 260 S 1360 90, 1800 250 L1800 900 L-200 900 Z" />
             <path className="aur-wave aur-wave--2" fill="url(#aur-curtain-2)"
@@ -77,7 +74,7 @@ export default function AuroraBackdrop({
         )}
 
         {showInfinity && (
-          <g className="aur-inf" filter="url(#aur-glow)">
+          <g className="aur-inf">
             <path className="aur-inf-wire" d={LEMNISCATE} />
             <path className="aur-inf-trail" d={LEMNISCATE} stroke="url(#aur-trail)" />
             <path className="aur-inf-head" d={LEMNISCATE} />

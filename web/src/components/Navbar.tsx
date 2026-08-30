@@ -148,11 +148,11 @@ const productSection = (
 
 function sectionFor(pathname: string): Section {
   if (pathname.startsWith("/calling"))
-    return productSection("/calling", "Calling", "VoxioAgents Calling");
+    return productSection("/calling", "Calling", "Voxio Agents Calling");
   if (pathname.startsWith("/avatar"))
-    return productSection("/avatar", "Avatar", "VoxioAgents Avatar");
+    return productSection("/avatar", "Avatar", "Voxio Agents Avatar");
   if (pathname.startsWith("/webnav"))
-    return productSection("/webnav", "Navigator", "VoxioAgents Navigator");
+    return productSection("/webnav", "Navigator", "Voxio Agents Navigator");
   return { items: COMPANY, label: "Company", products: PRODUCTS };
 }
 
@@ -431,22 +431,18 @@ export default function Navbar() {
             <Link
               className="logo"
               to="/"
-              aria-label="Voxio"
+              aria-label="Voxio Agents"
               title={
-                section.tag ? "Voxio.ai — back to the main site" : "Voxio"
+                section.tag ? "Voxio Agents — back to the main site" : "Voxio Agents"
               }
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <g transform="rotate(-30 12 12)">
-                  <circle cx="7.3" cy="3.2" r="1.45" />
-                  <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8" />
-                  <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8" />
-                  <circle cx="16.7" cy="20.8" r="1.45" />
-                </g>
-              </svg>
-              <span>
-                Voxio<span className="logo-suffix">.ai</span>
-              </span>
+              {/* Set, not drawn. The initials are the mark now, so they are
+                  ordinary text in the page's own typeface — which also means
+                  they inherit the wordmark's colour and never need a second
+                  asset for the dark bar. */}
+              <span className="logo-initials" aria-hidden="true">VA</span>
+              <span className="logo-rule" aria-hidden="true" />
+              <span className="logo-name">Voxio Agents</span>
             </Link>
 
             <button

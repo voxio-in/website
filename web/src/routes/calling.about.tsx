@@ -6,7 +6,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/calling-about.css'
 
 export const Route = createFileRoute('/calling/about')({
-  head: () => ({ meta: [{ title: 'About — VoxioAgents Calling' }] }),
+  head: () => ({ meta: [{ title: 'About — Voxio Agents Calling' }] }),
   component: CallingAbout,
 })
 

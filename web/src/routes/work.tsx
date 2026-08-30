@@ -6,7 +6,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/work.css'
 
 export const Route = createFileRoute('/work')({
-  head: () => ({ meta: [{ title: 'Work — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'Work — Voxio Agents' }] }),
   component: Work,
 })
 
@@ -24,8 +24,8 @@ function Work() {
             A pattern runs through everything below. The work happens in a conversation &mdash;
             a student who has to face a frightened patient, a caller who wants an answer now,
             someone who needs a system to do something and shouldn&rsquo;t have to learn it
-            first. Voxio is the voice on the other side. None of this was a pilot that stayed
-            a pilot.
+            first. Voxio is the voice on the other side. None of the deployments here was a
+            pilot that stayed a pilot, and the two still being built are marked as such.
           </p>
         </div>
 
@@ -114,39 +114,13 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <img className="logo-crest logo-solid" src="/assets/ministry-of-health.png" alt="Ministry of Health, Singapore" />
-              <span className="case-name">Ministry of Health, Singapore</span>
-              <span className="case-meta">Government of Singapore<br />Healthcare communication training</span>
+              <img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" alt="Yellow Ribbon Singapore" />
+              <span className="case-name">Yellow Ribbon Singapore</span>
+              <span className="case-meta">Rehabilitation &amp; reintegration<br />Work readiness before release</span>
             </div>
             <div className="case-copy">
               <p>
-                The same pattern, applied to healthcare staff. Clinical training covers the
-                medicine thoroughly and the conversation barely at all &mdash; the distressed
-                family, the patient who will not accept the diagnosis, the person who needs the
-                same thing explained a third time without being made to feel small.
-              </p>
-              <p>
-                Staff practise those conversations against a character that reacts the way the
-                real person would, then get told plainly where it went wrong and what would
-                have worked instead.
-              </p>
-              <div className="case-tags">
-                <span className="case-tag">3D avatar</span>
-                <span className="case-tag">Healthcare</span>
-                <span className="case-tag">Post-session debrief</span>
-              </div>
-            </div>
-          </article>
-
-          <article className="case rise">
-            <div className="case-id">
-              <img className="logo-crest logo-fine" src="/assets/singapore-prison-service.png" alt="Singapore Prison Service" />
-              <span className="case-name">Singapore Prison Service</span>
-              <span className="case-meta">Government of Singapore<br />Rehabilitation &amp; work readiness</span>
-            </div>
-            <div className="case-copy">
-              <p>
-                The Prison Service uses it for the job waiting on the other side of the gate.
+                Yellow Ribbon runs it for the job waiting on the other side of the gate.
                 An inmate preparing for retail work stands in front of a customer who is
                 furious about a refund &mdash; and has to bring that person down. The avatar
                 argues, interrupts, escalates when handled badly, and only settles when the
@@ -162,6 +136,85 @@ function Work() {
                 <span className="case-tag">Angry-customer scenario</span>
                 <span className="case-tag">Required actions, in order</span>
                 <span className="case-tag">Work readiness</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        {/* ---------- in development ----------
+
+            Held apart from the section above rather than appended to it. Those
+            are running; these two are being built, and a case study reads as a
+            claim about something that already works unless it says otherwise.
+            The stage badge is the only thing keeping that distinction, so it
+            sits in the identity column where the client name is, not buried in
+            the copy. */}
+        <section className="section" id="building">
+          <div className="section-head rise">
+            <span className="eyebrow">In development</span>
+            <h2 className="section-title">Being <em>built now</em>.</h2>
+            <p className="section-lede">
+              Two engagements in progress. Neither is live yet, and both are here because
+              they point at where this goes next: teaching the people who teach, and
+              teaching the people who will build these themselves.
+            </p>
+          </div>
+
+          <article className="case rise">
+            <div className="case-id">
+              <img className="logo-crest" src="/assets/agency-for-integrated-care.png" alt="Agency for Integrated Care" />
+              <span className="case-name">Agency for Integrated Care</span>
+              <span className="case-stage">In development</span>
+              <span className="case-meta">Care sector, Singapore<br />Training the trainers</span>
+            </div>
+            <div className="case-copy">
+              <p>
+                One level up from every other engagement on this page. AIC does not want us
+                to train their officers &mdash; they want us to train the people who train
+                their officers. The trainers are the ones who have to judge whether an
+                officer handled someone well, and that judgement is the thing that is hard
+                to teach and hard to keep consistent across a cohort.
+              </p>
+              <p>
+                So the avatar becomes the shared reference. A trainer runs the difficult
+                client themselves, sees what the scenario is actually testing, and then
+                takes it to their own officers with the same standard in their head. The
+                same character, held the same way, in every room.
+              </p>
+              <div className="case-tags">
+                <span className="case-tag">Train-the-trainer</span>
+                <span className="case-tag">Client-handling scenarios</span>
+                <span className="case-tag">Consistent assessment</span>
+              </div>
+            </div>
+          </article>
+
+          <article className="case rise">
+            <div className="case-id">
+              <img className="logo-fine" src="/assets/acetek-college.png" alt="Acetek College" />
+              <span className="case-name">Acetek College</span>
+              <span className="case-stage">In development</span>
+              <span className="case-meta">Co-developed course<br />Retail &amp; hotel management</span>
+            </div>
+            <div className="case-copy">
+              <p>
+                A course we are writing with the college rather than a deployment we are
+                selling to it. Retail and hotel management students are walking into an
+                industry where the first voice a guest hears is increasingly not a person,
+                and the honest thing to teach them is both halves of that: what voice AI is
+                already changing about the front desk and the shop floor, and how the work
+                that stays human changes shape around it.
+              </p>
+              <p>
+                The second half is the part that matters. They do not just study the
+                technology, they build with it &mdash; students design and stand up their own
+                voice agent for a booking desk or a returns counter, which is a far better
+                way to understand what these things can and cannot do than being shown one.
+              </p>
+              <div className="case-tags">
+                <span className="case-tag">Curriculum, co-developed</span>
+                <span className="case-tag">Retail &amp; hospitality</span>
+                <span className="case-tag">Students build their own</span>
               </div>
             </div>
           </article>
@@ -231,7 +284,7 @@ function Work() {
             <span className="eyebrow">Partners &amp; product</span>
             <h2 className="section-title">Inside someone else&rsquo;s product</h2>
             <p className="section-lede">
-              Voxio as the conversational layer in a product that is not ours &mdash; the
+              Voxio Agents as the conversational layer in a product that is not ours &mdash; the
               voice, the face, or an agent that drives the page while it talks.
             </p>
           </div>
@@ -246,7 +299,7 @@ function Work() {
               <p>
                 SilverWings XR is both a customer and the partner we delivered the
                 public-sector work alongside &mdash; the training deployments above were built
-                with them. They also run the Voxio voicebot and 3D avatar in front of their own
+                with them. They also run the Voxio Agents voicebot and 3D avatar in front of their own
                 users.
               </p>
               <div className="case-tags">
@@ -264,7 +317,7 @@ function Work() {
             </div>
             <div className="case-copy">
               <p>
-                A Singapore client running Voxio as the conversational layer inside their own
+                A Singapore client running Voxio Agents as the conversational layer inside their own
                 product &mdash; the same engine as the training deployments, without the Voxio
                 name on it.
               </p>
@@ -274,6 +327,22 @@ function Work() {
               </div>
             </div>
           </article>
+
+          {/* A mark on its own, with no case beside it. Everything else on this
+              page is a claim we are prepared to describe; this is only the fact
+              that the name belongs here. Given its own quiet row rather than a
+              case card with the copy left blank, because an empty card reads as
+              something missing. The image removes itself if the file is not
+              there, so a mark we have not been given yet degrades to nothing
+              rather than to a broken icon. */}
+          <div className="logo-quiet rise">
+            <img
+              className="logo-fine"
+              src="/assets/straits-interactive.png"
+              alt="Straits Interactive"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          </div>
         </section>
 
         {/* ---------- website navigation ---------- */}
@@ -289,7 +358,7 @@ function Work() {
 
           <article className="case rise">
             <div className="case-id">
-              <span className="logo-word" style={{ fontSize: "19px" }}>Voxio</span>
+              <span className="logo-word" style={{ fontSize: "19px" }}>Voxio Agents</span>
               <span className="case-name">An agent that uses the site for you</span>
               <span className="case-meta">Available now<br />Live demo on this site</span>
             </div>

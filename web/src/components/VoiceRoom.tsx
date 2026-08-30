@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { demoById, type DemoId } from '#/lib/demos'
-import { endRoomSession, startRoomSession, type RoomStart } from '#/server/room'
+import { toneOf } from '#/lib/sceneProps'
+import ScenePanel, { EMPTY_SCENE, type Scene } from '#/components/ScenePanel'
+import { endRoomSession, roomScene, startRoomSession, type RoomStart } from '#/server/room'
 
 type Phase = 'idle' | 'asking' | 'connecting' | 'live' | 'ended' | 'failed'
 
@@ -52,6 +54,11 @@ export default function VoiceRoom({
   const [youSpeaking, setYouSpeaking] = useState(false)
   const [opened, setOpened] = useState(false)
   const [cueReady, setCueReady] = useState(false)
+  /* What he has put on the counter, how he is taking it, and the running
+     score. Empty for the demos that have no scene — the panel draws nothing
+     until a beat actually arrives. */
+  const [scene, setScene] = useState<Scene>(EMPTY_SCENE)
+  const [formDone, setFormDone] = useState(false)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -89,6 +96,8 @@ export default function VoiceRoom({
     }
     setAgentSpeaking(false)
     setYouSpeaking(false)
+    setScene(EMPTY_SCENE)
+    setFormDone(false)
     setOpened(false)
     setCueReady(false)
     setLeft(null)
@@ -291,6 +300,60 @@ export default function VoiceRoom({
     return () => clearTimeout(t)
   }, [live])
 
+  /* The scene arrives over the gateway's webhook, not over the peer
+     connection, so the room polls for it. Two seconds: the beats land a turn
+     behind the audio either way, and a tighter poll would only add load
+     without making the counter any more current. */
+  useEffect(() => {
+    if (!live || !demo.faceKind) return
+    const session = sessionRef.current
+    if (!session) return
+
+    let after = 0
+    let stopped = false
+
+    const pull = async () => {
+      try {
+        const { beats } = await roomScene({ data: { sessionId: session.id, after } })
+        if (stopped || !beats.length) return
+        after = beats[beats.length - 1]!.n
+
+        setScene((prev) => {
+          let next = prev
+          for (const beat of beats) {
+            const props = beat.actions?.length
+              ? [...next.props, ...beat.actions.filter((a) => !next.props.includes(a))]
+              : next.props
+            /* Last-wins on the face: only the newest one is the one he is
+               still wearing. A slow poll can return several turns at once, and
+               announcing every transition in that batch would flash two
+               contradictory banners for a mood already moved past. */
+            const changed = beat.frame && beat.frame !== next.frame && next.frame !== null
+            next = {
+              props,
+              frame: beat.frame ?? next.frame,
+              score: beat.score ?? next.score,
+              shift: changed
+                ? { id: beat.n, tone: toneOf(beat.frame!) }
+                : next.shift,
+            }
+          }
+          return next
+        })
+      } catch {
+        // A dropped poll is not worth breaking the call over. The next one
+        // asks for the same delta.
+      }
+    }
+
+    void pull()
+    const t = setInterval(() => void pull(), 2000)
+    return () => {
+      stopped = true
+      clearInterval(t)
+    }
+  }, [live, demo.faceKind])
+
   const cue = live && cueReady && !opened
 
   return (
@@ -348,6 +411,17 @@ export default function VoiceRoom({
           </p>
         ) : null}
       </div>
+
+      {demo.faceKind ? (
+        <ScenePanel
+          scene={scene}
+          name={demo.role.split(',')[0]!.trim()}
+          showMood={demo.faceKind === 'mood'}
+          moodRegister={demo.moodRegister}
+          formDone={formDone}
+          onFormDone={() => setFormDone(true)}
+        />
+      ) : null}
 
       {demo.video && live ? (
         <div className="layouts" role="group" aria-label="Layout">

@@ -7,6 +7,7 @@ import { demoById, type DemoId } from '#/lib/demos'
 import { db, withDb } from '#/server/db'
 import { buildRoomCustoms } from '#/server/voice/roomCustoms'
 import { SERVERS } from '#/server/voice/servers'
+import type { SceneBeat } from '#/server/voice/webhookPayload'
 
 const FLOW_API_KEY = process.env.VX_FLOW_API_KEY || ''
 
@@ -115,4 +116,26 @@ export const endRoomSession = createServerFn({ method: 'POST' })
       }),
     )
     return { ok: true }
+  })
+
+/* ---------- the scene, read back ----------
+
+   The roleplays put things on the counter. The voice server posts each turn to
+   /api/room-webhook, which appends the beats; this is how the live room reads
+   them. Polling rather than pushing because the beats arrive over the gateway's
+   webhook, not over the peer connection — the data channel this room opens
+   carries nothing back from the graph.
+
+   `after` is the last beat the room has drawn, so a poll returns the delta. */
+export const roomScene = createServerFn({ method: 'POST' })
+  .inputValidator((data: { sessionId: string; after: number }) => data)
+  .handler(async ({ data }): Promise<{ beats: SceneBeat[] }> => {
+    const row = await withDb(() =>
+      db.roomSession.findUnique({
+        where: { id: data.sessionId },
+        select: { scene: true },
+      }),
+    )
+    const scene = Array.isArray(row?.scene) ? (row.scene as SceneBeat[]) : []
+    return { beats: scene.filter((b) => b.n > data.after) }
   })

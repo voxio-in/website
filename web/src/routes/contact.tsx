@@ -1,6 +1,7 @@
-// There is no endpoint behind this yet. Rather than POST to nothing and show a
-// fake "sent" state, the form composes a mail draft the sender can see and edit
-// — the enquiry is never silently lost.
+// The form posts to the server and the enquiry is stored. It used to compose a
+// mailto: draft instead, which depended on the visitor having a mail client and
+// on the address in the link being live — and it was not, so the form looked
+// like it worked and lost everything put into it. See server/contact.ts.
 
 import { createFileRoute, Link } from '@tanstack/react-router'
 
@@ -8,46 +9,64 @@ import { useState } from 'react'
 
 import SiteFooter from '#/components/SiteFooter'
 import { useReveal } from '#/components/useReveal'
+import { submitContact } from '#/server/contact'
 
 import '#/styles/forms.css'
 import '#/styles/contact.css'
 
 export const Route = createFileRoute('/contact')({
-  head: () => ({ meta: [{ title: 'Contact us — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'Contact us — Voxio Agents' }] }),
   component: Contact,
 })
 
+type Phase = 'idle' | 'sending' | 'sent' | 'failed'
+
 function Contact() {
   useReveal()
+  const [phase, setPhase] = useState<Phase>('idle')
   const [note, setNote] = useState('')
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
     if (!form.checkValidity()) {
       form.reportValidity()
       return
     }
+    if (phase === 'sending') return
+
     const v = (id: string) =>
-      (document.querySelector<HTMLInputElement>('#' + id)?.value || '').trim()
+      (
+        document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+          '#' + id,
+        )?.value || ''
+      ).trim()
 
-    const subject = 'Voxio enquiry — ' + (v('cf-org') || v('cf-name') || 'website')
-    const body = [
-      'Name: ' + v('cf-name'),
-      'Organisation: ' + (v('cf-org') || '—'),
-      'Email: ' + v('cf-email'),
-      'Interested in: ' + v('cf-surface'),
-      '',
-      v('cf-msg') || '(no detail given)',
-    ].join('\n')
+    setPhase('sending')
+    setNote('')
 
-    window.location.href =
-      'mailto:hello@voxio.ai?subject=' +
-      encodeURIComponent(subject) +
-      '&body=' +
-      encodeURIComponent(body)
-
-    setNote('Opening your mail app… if nothing happens, write to hello@voxio.ai.')
+    try {
+      const res = await submitContact({
+        data: {
+          name: v('cf-name'),
+          org: v('cf-org'),
+          email: v('cf-email'),
+          surface: v('cf-surface'),
+          message: v('cf-msg'),
+        },
+      })
+      if (res.ok) {
+        setPhase('sent')
+        return
+      }
+      setPhase('failed')
+      setNote(res.reason)
+    } catch {
+      /* A network failure is the one case where the enquiry really is lost, so
+         say so plainly rather than showing a confirmation we cannot stand behind. */
+      setPhase('failed')
+      setNote('That did not go through. Check your connection and try once more.')
+    }
   }
 
   return (
@@ -68,8 +87,23 @@ function Contact() {
           <div className="glass-panel rise">
             <div className="contact-grid">
 
-              {/* No backend is wired to this static site, so the form composes a mail
-                   the enquiry. */}
+              {/* The confirmation replaces the form rather than sitting under it.
+                  A sent form left on screen invites a second submission, and the
+                  one thing a person wants to know here is whether it went. */}
+              {phase === 'sent' ? (
+              <div className="contact-sent">
+                <p className="contact-sent-head">That is with us.</p>
+                <p className="contact-sent-body">
+                  We read every one of these ourselves, and we reply with questions rather
+                  than a deck. Expect to hear back within a couple of working days.
+                </p>
+                <p className="contact-sent-foot">
+                  In the meantime the demos on this site are live &mdash;{' '}
+                  <Link className="card-link" to="/avatar">talk to an avatar</Link> or{' '}
+                  <Link className="card-link" to="/webnav">watch one drive a page</Link>.
+                </p>
+              </div>
+              ) : (
               <form className="contact-form" id="contact-form" noValidate onSubmit={onSubmit}>
                 <div className="field">
                   <label htmlFor="cf-name">Your name</label>
@@ -106,17 +140,28 @@ function Contact() {
                 </div>
 
                 <div className="form-actions">
-                  <button className="btn btn-solid" type="submit">Send it over</button>
-                  <span className="form-note" id="cf-note" role="status" aria-live="polite">
-                    {note || 'Opens in your mail app, addressed to hello@voxio.ai.'}
+                  <button className="btn btn-solid" type="submit" disabled={phase === 'sending'}>
+                    {phase === 'sending' ? 'Sending…' : 'Send it over'}
+                  </button>
+                  <span
+                    className={`form-note${phase === 'failed' ? ' form-note--bad' : ''}`}
+                    id="cf-note"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {note || 'Goes straight to us. We read every one.'}
                   </span>
                 </div>
               </form>
+              )}
 
               <aside className="contact-aside sheet">
                 <div className="aside-block">
-                  <span className="fact-k">Email</span>
-                  <a className="card-link" href="mailto:hello@voxio.ai">hello@voxio.ai</a>
+                  <span className="fact-k">How to reach us</span>
+                  <p className="aside-body">
+                    The form is the way in. It reaches us directly, and we answer from a
+                    real address so you can just reply to us after that.
+                  </p>
                 </div>
                 <div className="aside-block">
                   <span className="fact-k">Where we work</span>
@@ -134,8 +179,15 @@ function Contact() {
                   <span className="fact-k">Already running</span>
                   <p className="aside-body">
                     Singapore Institute of Technology, the Ministry of Social and Family
-                    Development, the Ministry of Health, the Singapore Prison Service, VOXA and
-                    SilverWings XR. <Link className="card-link" to="/work">See the work</Link>
+                    Development, Yellow Ribbon Singapore, VOXA and SilverWings XR.{' '}
+                    <Link className="card-link" to="/work">See the work</Link>
+                  </p>
+                </div>
+                <div className="aside-block">
+                  <span className="fact-k">In development</span>
+                  <p className="aside-body">
+                    The Agency for Integrated Care, and a co-developed course with Acetek
+                    College.
                   </p>
                 </div>
               </aside>

@@ -13,7 +13,7 @@ Be honest and specific. Quote or paraphrase what the officer actually said. A ge
 
 Return three things:
 
-"score" — one overall number from zero to ten, as digits, at most one decimal place (e.g. "7" or "6.5"). This is the officer's overall handling, not an average you must show your working for. Return the number alone with no words, no "/10" and no percent sign.
+"final_score" — one overall number from zero to ten, as digits, at most one decimal place (e.g. "7" or "6.5"). This is the officer's overall handling, not an average you must show your working for. Return the number alone with no words, no "/10" and no percent sign.
 
 "feedback" — a markdown table, and nothing before or after it. Exactly three columns with this header row: | Criteria | Rating (1-10) | Brief justification |. One row per criterion above, in that order. The justification is one sentence tied to something that actually happened in the conversation.
 

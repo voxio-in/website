@@ -18,7 +18,7 @@ import '#/styles/surfaces.css'
 import '#/styles/demo.css'
 
 export const Route = createFileRoute('/webnav')({
-  head: () => ({ meta: [{ title: 'Website Navigation — Voxio' }] }),
+  head: () => ({ meta: [{ title: 'Website Navigation — Voxio Agents' }] }),
   component: Webnav,
 })
 
@@ -75,13 +75,17 @@ function Webnav() {
             <h2 className="section-title">
               Watch it <em>use the page</em>.
             </h2>
-            {/* The lede no longer names one portal — the picker below has four,
-                and each states its own trap in its own caption. */}
+            {/* The lede no longer names one portal — the picker below has five,
+                and each states its own trap in its own caption. The care record
+                is called out separately because it is a different claim: the
+                other four are an agent reading a page for you, and that one is
+                an agent writing in a language you cannot. */}
             <p className="section-lede">
-              Four real systems, rebuilt faithfully &mdash; a hospital, a university, the
-              railway booking flow and a shop. Pick one, try to do the job yourself, then
-              hand it over: you hear what the agent is about to do, then you watch it happen
-              on the screen in front of you. Nothing is submitted anywhere.
+              Five real systems, rebuilt faithfully &mdash; a hospital, a university, the
+              railway booking flow, a shop, and a Japanese care home&rsquo;s incident
+              report. Pick one, try to do the job yourself, then hand it over: you hear
+              what the agent is about to do, then you watch it happen on the screen in
+              front of you. Nothing is submitted anywhere.
             </p>
           </div>
 

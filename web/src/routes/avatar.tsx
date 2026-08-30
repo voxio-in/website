@@ -17,7 +17,7 @@ import '#/styles/avatar.css'
 import '#/styles/demo.css'
 
 export const Route = createFileRoute('/avatar')({
-  head: () => ({ meta: [{ title: '3D Avatar Agents — Voxio' }] }),
+  head: () => ({ meta: [{ title: '3D Avatar Agents — Voxio Agents' }] }),
   component: Avatar,
 })
 
@@ -167,8 +167,8 @@ function Avatar() {
             <span className="eyebrow">In production</span>
             <h2 className="section-title">Already in the <em>toughest rooms</em>.</h2>
             <p className="section-lede">
-              Singapore&rsquo;s universities, ministries and prison service use it to let their
-              people practise the conversation before it counts.
+              Singapore&rsquo;s universities, ministries and reintegration agencies use it to
+              let their people practise the conversation before it counts.
             </p>
           </div>
 
@@ -176,8 +176,15 @@ function Avatar() {
             <span className="logo-tip" data-label="Singapore Institute of Technology"><img src="/assets/SIT.png" alt="Singapore Institute of Technology" /></span>
             <span className="logo-tip" data-label="Ministry of Social &amp; Family Development"><img src="/assets/MSF.png" alt="Ministry of Social and Family Development, Singapore" /></span>
             <span className="logo-tip" data-label="SilverWings XR"><img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" /></span>
-            <span className="logo-tip" data-label="Ministry of Health, Singapore"><img className="logo-crest logo-solid" src="/assets/ministry-of-health.png" alt="Ministry of Health, Singapore" /></span>
-            <span className="logo-tip" data-label="Singapore Prison Service"><img className="logo-crest logo-fine" src="/assets/singapore-prison-service.png" alt="Singapore Prison Service" /></span>
+            <span className="logo-tip" data-label="Yellow Ribbon Singapore"><img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" alt="Yellow Ribbon Singapore" /></span>
+          </div>
+
+          {/* Kept out of the wall above rather than mixed into it. A logo wall
+              is read as a customer list, and these two are being built. */}
+          <div className="logo-soon rise" style={{ "--rd": "0.09s" }}>
+            <span className="logo-soon-k">In development</span>
+            <span className="logo-tip" data-label="Agency for Integrated Care"><img className="logo-crest" src="/assets/agency-for-integrated-care.png" alt="Agency for Integrated Care" /></span>
+            <span className="logo-tip" data-label="Acetek College"><img className="logo-fine" src="/assets/acetek-college.png" alt="Acetek College" /></span>
           </div>
 
           {/* Three, filling the grid exactly. .split is auto-fit minmax(300px, 1fr),
@@ -185,15 +192,14 @@ function Avatar() {
           <div className="split rise section-block" style={{ "--rd": "0.12s" }}>
             <article className="who">
               <Glyph name="withhold" />
-              <span className="who-k">Singapore Institute of Technology &middot; Ministry of Health</span>
+              <span className="who-k">Singapore Institute of Technology</span>
               <h3 className="who-t">The patient who will not just tell you</h3>
               <p className="who-b">
                 Medical students can name the disease and prescribe the drug, then freeze in
                 front of a real person. The avatar hedges, drifts off the point and gets uneasy
-                when pushed &mdash; so they have to learn how to <em>ask</em>. For MOH it is the
-                other half of that conversation: the distressed family, the patient who needs the
-                same thing explained a third time without being made to feel small. Afterwards it
-                becomes the teacher and reviews the consultation.
+                when pushed &mdash; so they have to learn how to <em>ask</em>. It holds a fear it
+                will not volunteer until someone gives it room. Afterwards it becomes the teacher
+                and reviews the consultation.
               </p>
             </article>
 
@@ -211,7 +217,7 @@ function Avatar() {
 
             <article className="who">
               <Glyph name="refund" />
-              <span className="who-k">Singapore Prison Service</span>
+              <span className="who-k">Yellow Ribbon Singapore</span>
               <h3 className="who-t">The customer demanding a refund</h3>
               <p className="who-b">
                 Preparing for retail work on the other side of the gate. Acknowledge the

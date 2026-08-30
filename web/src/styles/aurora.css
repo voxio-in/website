@@ -77,7 +77,19 @@
 @keyframes aur-twinkle { from { opacity: 0.34; } to { opacity: 0.62; } }
 
 .aur-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.aur-curtains { mix-blend-mode: screen; opacity: var(--aur-curtains); }
+
+/* Roughly the stdDeviation=38 this used to be given in viewBox units: the box
+   is 1600 wide and lands near viewport width, so the two are within a pixel or
+   two of each other at any normal size. `will-change` is what makes the swap
+   worth making — it promotes the blurred result to its own layer, so the three
+   sway animations underneath move a finished texture instead of asking for a
+   new one sixty times a second. */
+.aur-curtains {
+  mix-blend-mode: screen;
+  opacity: var(--aur-curtains);
+  filter: blur(34px);
+  will-change: filter;
+}
 
 .aur-wave { transform-origin: 50% 40%; }
 .aur-wave--1 { animation: aur-sway-1 19s ease-in-out infinite alternate; }
@@ -97,7 +109,11 @@
   to   { transform: translate3d(4%, 3%, 0)   scaleY(1.2);  }
 }
 
-.aur-inf { fill: none; stroke-linecap: round; }
+/* Was feGaussianBlur + feMerge, which is the same trap as the curtains: the
+   trail's dashoffset animates continuously, so the merge re-ran every frame
+   over a 180% region. A drop-shadow is one pass and reads the same at this
+   opacity. */
+.aur-inf { fill: none; stroke-linecap: round; filter: drop-shadow(0 0 7px var(--teal-lit)); }
 
 .aur-inf-wire {
   stroke: var(--aur-wire);
@@ -114,7 +130,6 @@
   stroke: var(--teal-pale);
   stroke-width: 3.4;
   stroke-dasharray: 42 3358;
-  filter: drop-shadow(0 0 9px var(--teal-lit));
   animation: aur-run 9s linear infinite;
 }
 .aur-inf-head { animation-delay: -1.38s; }
@@ -215,7 +230,7 @@
     radial-gradient(80% 54% at 88% 16%, var(--aur-wash-3), transparent 68%),
     linear-gradient(180deg, rgba(3, 23, 28, 0.32) 0%, rgba(3, 23, 28, 0.30) 34%, var(--aur-wash-floor) 88%, var(--aur-ground) 100%);
 }
-.perf-lite .aur-curtains { mix-blend-mode: normal; opacity: 0.3; }
+.perf-lite .aur-curtains { mix-blend-mode: normal; opacity: 0.3; filter: blur(18px); }
 
 /* 3. The still, when the video will not run, drifts by scaling a full-screen
       background image. That is a full-viewport repaint on a 46s loop. */

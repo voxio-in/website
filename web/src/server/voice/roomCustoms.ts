@@ -5,12 +5,14 @@ import { demoById } from '#/lib/demos'
 import { buildCherylCustoms } from './roleplays/cherylCustoms'
 import { buildMuthuCustoms } from './roleplays/muthuCustoms'
 import { setRoleplayWebhook } from './roleplays/shared'
+import { buildTanCustoms } from './roleplays/tanCustoms'
 import { buildVpsCustoms } from './roleplays/vpsCustoms'
 import type { SurfaceId } from '#/lib/surfaces'
 import { buildWebActionCustoms } from './webActionCustoms'
 
 const ROLEPLAYS: Partial<Record<DemoId, (userName: string) => unknown>> = {
   mm: buildMuthuCustoms,
+  tn: buildTanCustoms,
   pr: buildCherylCustoms,
   vps: buildVpsCustoms,
 }

@@ -1,4 +1,4 @@
-// Scroll up past the top of any page and you go back to voxio.ai.
+// Scroll up past the top of any page and you go back to the main site.
 
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
@@ -217,7 +217,7 @@ export default function PullToHome() {
           <path d="M10 16V4" />
           <path d="M5 9l5-5 5 5" />
         </svg>
-        Keep pulling for Voxio.ai
+        Keep pulling for Voxio Agents
       </div>
     </div>
   )

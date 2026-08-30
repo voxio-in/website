@@ -9,6 +9,7 @@ import clinicPage from './prompts/webnav/clinic.md?raw'
 import universityPage from './prompts/webnav/university.md?raw'
 import railPage from './prompts/webnav/rail.md?raw'
 import shopPage from './prompts/webnav/shop.md?raw'
+import carePage from './prompts/webnav/care.md?raw'
 
 const MARKER = '<|web_action|>'
 
@@ -35,6 +36,14 @@ const PAGES: Record<SurfaceId, PageSpec> = {
   shop: {
     greeting: 'Hi, bazaar here. What are you after?',
     page: render(md(shopPage), { MARKER }),
+  },
+
+  /* Greets in Japanese and then gets out of the way, because the worker on the
+     other end is not going to be answering in it. */
+  care: {
+    greeting:
+      'お疲れさまです。Record assistant here — tell me what happened and I will write it up.',
+    page: render(md(carePage), { MARKER }),
   },
 }
 

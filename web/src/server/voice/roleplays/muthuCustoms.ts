@@ -65,6 +65,11 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
                   type: "str",
                   description: "What the officer just said to Mr Muthu.",
                 },
+                score: {
+                  type: "str",
+                  description:
+                    "Mr Muthu's running judgement of the officer so far, in STATUS_VALUE form (e.g. \"retry_5\"). Carry it forward and return it updated.",
+                },
               },
               prompt_template: "base_llm",
               system_prompt: systemPrompt,
@@ -82,10 +87,20 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
                   description:
                     "Which face Mr Muthu is wearing for this line. EXACTLY one of: \"main\" (the name of his ANGRY face — agitated, hostile, the default, and where the conversation starts) or \"normal\" (guarded but no longer shouting; use ONLY once the officer has genuinely de-escalated him, and switch straight back to \"main\" the moment they deflect, refuse, or read from a script). Required on every reply. Never any other word.",
                 },
+                actions: {
+                  type: "list",
+                  description:
+                    "The physical things Mr Muthu does this turn, as a list of strings. Empty list [] on most turns. Allowed values, and ONLY these five: \"bills\" (the turn he pushes the stack of bills across the desk instead of answering — usually early, and usually when pressed on what he spends the money on), \"aid-letter\" (the turn he produces the assistance letter to prove the nine hundred figure, after the officer questions or restates the amount), \"mp-letter\" (the turn he lays out the Meet-the-People appeal letter to show he has already gone over the officer's head — only when he threatens the MP, the media or a supervisor), \"referral-form\" (the exact turn the officer FIRST offers job coaching, skills upgrading, counselling or any other referral, so the slip lands on the desk unsigned), \"turn-away\" (only on the exit turn, when he gives up and walks out). Fire each at most once per session.",
+                },
                 end_session: {
                   type: "str",
                   description:
                     "Whether the meeting is now over. EXACTLY the lowercase word \"yes\" or the lowercase word \"no\" — never capitalised, never \"true\", never a sentence. \"no\" on almost every turn. \"yes\" ONLY once Mr Muthu is genuinely leaving, either because the officer got somewhere concrete with him or because he has given up on them and is walking out. Required on every reply.",
+                },
+                score: {
+                  type: "str",
+                  description:
+                    "The running score in STATUS_VALUE form, e.g. \"pass_9\", \"retry_5\", \"fail_1\". VALUE is a whole number zero to ten carried forward from the value you were given and adjusted; STATUS is \"pass\", \"retry\" or \"fail\". Required on every reply including the last.",
                 },
               },
             },
@@ -94,7 +109,7 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
           response: {
             type: "out",
             parameters: {
-              variables: ["speak", "frame", "end_session"],
+              variables: ["speak", "frame", "actions", "score", "end_session"],
               interruption_type: "no",
               interruption_metadata: {},
             },
@@ -134,7 +149,7 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
               model: "google/gemini-3.1-flash-lite-preview",
               history_key: "debrief_conversation_history",
               llm_return_type: {
-                score: {
+                final_score: {
                   type: "str",
                   description:
                     "The officer's overall handling, zero to ten, as digits with at most one decimal place. The bare number only — no words, no \"/10\", no percent sign.",
@@ -156,7 +171,7 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
           debrief_out: {
             type: "out",
             parameters: {
-              variables: ["score", "feedback", "summary"],
+              variables: ["final_score", "feedback", "summary"],
               interruption_type: "no",
               interruption_metadata: {},
             },
@@ -168,8 +183,10 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
           speak: { type: "str" },
           frame: { type: "str", default: MUTHU_OPENING_FRAME },
           end_session: { type: "str", default: "no" },
+          actions: { type: "list", default: [] },
+          score: { type: "str", default: "retry_5" },
           debrief_conversation_history: { type: "list", default: [] },
-          score: { type: "str" },
+          final_score: { type: "str" },
           feedback: { type: "str" },
           summary: { type: "str" },
           node_type: { type: "str" },

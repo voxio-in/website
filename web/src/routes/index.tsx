@@ -46,7 +46,7 @@ function Home() {
             </h1>
 
             <p className="lede appear appear--soft" style={{ "--d": "0.82s" }}>
-              Voxio AI puts one intelligent agent on every line your customer already uses
+              Voxio Agents puts one intelligent agent on every line your customer already uses
               &mdash; the phone, the chat window, a message thread, or face-to-face on a
               screen. It does not explain your system to them. It works it while they talk.
             </p>
@@ -85,7 +85,7 @@ function Home() {
             <h2 className="section-title">Already trusted in the <em>toughest rooms</em>.</h2>
             <p className="section-lede">
               A medical student who freezes in front of a patient. An officer facing someone
-              furious. Singapore&rsquo;s universities and ministries use Voxio so their people
+              furious. Singapore&rsquo;s universities and ministries use Voxio Agents so their people
               can practise the conversation before it counts. The same agent screens a hundred
               candidates on the phone, and runs your software while you talk to it.
             </p>
@@ -98,9 +98,16 @@ function Home() {
             <span className="logo-tip" data-label="Ministry of Social &amp; Family Development"><img src="/assets/MSF.png" alt="Ministry of Social and Family Development, Singapore" /></span>
             <span className="logo-tip" data-label="SilverWings XR"><img src="/assets/silver-wings-xr-logo.png" alt="SilverWings XR" /></span>
             <span className="logo-tip" data-label="VOXA"><img src="/assets/voxa.png" alt="VOXA" /></span>
-            <span className="logo-tip" data-label="Ministry of Health, Singapore"><img className="logo-crest logo-solid" src="/assets/ministry-of-health.png" alt="Ministry of Health, Singapore" /></span>
-            <span className="logo-tip" data-label="Singapore Prison Service"><img className="logo-crest logo-fine" src="/assets/singapore-prison-service.png" alt="Singapore Prison Service" /></span>
+            <span className="logo-tip" data-label="Yellow Ribbon Singapore"><img className="logo-crest logo-fine" src="/assets/yellow-ribbon.png" alt="Yellow Ribbon Singapore" /></span>
             <span className="logo-tip" data-label="Echobotics"><img className="logo-invert logo-crest" src="/assets/echobotics.svg" alt="Echobotics" /></span>
+          </div>
+
+          {/* Kept out of the wall above rather than mixed into it. A logo wall
+              is read as a customer list, and these two are being built. */}
+          <div className="logo-soon rise" style={{ "--rd": "0.09s" }}>
+            <span className="logo-soon-k">In development</span>
+            <span className="logo-tip" data-label="Agency for Integrated Care"><img className="logo-crest" src="/assets/agency-for-integrated-care.png" alt="Agency for Integrated Care" /></span>
+            <span className="logo-tip" data-label="Acetek College"><img className="logo-fine" src="/assets/acetek-college.png" alt="Acetek College" /></span>
           </div>
 
           <div className="cards rise section-block" style={{ "--rd": "0.12s" }}>

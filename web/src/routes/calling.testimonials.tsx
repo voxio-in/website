@@ -6,7 +6,7 @@ import { useReveal } from '#/components/useReveal'
 import '#/styles/calling-testimonials.css'
 
 export const Route = createFileRoute('/calling/testimonials')({
-  head: () => ({ meta: [{ title: 'Testimonials — VoxioAgents Calling' }] }),
+  head: () => ({ meta: [{ title: 'Testimonials — Voxio Agents Calling' }] }),
   component: CallingTestimonials,
 })
 
@@ -21,7 +21,7 @@ function CallingTestimonials() {
           <span className="eyebrow">Calling &middot; Testimonials</span>
           <h1>What callers&rsquo; <em>owners say</em>.</h1>
           <p className="section-lede">
-            Quotes from the people who put a Voxio agent on their line.
+            Quotes from the people who put a Voxio Agents line into service.
           </p>
         </div>
 
@@ -47,7 +47,7 @@ function CallingTestimonials() {
             </figure>
           </div>
           <p className="section-lede rise section-tail">
-            More quotes as more lines go live. <Link className="card-link" to="/testimonials">Testimonials from the wider Voxio work</Link>
+            More quotes as more lines go live. <Link className="card-link" to="/testimonials">Testimonials from the wider Voxio Agents work</Link>
           </p>
         </section>
 

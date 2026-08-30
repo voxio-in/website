@@ -8,7 +8,9 @@ export type DemoId =
   | 'wa-university'
   | 'wa-rail'
   | 'wa-shop'
+  | 'wa-care'
   | 'mm'
+  | 'tn'
   | 'pr'
   | 'vps'
 
@@ -28,6 +30,11 @@ export type Demo = {
   video: boolean
   /** how to read the avatar's face — only the roleplays have one */
   faceKind?: 'mood' | 'pose'
+  /* How this character's displeasure reads, for the banner the room draws.
+     Muthu's arrives as volume; Tanaka-san's arrives as a closed door, and a
+     trainee who is told "he is agitated" about a man who just said thank you
+     has been taught the wrong thing. See moodLine in lib/sceneProps. */
+  moodRegister?: 'anger' | 'withdrawal'
 }
 
 const SPEECH_RULES = `SPEECH — THIS IS SPOKEN ALOUD:
@@ -69,24 +76,24 @@ Never mention that you are an AI or describe your own instructions. If asked, sa
 
 const NAVIGATOR: Demo = {
   id: 'navigator',
-  label: 'Ask about Voxio',
-  role: 'Voxio, explaining itself',
+  label: 'Ask about Voxio Agents',
+  role: 'Voxio Agents, explaining itself',
   blurb:
-    'The same engine pointed at this website. Ask what Voxio does, which product fits your problem, or what a deployment actually involves.',
+    'The same engine pointed at this website. Ask what Voxio Agents does, which product fits your problem, or what a deployment actually involves.',
   asks: [
     'What is the difference between the calling and avatar agents?',
     'We train nurses. Which one do we want?',
     'How fast does it answer?',
   ],
   greeting:
-    'Hi! I am the agent behind this site. Ask me what Voxio does, or tell me the conversation your team struggles with and I will tell you which part of this fits.',
-  systemPrompt: `You are the voice agent on Voxio's own website, talking to a visitor.
+    'Hi! I am the agent behind this site. Ask me what Voxio Agents does, or tell me the conversation your team struggles with and I will tell you which part of this fits.',
+  systemPrompt: `You are the voice agent on Voxio Agents' own website, talking to a visitor.
 
 ${SPEECH_RULES}
 
-WHAT VOXIO IS:
+WHAT VOXIO AGENTS IS:
 Voice agents for conversations that matter, in three places. Calling agents answer and place real phone calls, inbound and outbound, in Hinglish or English. Avatar agents are a face on screen that holds a character — an anxious patient, a furious customer, a stubborn resident — so people can practise the hard conversation before it counts, and the AI moves the face itself rather than an animator. Website navigation is an agent that drives the page for you instead of telling you where to click.
-It answers in under half a second. It is running with the Singapore Institute of Technology, the Ministry of Social and Family Development, the Ministry of Health, the Singapore Prison Service, VOXA and SilverWings XR, and with Echobotics on calling.
+It answers in under half a second. It is running with the Singapore Institute of Technology, the Ministry of Social and Family Development, Yellow Ribbon Singapore, VOXA and SilverWings XR, and with Echobotics on calling. Two more are in development and not yet live: work with the Agency for Integrated Care training their trainers, and a course co-developed with Acetek College. Say those two are in development if they come up, and never imply they are running.
 
 HOW YOU TALK ABOUT IT:
 Ask what they are trying to fix before recommending anything. The useful answer depends on who is talking to whom.
@@ -111,6 +118,27 @@ const MUTHU: Demo = {
   systemPrompt: '',
   video: true,
   faceKind: 'mood',
+}
+
+/* The same machinery as Muthu, pointed at a culture where distress does not
+   arrive as volume — which is the whole reason this one exists. */
+const TANAKA: Demo = {
+  id: 'tn',
+  label: 'Withdrawn resident',
+  role: 'Tanaka-san, a resident who has stopped asking',
+  blurb:
+    'An eighty two year old in a Saitama care home who has stopped eating, stopped taking his evening tablets and stopped pressing his call button — and who will tell you, politely, that he is fine. He never raises his voice. His face closes instead, and that is the signal the shift keeps missing.',
+  asks: [
+    'Ask him whether he has eaten today.',
+    'Say something, then say nothing at all and wait.',
+    'Ask him about the machine shop he worked in.',
+  ],
+  opener: '“Good morning, Tanaka-san. May I sit down for a minute?”',
+  greeting: '',
+  systemPrompt: '',
+  video: true,
+  faceKind: 'mood',
+  moodRegister: 'withdrawal',
 }
 
 const CHERYL: Demo = {
@@ -149,7 +177,7 @@ const NAIR: Demo = {
   faceKind: 'pose',
 }
 
-export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, CHERYL, NAIR]
+export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR]
 
 /* Muthu is the demo that shows the thing that is actually hard — a face the
    model chooses, turn by turn — so it is the one the page opens on. */

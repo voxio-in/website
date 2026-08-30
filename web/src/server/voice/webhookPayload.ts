@@ -71,3 +71,63 @@ export function isFinished(body: Payload): boolean {
 }
 
 export type { Payload, Turn };
+
+/* ---------- the scene ----------
+
+   The roleplay graphs return more than a spoken line. Every `response` node in
+   cheryl/muthu/vps emits `frame` (which face he is wearing), `actions` (the
+   physical things he does this turn) and, for cheryl and vps, a running
+   `score`. tempp reads those back out of its own database and draws them; this
+   is the same reading, against the same payload shape.
+
+   Kept append-only and turn-numbered so the browser can poll for "anything
+   after N" rather than re-reading the whole session every second. */
+
+export type SceneBeat = {
+  /** Monotonic, assigned on write. What the poller asks for "after". */
+  n: number;
+  /** The avatar's face or pose for this turn, as the model labelled it. */
+  frame?: string;
+  /** Physical things done this turn — "receipt", "shirt", "phone", … */
+  actions?: string[];
+  /** Running judgement, STATUS_VALUE form, e.g. "retry_5". cheryl/vps only. */
+  score?: string;
+};
+
+function outObject(out: unknown): Record<string, unknown> | null {
+  if (!out || typeof out !== "object") return null;
+  const o = out as Record<string, unknown>;
+  const inner = o.out_dict;
+  if (inner && typeof inner === "object") return inner as Record<string, unknown>;
+  return o;
+}
+
+/** The beats carried by one post, in order, ready to append. */
+export function sceneBeats(body: Payload, from: number): SceneBeat[] {
+  const beats: SceneBeat[] = [];
+  let n = from;
+
+  for (const response of body.responses ?? []) {
+    const out = outObject(response?.out);
+    if (!out) continue;
+
+    const frame = typeof out.frame === "string" ? out.frame : undefined;
+    const score = typeof out.score === "string" ? out.score : undefined;
+    const actions = Array.isArray(out.actions)
+      ? out.actions.filter((a): a is string => typeof a === "string" && !!a)
+      : undefined;
+
+    // `hold_frame` re-emits the face on its own to keep the avatar on it. That
+    // is not a beat — appending it would replay the same face change forever.
+    if (!frame && !score && !actions?.length) continue;
+
+    beats.push({
+      n: ++n,
+      ...(frame ? { frame } : {}),
+      ...(actions?.length ? { actions } : {}),
+      ...(score ? { score } : {}),
+    });
+  }
+
+  return beats;
+}
