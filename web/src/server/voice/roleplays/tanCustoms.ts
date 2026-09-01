@@ -9,10 +9,11 @@
 //     the pause after one second has answered for the trainee.
 //   - his own inactivity line is in character: he does not chase you.
 
+import type { AccentId } from '#/lib/accents'
 import {
   buildVoiceCustoms,
   roleplayWebhook,
-  STT_SONIOX_EN,
+  sttForAccent,
 } from './shared'
 import {
   TAN_DEBRIEF_PROMPT,
@@ -38,7 +39,7 @@ export const TAN_FACES: { uuid: string; label: TanFrame; usage: string }[] = [
   },
 ]
 
-export function buildTanCustoms(userName: string) {
+export function buildTanCustoms(userName: string, accent?: AccentId) {
   const systemPrompt = `${TAN_PROMPT}
 
 — — —
@@ -205,6 +206,7 @@ You are speaking out loud, on a live call, to a care worker named ${userName} wh
       'webhook-url': roleplayWebhook(),
     },
     ...buildVoiceCustoms({
+      accent,
       ttsModel: 'aura-2-odysseus-en',
       preFire: false,
       // Six times the default. A trainee who says something and then waits is
@@ -213,6 +215,6 @@ You are speaking out loud, on a live call, to a care worker named ${userName} wh
       inactivityTimes: 2,
       inactivityMessage: 'It is all right. You do not have to stay.',
     }),
-    stt_id: STT_SONIOX_EN,
+    stt_id: sttForAccent(accent),
   }
 }

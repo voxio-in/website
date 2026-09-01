@@ -1222,3 +1222,57 @@ html.perf-lite .rec-bars span { animation: none; }
 }
 .jp-log div > span:first-child { color: #fff; }
 .jp-log div > span:last-child { color: rgba(255, 255, 255, 0.42); }
+
+/* ---------- the accent dropdown ---------- */
+
+.daccent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding-left: 27px;
+  flex-wrap: wrap;
+}
+.daccent-l {
+  font-size: 12.6px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+.daccent-s {
+  appearance: none;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  /* The chevron, drawn rather than loaded, so the control needs no asset. */
+  background-image: linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.5) 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5) 50%, transparent 50%);
+  background-position: right 13px center, right 8px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  color: #eef2f3;
+  font: inherit;
+  font-size: 12.8px;
+  cursor: pointer;
+}
+.daccent-s:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+.daccent-s:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* The dropdown panel is drawn by the OS, which does not inherit the dark
+   card — so the options need their own colours or they arrive white on white. */
+.daccent-s option {
+  background: #14181a;
+  color: #eef2f3;
+}
+.daccent-n {
+  font-size: 12.2px;
+  color: rgba(255, 255, 255, 0.38);
+}
+@media (max-width: 620px) {
+  .daccent { padding-left: 0; }
+}

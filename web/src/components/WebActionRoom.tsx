@@ -11,6 +11,8 @@ import {
   UniversitySurface,
 } from '#/components/surfaces'
 import { DEFAULT_SURFACE, SURFACES, surfaceById, type SurfaceId } from '#/lib/surfaces'
+import AccentPicker from '#/components/AccentPicker'
+import { DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { endRoomSession, startRoomSession, type RoomStart } from '#/server/room'
 
 const SURFACE_VIEWS: Record<SurfaceId, () => React.ReactElement> = {
@@ -68,6 +70,7 @@ function describe(a: Action): string {
 
 export default function WebActionRoom() {
   const [surfaceId, setSurfaceId] = useState<SurfaceId>(DEFAULT_SURFACE)
+  const [accent, setAccent] = useState<AccentId>(DEFAULT_ACCENT)
   const surface = surfaceById(surfaceId)
   const Surface = SURFACE_VIEWS[surfaceId]
   const [phase, setPhase] = useState<Phase>('idle')
@@ -370,7 +373,7 @@ export default function WebActionRoom() {
     setLog([])
     setPhase('asking')
     try {
-      const config = await startRoomSession({ data: { demo: `wa-${surfaceId}` } })
+      const config = await startRoomSession({ data: { demo: `wa-${surfaceId}`, accent } })
       if (!config.ok) {
         setError(config.reason)
         setPhase('failed')
@@ -389,7 +392,7 @@ export default function WebActionRoom() {
       )
       setPhase('failed')
     }
-  }, [connect, surfaceId])
+  }, [connect, surfaceId, accent])
 
   const busy = phase === 'asking' || phase === 'connecting'
 
@@ -422,6 +425,8 @@ export default function WebActionRoom() {
               </button>
             ))}
           </div>
+
+          <AccentPicker value={accent} onChange={setAccent} />
 
           {/* ---------- 2 · the specimen ----------
               The caption sits OUTSIDE the frame, in our type, saying why this

@@ -3,6 +3,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 
+import { accentById, DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { demoById, type DemoId } from '#/lib/demos'
 import { db, withDb } from '#/server/db'
 import { buildRoomCustoms } from '#/server/voice/roomCustoms'
@@ -46,9 +47,12 @@ function participantsFor(video: boolean) {
 }
 
 export const startRoomSession = createServerFn({ method: 'POST' })
-  .inputValidator((data: { demo: string }) => data)
+  .inputValidator((data: { demo: string; accent?: string }) => data)
   .handler(async ({ data }): Promise<RoomStart> => {
     const id = data.demo || ''
+    // Round-tripped through accentById so an unknown id from the wire falls
+    // back to the default rather than reaching the graph builders.
+    const accent: AccentId = accentById(data.accent ?? DEFAULT_ACCENT).id
     const isPageDriver = id.startsWith('wa-')
     const demo = isPageDriver ? null : demoById(id)
     const video = demo?.video ?? false
@@ -96,7 +100,11 @@ export const startRoomSession = createServerFn({ method: 'POST' })
       sessionId: row.id,
       server,
       apiKey: FLOW_API_KEY,
-      customs: buildRoomCustoms((isPageDriver ? id : demo!.id) as DemoId, webhookUrl) as Json,
+      customs: buildRoomCustoms(
+        (isPageDriver ? id : demo!.id) as DemoId,
+        webhookUrl,
+        accent,
+      ) as Json,
       participants: participantsFor(video) as Json,
       maxSeconds: ROOM_MAX_SECONDS,
     }

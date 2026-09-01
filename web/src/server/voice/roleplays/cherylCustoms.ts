@@ -2,7 +2,8 @@
 // src/lib/voice/roleplays\cherylCustoms.ts — the graph the running deployment
 // sends — copied with two edits and no others:
 
-import { buildVoiceCustoms, roleplayWebhook, STT_SONIOX_EN } from "./shared";
+import type { AccentId } from '#/lib/accents';
+import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared';
 import {
   CHERYL_FEEDBACK_PROMPT,
   CHERYL_OPENING_FRAME,
@@ -31,7 +32,7 @@ export const CHERYL_FACES: { uuid: string; label: CherylFrame; usage: string }[]
 /** Who the trainee is talking to, for every label the room puts on screen. */
 export const CHERYL_NAME = "Mr Cheryl";
 
-export function buildCherylCustoms(userName: string) {
+export function buildCherylCustoms(userName: string, accent?: AccentId) {
   const systemPrompt = `${CHERYL_PROMPT}
 
 — — —
@@ -229,11 +230,12 @@ You are speaking out loud, at a retail service counter, to a frontline trainee n
       "webhook-url": roleplayWebhook(),
     },
     ...buildVoiceCustoms({
+      accent,
       ttsModel: "aura-2-odysseus-en",
       preFire: false,
       inactivityMessage:
         "Hello? I am still standing here. There are people waiting behind me, you know.",
     }),
-    stt_id: STT_SONIOX_EN,
+    stt_id: sttForAccent(accent),
   };
 }

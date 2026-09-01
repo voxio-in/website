@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { demoById, type DemoId } from '#/lib/demos'
 import { toneOf } from '#/lib/sceneProps'
 import ScenePanel, { EMPTY_SCENE, type Scene } from '#/components/ScenePanel'
@@ -30,10 +31,13 @@ function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
 
 export default function VoiceRoom({
   demoId,
+  accent = DEFAULT_ACCENT,
   idleFace,
   children,
 }: {
   demoId: DemoId
+  /** Which languages to listen for, and which voice answers. */
+  accent?: AccentId
   /** What fills the stage before a session starts. See IdleFace. */
   idleFace?: React.ReactNode
   children?: React.ReactNode
@@ -255,7 +259,7 @@ export default function VoiceRoom({
     setError(null)
     setPhase('asking')
     try {
-      const config = await startRoomSession({ data: { demo: demoId } })
+      const config = await startRoomSession({ data: { demo: demoId, accent } })
       if (!config.ok) {
         setError(config.reason)
         setPhase('failed')
@@ -274,7 +278,7 @@ export default function VoiceRoom({
       )
       setPhase('failed')
     }
-  }, [connect, demoId])
+  }, [connect, demoId, accent])
 
   const toggleMute = () => {
     const track = streamRef.current?.getAudioTracks()[0]

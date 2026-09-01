@@ -13,6 +13,7 @@ export type DemoId =
   | 'tn'
   | 'pr'
   | 'vps'
+  | 'jl'
 
 export type Demo = {
   id: DemoId
@@ -41,7 +42,10 @@ const SPEECH_RULES = `SPEECH — THIS IS SPOKEN ALOUD:
 Write numbers as words, never digits: "eighty three percent", not "83%".
 No dashes, bullets, arrows or pipes — plain sentences and commas only.
 Keep turns short, one or two sentences, the way people actually speak. Ask one question at a time.
-A quick filler word is already played before your reply, so never begin with "Okay", "Sure", "Got it" or "Alright".`
+A quick filler word is already played before your reply, so never begin with "Okay", "Sure", "Got it" or "Alright".
+
+ANSWER IN THE SCRIPT YOU WERE JUST HANDED. Japanese — any kana or kanji — and you reply in Japanese. Devanagari and you reply in Hindi. Latin letters and you reply in English, romanised Hindi included: "mujhe samajh nahi aaya" is a Hinglish speaker and gets Hinglish back, not formal Hindi.
+Decide it per turn, on the turn you are answering, never on what they used earlier. Follow them the moment they switch, without remarking on it — no "I see you speak Japanese", no asking which language they would prefer. One stray word in another script is the transcriber erring, not a switch; a whole clause is a switch.`
 
 const INTERVIEW: Demo = {
   id: 'interview',
@@ -177,7 +181,31 @@ const NAIR: Demo = {
   faceKind: 'pose',
 }
 
-export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR]
+/* The TTSH physiotherapy residency's disclosure scenario. The odd one out of
+   the five roleplays: every clinical fact here is reassuring and the patient
+   is fine, so the difficulty is not the character's temperament but whether
+   the resident can say so in a way a frightened relative can follow. */
+const JEREMY: Demo = {
+  id: 'jl',
+  label: 'Disclosing a fall',
+  role: 'Mr Jeremy Lim, a patient’s son',
+  blurb:
+    'His seventy year old father fell during physiotherapy an hour ago. He knows one phone call’s worth — that there was a fall and a scraped heel — and everything reassuring is something you have to tell him. He gets calmer when you say what was checked, and hard the moment you suggest his father did not follow instructions.',
+  asks: [
+    'Introduce yourself before you explain anything.',
+    'Tell him what was examined, not that everything is fine.',
+    'Hint that his father misstepped, and see what happens.',
+  ],
+  opener: '“Good afternoon, am I speaking with Mr Jeremy Lim?”',
+  greeting: '',
+  systemPrompt: '',
+  video: true,
+  /* No mood banner. He holds one face for the whole call, so the panel shows
+     the score without claiming a change the resident could not see anyway. */
+  faceKind: 'pose',
+}
+
+export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR, JEREMY]
 
 /* Muthu is the demo that shows the thing that is actually hard — a face the
    model chooses, turn by turn — so it is the one the page opens on. */

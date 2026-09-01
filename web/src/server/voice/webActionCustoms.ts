@@ -2,9 +2,11 @@
 
 import type { SurfaceId } from '#/lib/surfaces'
 import { buildVoiceCustoms } from './roleplays/shared'
+import type { AccentId } from '#/lib/accents'
 
 import { md, render } from './prompts/render'
 import craftRules from './prompts/webnav/craft.md?raw'
+import languageRules from './prompts/webnav/language.md?raw'
 import clinicPage from './prompts/webnav/clinic.md?raw'
 import universityPage from './prompts/webnav/university.md?raw'
 import railPage from './prompts/webnav/rail.md?raw'
@@ -15,11 +17,17 @@ const MARKER = '<|web_action|>'
 
 const CRAFT = render(md(craftRules), { MARKER })
 
+/* One rule for every surface: reply in the script you were spoken to in. It
+   lives here rather than in the six page files because it is a property of
+   the engine, not of any one counter. */
+const LANGUAGE = md(languageRules)
+
 type PageSpec = { greeting: string; page: string }
 
 const PAGES: Record<SurfaceId, PageSpec> = {
   clinic: {
-    greeting: 'Civil Hospital appointments. Who is the appointment for?',
+    greeting:
+      'Civil Hospital appointments. Who is the appointment for? 日本語でもご案内できます。',
     page: render(md(clinicPage), { MARKER }),
   },
 
@@ -42,12 +50,12 @@ const PAGES: Record<SurfaceId, PageSpec> = {
      other end is not going to be answering in it. */
   care: {
     greeting:
-      'お疲れさまです。Record assistant here — tell me what happened and I will write it up.',
+      'お疲れさまです。Record assistant here — tell me what happened and I will write it up. 日本語でも大丈夫です。',
     page: render(md(carePage), { MARKER }),
   },
 }
 
-export function buildWebActionCustoms(surface: SurfaceId) {
+export function buildWebActionCustoms(surface: SurfaceId, accent?: AccentId) {
   const spec = PAGES[surface]
 
   return {
@@ -88,6 +96,8 @@ export function buildWebActionCustoms(surface: SurfaceId) {
               },
               prompt_template: 'base_llm',
               system_prompt: `${spec.page}
+
+${LANGUAGE}
 
 ${CRAFT}
 
@@ -136,6 +146,6 @@ THE SHAPE OF A REPLY, so the markers and the speech line up:
       },
       'webhook-url': '',
     },
-    ...buildVoiceCustoms({ preFire: false }),
+    ...buildVoiceCustoms({ preFire: false, accent }),
   }
 }

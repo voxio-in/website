@@ -2,7 +2,8 @@
 // src/lib/voice/roleplays\vpsCustoms.ts — the graph the running deployment sends
 // — copied with two edits and no others:
 
-import { buildVoiceCustoms, roleplayWebhook, STT_SONIOX_EN } from "./shared";
+import type { AccentId } from '#/lib/accents';
+import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared';
 import {
   VPS_FEEDBACK_PROMPT,
   VPS_OPENING_FRAME,
@@ -54,7 +55,7 @@ export const VPS_FACE_MANIFEST = {
 /** Who the trainee is talking to, for every label the room puts on screen. */
 export const VPS_NAME = "Mr Nair";
 
-export function buildVpsCustoms(userName: string) {
+export function buildVpsCustoms(userName: string, accent?: AccentId) {
   const systemPrompt = `${VPS_PROMPT}
 
 — — —
@@ -248,11 +249,12 @@ You are speaking out loud, in a clinic consulting room, to a healthcare trainee 
       "webhook-url": roleplayWebhook(),
     },
     ...buildVoiceCustoms({
+      accent,
       ttsModel: "aura-2-arcas-en",
       preFire: false,
       inactivityMessage:
         "Sorry, doctor. Did I say something wrong? You carry on, I am listening.",
     }),
-    stt_id: STT_SONIOX_EN,
+    stt_id: sttForAccent(accent),
   };
 }

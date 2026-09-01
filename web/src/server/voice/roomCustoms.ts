@@ -1,59 +1,42 @@
 // The call graph for a browser demo — the WebRTC side of the house.
 
+import type { AccentId } from '#/lib/accents'
 import type { DemoId } from '#/lib/demos'
 import { demoById } from '#/lib/demos'
 import { buildCherylCustoms } from './roleplays/cherylCustoms'
+import { buildJeremyCustoms } from './roleplays/jeremyCustoms'
 import { buildMuthuCustoms } from './roleplays/muthuCustoms'
-import { setRoleplayWebhook } from './roleplays/shared'
+import { buildVoiceCustoms, setRoleplayWebhook } from './roleplays/shared'
 import { buildTanCustoms } from './roleplays/tanCustoms'
 import { buildVpsCustoms } from './roleplays/vpsCustoms'
 import type { SurfaceId } from '#/lib/surfaces'
 import { buildWebActionCustoms } from './webActionCustoms'
 
-const ROLEPLAYS: Partial<Record<DemoId, (userName: string) => unknown>> = {
+const ROLEPLAYS: Partial<
+  Record<DemoId, (userName: string, accent?: AccentId) => unknown>
+> = {
   mm: buildMuthuCustoms,
   tn: buildTanCustoms,
   pr: buildCherylCustoms,
   vps: buildVpsCustoms,
+  jl: buildJeremyCustoms,
 }
 
-/** TTS, STT, pre-fire and inactivity — the keys the voice backend expects. */
-function voiceSettings() {
-  return {
-    tts_id: { service: 'deepgram', model: 'aura-2-thalia-en' },
-    stt_id: {
-      service: 'deepgram-streaming',
-      'model-name': 'nova-3',
-      language: 'en-IN',
-    },
-    'grain-voice': false,
-    'grain-level': 0,
-    'pre-fire': true,
-    'pre-fire-config': { min: 5, max: 5000, current: 10 },
-    inactivity: true,
-    'inactivity-metadata': {
-      'time-period': 1000,
-      'max-times': 3,
-      'inactivity-type': 'static',
-      message:
-        'Are you still there? No rush — take your time and answer whenever you are ready.',
-      'interruption-type': 'full',
-      'interruption-metadata': {},
-    },
-  }
-}
-
-export function buildRoomCustoms(id: DemoId, webhookUrl: string) {
+export function buildRoomCustoms(
+  id: DemoId,
+  webhookUrl: string,
+  accent?: AccentId,
+) {
   const demo = demoById(id)
 
   if (id.startsWith('wa-')) {
-    return buildWebActionCustoms(id.slice(3) as SurfaceId)
+    return buildWebActionCustoms(id.slice(3) as SurfaceId, accent)
   }
 
   const roleplay = ROLEPLAYS[id]
   if (roleplay) {
     setRoleplayWebhook(webhookUrl)
-    return roleplay('you')
+    return roleplay('you', accent)
   }
 
   return {
@@ -126,6 +109,6 @@ export function buildRoomCustoms(id: DemoId, webhookUrl: string) {
       },
       'webhook-url': webhookUrl,
     },
-    ...voiceSettings(),
+    ...buildVoiceCustoms({ accent }),
   }
 }

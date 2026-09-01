@@ -2,7 +2,8 @@
 // src/lib/voice/roleplays\muthuCustoms.ts — the graph the running deployment
 // sends — copied with two edits and no others:
 
-import { buildVoiceCustoms, roleplayWebhook, STT_SONIOX_EN } from "./shared";
+import type { AccentId } from '#/lib/accents';
+import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared';
 import {
   MUTHU_DEBRIEF_PROMPT,
   MUTHU_OPENING_FRAME,
@@ -29,7 +30,7 @@ export const MUTHU_FACES: { uuid: string; label: MuthuFrame; usage: string }[] =
 /** Who the user is talking to, for every label the room puts on screen. */
 export const MUTHU_NAME = "Mr Muthu";
 
-export function buildMuthuCustoms(userName: string) {
+export function buildMuthuCustoms(userName: string, accent?: AccentId) {
   const systemPrompt = `${MUTHU_PROMPT}
 
 — — —
@@ -196,11 +197,12 @@ You are speaking out loud, on a live call, to an officer named ${userName}. They
       "webhook-url": roleplayWebhook(),
     },
     ...buildVoiceCustoms({
+      accent,
       ttsModel: "aura-2-odysseus-en",
       preFire: false,
       inactivityMessage:
         "Hello? You are still there or not? I'm sitting here waiting, you know!",
     }),
-    stt_id: STT_SONIOX_EN,
+    stt_id: sttForAccent(accent),
   };
 }

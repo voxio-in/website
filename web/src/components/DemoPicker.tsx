@@ -3,21 +3,26 @@
 
 import { useState } from 'react'
 
+import AccentPicker from '#/components/AccentPicker'
 import IdleFace from '#/components/IdleFace'
 import VoiceRoom from '#/components/VoiceRoom'
+import { DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { DEFAULT_DEMO, DEMOS, demoById, type DemoId } from '#/lib/demos'
 
 export default function DemoPicker() {
   const [demoId, setDemoId] = useState<DemoId>(DEFAULT_DEMO)
+  const [accent, setAccent] = useState<AccentId>(DEFAULT_ACCENT)
   const demo = demoById(demoId)
 
   return (
     <div className="dcard dcard--wide">
-      {/* Keyed on the demo: switching who you are talking to must end the
-          session you were in, not carry it across to a different agent. */}
+      {/* Keyed on the demo and the accent: both are fixed at connect, so
+          changing either must end the session you were in rather than carry
+          it across to an agent with a different voice. */}
       <VoiceRoom
-        key={demo.id}
+        key={`${demo.id}:${accent}`}
         demoId={demo.id}
+        accent={accent}
         idleFace={<IdleFace demoId={demo.id} name={demo.label} role={demo.role} />}
       >
         <div className="dstep">
@@ -42,6 +47,8 @@ export default function DemoPicker() {
         </div>
 
         <p className="dhint">{demo.blurb}</p>
+
+        <AccentPicker value={accent} onChange={setAccent} />
 
         {/* "Try saying" used to be a sidebar block you read before starting,
             a nudge while you are actually talking. See VoiceRoom's live state. */}
