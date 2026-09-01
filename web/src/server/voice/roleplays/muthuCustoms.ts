@@ -2,7 +2,7 @@
 // src/lib/voice/roleplays\muthuCustoms.ts — the graph the running deployment
 // sends — copied with two edits and no others:
 
-import type { AccentId } from '#/lib/accents';
+import { accentSpeech, type AccentId } from '#/lib/accents';
 import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared';
 import {
   MUTHU_DEBRIEF_PROMPT,
@@ -35,7 +35,10 @@ export function buildMuthuCustoms(userName: string, accent?: AccentId) {
 
 — — —
 THE PERSON IN FRONT OF YOU:
-You are speaking out loud, on a live call, to an officer named ${userName}. They are the one refusing you more money. Use their name the way an angry man uses a name — to press them — never as small talk.`;
+You are speaking out loud, on a live call, to an officer named ${userName}. They are the one refusing you more money. Use their name the way an angry man uses a name — to press them — never as small talk.
+
+— — —
+${accentSpeech(accent)}`;
 
   return {
     "warmup-agent": true,

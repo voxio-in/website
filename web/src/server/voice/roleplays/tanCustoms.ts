@@ -9,7 +9,7 @@
 //     the pause after one second has answered for the trainee.
 //   - his own inactivity line is in character: he does not chase you.
 
-import type { AccentId } from '#/lib/accents'
+import { accentSpeech, type AccentId } from '#/lib/accents'
 import {
   buildVoiceCustoms,
   roleplayWebhook,
@@ -44,7 +44,10 @@ export function buildTanCustoms(userName: string, accent?: AccentId) {
 
 — — —
 THE PERSON IN FRONT OF YOU:
-You are speaking out loud, on a live call, to a care worker named ${userName} who is on shift at your facility. They may not be Japanese, and their Japanese may be poor. That is not something you hold against them — you are gentle about it, and you repeat yourself in English without ever making a point of it. Use their name rarely, and only warmly.`
+You are speaking out loud, on a live call, to a care worker named ${userName} who is on shift at your facility. They may not be Japanese, and their Japanese may be poor. That is not something you hold against them — you are gentle about it, and you repeat yourself in English without ever making a point of it. Use their name rarely, and only warmly.
+
+— — —
+${accentSpeech(accent)}`
 
   return {
     'warmup-agent': true,

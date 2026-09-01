@@ -2,7 +2,7 @@
 // src/lib/voice/roleplays\vpsCustoms.ts — the graph the running deployment sends
 // — copied with two edits and no others:
 
-import type { AccentId } from '#/lib/accents';
+import { accentSpeech, type AccentId } from '#/lib/accents';
 import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared';
 import {
   VPS_FEEDBACK_PROMPT,
@@ -60,7 +60,10 @@ export function buildVpsCustoms(userName: string, accent?: AccentId) {
 
 — — —
 THE PERSON IN FRONT OF YOU:
-You are speaking out loud, in a clinic consulting room, to a healthcare trainee named ${userName}. They are the one seeing you today. Use their name the way an older patient uses a young doctor's name — with a little formality, and more often once you have decided you trust them.`;
+You are speaking out loud, in a clinic consulting room, to a healthcare trainee named ${userName}. They are the one seeing you today. Use their name the way an older patient uses a young doctor's name — with a little formality, and more often once you have decided you trust them.
+
+— — —
+${accentSpeech(accent)}`;
 
   return {
     "warmup-agent": true,

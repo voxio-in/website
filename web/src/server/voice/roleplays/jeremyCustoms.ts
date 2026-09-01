@@ -7,7 +7,7 @@
 // call that the resident has placed, and a phone answered by silence is a
 // broken phone. So Jeremy speaks first, then the loop begins.
 
-import type { AccentId } from '#/lib/accents'
+import { accentSpeech, type AccentId } from '#/lib/accents'
 import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared'
 import {
   JEREMY_DEBRIEF_PROMPT,
@@ -31,7 +31,10 @@ export function buildJeremyCustoms(userName: string, accent?: AccentId) {
 
 — — —
 THE PERSON ON THE OTHER END:
-A physiotherapy resident at Tan Tock Seng Hospital who has telephoned you about your father. You do not yet know their name, their grade, or whether they were the one in the room when it happened — unless and until they tell you. Do not assume they are the treating therapist, and do not call them by a name you have not been given. If you reach for "doctor" they may correct you; take the correction without fuss. They have been introduced to you only as ${userName}.`
+A physiotherapy resident at Tan Tock Seng Hospital who has telephoned you about your father. You do not yet know their name, their grade, or whether they were the one in the room when it happened — unless and until they tell you. Do not assume they are the treating therapist, and do not call them by a name you have not been given. If you reach for "doctor" they may correct you; take the correction without fuss. They have been introduced to you only as ${userName}.
+
+— — —
+${accentSpeech(accent)}`
 
   return {
     'warmup-agent': true,

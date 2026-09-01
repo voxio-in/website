@@ -2,11 +2,10 @@
 
 import type { SurfaceId } from '#/lib/surfaces'
 import { buildVoiceCustoms } from './roleplays/shared'
-import type { AccentId } from '#/lib/accents'
+import { accentSpeech, type AccentId } from '#/lib/accents'
 
 import { md, render } from './prompts/render'
 import craftRules from './prompts/webnav/craft.md?raw'
-import languageRules from './prompts/webnav/language.md?raw'
 import clinicPage from './prompts/webnav/clinic.md?raw'
 import universityPage from './prompts/webnav/university.md?raw'
 import railPage from './prompts/webnav/rail.md?raw'
@@ -16,11 +15,6 @@ import carePage from './prompts/webnav/care.md?raw'
 const MARKER = '<|web_action|>'
 
 const CRAFT = render(md(craftRules), { MARKER })
-
-/* One rule for every surface: reply in the script you were spoken to in. It
-   lives here rather than in the six page files because it is a property of
-   the engine, not of any one counter. */
-const LANGUAGE = md(languageRules)
 
 type PageSpec = { greeting: string; page: string }
 
@@ -97,7 +91,7 @@ export function buildWebActionCustoms(surface: SurfaceId, accent?: AccentId) {
               prompt_template: 'base_llm',
               system_prompt: `${spec.page}
 
-${LANGUAGE}
+${accentSpeech(accent)}
 
 ${CRAFT}
 

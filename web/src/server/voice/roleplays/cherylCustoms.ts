@@ -2,7 +2,7 @@
 // src/lib/voice/roleplays\cherylCustoms.ts — the graph the running deployment
 // sends — copied with two edits and no others:
 
-import type { AccentId } from '#/lib/accents';
+import { accentSpeech, type AccentId } from '#/lib/accents';
 import { buildVoiceCustoms, roleplayWebhook, sttForAccent } from './shared';
 import {
   CHERYL_FEEDBACK_PROMPT,
@@ -37,7 +37,10 @@ export function buildCherylCustoms(userName: string, accent?: AccentId) {
 
 — — —
 THE PERSON IN FRONT OF YOU:
-You are speaking out loud, at a retail service counter, to a frontline trainee named ${userName}. They are the one who has to sort this out. Use their name the way an impatient customer uses a name — to press them — never as small talk.`;
+You are speaking out loud, at a retail service counter, to a frontline trainee named ${userName}. They are the one who has to sort this out. Use their name the way an impatient customer uses a name — to press them — never as small talk.
+
+— — —
+${accentSpeech(accent)}`;
 
   return {
     "warmup-agent": true,

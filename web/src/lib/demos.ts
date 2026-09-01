@@ -42,10 +42,7 @@ const SPEECH_RULES = `SPEECH — THIS IS SPOKEN ALOUD:
 Write numbers as words, never digits: "eighty three percent", not "83%".
 No dashes, bullets, arrows or pipes — plain sentences and commas only.
 Keep turns short, one or two sentences, the way people actually speak. Ask one question at a time.
-A quick filler word is already played before your reply, so never begin with "Okay", "Sure", "Got it" or "Alright".
-
-ANSWER IN THE SCRIPT YOU WERE JUST HANDED. Japanese — any kana or kanji — and you reply in Japanese. Devanagari and you reply in Hindi. Latin letters and you reply in English, romanised Hindi included: "mujhe samajh nahi aaya" is a Hinglish speaker and gets Hinglish back, not formal Hindi.
-Decide it per turn, on the turn you are answering, never on what they used earlier. Follow them the moment they switch, without remarking on it — no "I see you speak Japanese", no asking which language they would prefer. One stray word in another script is the transcriber erring, not a switch; a whole clause is a switch.`
+A quick filler word is already played before your reply, so never begin with "Okay", "Sure", "Got it" or "Alright".`
 
 const INTERVIEW: Demo = {
   id: 'interview',
