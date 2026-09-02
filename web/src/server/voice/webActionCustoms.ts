@@ -16,12 +16,25 @@ const MARKER = '<|web_action|>'
 
 const CRAFT = render(md(craftRules), { MARKER })
 
-type PageSpec = { greeting: string; page: string }
+type PageSpec = {
+  /** The line it opens with. English, and the default for every accent. */
+  greeting: string
+  /* Per-accent overrides. The greeting is a static out_dict spoken BEFORE the
+     model has run once, so unlike every other line it cannot react to the
+     visitor — which is why a bilingual greeting is the wrong fix: on the three
+     accents that are not Japanese it offers Japanese to someone who never
+     asked, and it is the first thing they hear. Only fill in an accent where
+     that surface genuinely has something to say in it. */
+  greetings?: Partial<Record<AccentId, string>>
+  page: string
+}
 
 const PAGES: Record<SurfaceId, PageSpec> = {
   clinic: {
-    greeting:
-      'Civil Hospital appointments. Who is the appointment for? 日本語でもご案内できます。',
+    greeting: 'Civil Hospital appointments. Who is the appointment for?',
+    greetings: {
+      japanese: 'シビル病院の予約受付です。どなたの予約でしょうか。',
+    },
     page: render(md(clinicPage), { MARKER }),
   },
 
@@ -44,13 +57,17 @@ const PAGES: Record<SurfaceId, PageSpec> = {
      other end is not going to be answering in it. */
   care: {
     greeting:
-      'お疲れさまです。Record assistant here — tell me what happened and I will write it up. 日本語でも大丈夫です。',
+      'お疲れさまです。Record assistant here — tell me what happened and I will write it up.',
+    greetings: {
+      japanese: 'お疲れさまです。記録の方、お手伝いします。何がありましたか。',
+    },
     page: render(md(carePage), { MARKER }),
   },
 }
 
 export function buildWebActionCustoms(surface: SurfaceId, accent?: AccentId) {
   const spec = PAGES[surface]
+  const greeting = (accent && spec.greetings?.[accent]) || spec.greeting
 
   return {
     'warmup-agent': true,
@@ -62,7 +79,7 @@ export function buildWebActionCustoms(surface: SurfaceId, accent?: AccentId) {
           greeting: {
             type: 'out',
             parameters: {
-              out_dict: { speak: spec.greeting },
+              out_dict: { speak: greeting },
               interruption_type: 'no',
               interruption_metadata: {},
             },
