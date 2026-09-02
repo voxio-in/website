@@ -43,6 +43,10 @@ export default function VoiceRoom({
   children?: React.ReactNode
 }) {
   const demo = demoById(demoId)
+  /* The agent's face and the visitor's camera are separate questions. The
+     roleplays show a face and ask for no camera — see selfVideo in lib/demos.
+     Nothing below may use demo.video to mean "get the camera". */
+  const wantsCamera = demo.video && demo.selfVideo !== false
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -266,7 +270,7 @@ export default function VoiceRoom({
         return
       }
       setPhase('connecting')
-      await connect(config, demo.video)
+      await connect(config, wantsCamera)
     } catch (err) {
       const denied =
         err instanceof DOMException &&
@@ -278,7 +282,7 @@ export default function VoiceRoom({
       )
       setPhase('failed')
     }
-  }, [connect, demoId, accent])
+  }, [connect, demoId, accent, wantsCamera])
 
   const toggleMute = () => {
     const track = streamRef.current?.getAudioTracks()[0]
@@ -366,8 +370,9 @@ export default function VoiceRoom({
 
       <div className={`room-stage${demo.video ? ' room-stage--video' : ''}`}>
         {demo.video ? (
-          <div className={`stage stage--${layout}`}>
-            {/* Both panes are always mounted — see the note on Layout. */}
+          <div className={`stage stage--${wantsCamera ? layout : 'agent'}`}>
+            {/* Both panes are always mounted — see the note on Layout. With no
+                camera there is no second pane, so the agent takes the stage. */}
             <div className="pane pane--agent">
               <video ref={agentVideoRef} playsInline autoPlay />
               {!hasAgentVideo ? (
@@ -375,11 +380,13 @@ export default function VoiceRoom({
               ) : null}
               <span className="pane-tag">{demo.role}</span>
             </div>
-            <div className="pane pane--you">
-              <video ref={ownVideoRef} playsInline autoPlay muted />
-              {!hasOwnVideo ? <span className="pane-empty">Camera off</span> : null}
-              <span className="pane-tag">You</span>
-            </div>
+            {wantsCamera ? (
+              <div className="pane pane--you">
+                <video ref={ownVideoRef} playsInline autoPlay muted />
+                {!hasOwnVideo ? <span className="pane-empty">Camera off</span> : null}
+                <span className="pane-tag">You</span>
+              </div>
+            ) : null}
           </div>
         ) : idleFace && !live ? (
           idleFace
@@ -427,7 +434,7 @@ export default function VoiceRoom({
         />
       ) : null}
 
-      {demo.video && live ? (
+      {wantsCamera && live ? (
         <div className="layouts" role="group" aria-label="Layout">
           {(['split', 'focus', 'agent', 'you'] as const).map((mode) => (
             <button
