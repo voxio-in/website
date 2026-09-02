@@ -27,15 +27,11 @@ export type Demo = {
   opener?: string
   greeting: string
   systemPrompt: string
-  /** whether the AGENT sends video — the 3D face on the stage */
+  /* Whether the room negotiates video in both directions. It is ONE flag on
+     purpose: the offer only carries a video m-line if the local stream has a
+     video track, so a room that does not take the camera gives the server
+     nowhere to put the agent's face. Camera off means no avatar either. */
   video: boolean
-  /* Whether the visitor's own camera is asked for. Defaults to true wherever
-     `video` is set, and is turned off for the roleplays: the character is
-     something you WATCH, and none of them react to your face, so demanding a
-     camera buys the visitor nothing and costs them the demo whenever the
-     device is already busy — a call, a meeting, another tab holding it. The
-     agent's video is unaffected; only the upward direction is dropped. */
-  selfVideo?: boolean
   /** how to read the avatar's face — only the roleplays have one */
   faceKind?: 'mood' | 'pose'
   /* How this character's displeasure reads, for the banner the room draws.
@@ -126,7 +122,6 @@ const MUTHU: Demo = {
   systemPrompt: '',
   video: true,
   faceKind: 'mood',
-  selfVideo: false,
 }
 
 /* The same machinery as Muthu, pointed at a culture where distress does not
@@ -148,7 +143,6 @@ const TANAKA: Demo = {
   video: true,
   faceKind: 'mood',
   moodRegister: 'withdrawal',
-  selfVideo: false,
 }
 
 const CHERYL: Demo = {
@@ -167,7 +161,6 @@ const CHERYL: Demo = {
   systemPrompt: '',
   video: true,
   faceKind: 'mood',
-  selfVideo: false,
 }
 
 const NAIR: Demo = {
@@ -186,7 +179,6 @@ const NAIR: Demo = {
   systemPrompt: '',
   video: true,
   faceKind: 'pose',
-  selfVideo: false,
 }
 
 /* The TTSH physiotherapy residency's disclosure scenario. The odd one out of
@@ -211,7 +203,6 @@ const JEREMY: Demo = {
   /* No mood banner. He holds one face for the whole call, so the panel shows
      the score without claiming a change the resident could not see anyway. */
   faceKind: 'pose',
-  selfVideo: false,
 }
 
 export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR, JEREMY]

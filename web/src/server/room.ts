@@ -36,16 +36,12 @@ function clientIp(): string | null {
   return h.get('x-real-ip')
 }
 
-/* The two directions are negotiated separately. `aiVideo` is the face on the
-   stage; `userVideo` is the visitor's camera, which the roleplays do not ask
-   for — see selfVideo in lib/demos. Asking for video on a leg that will never
-   carry it makes the browser demand a camera it does not need. */
-function participantsFor(aiVideo: boolean, userVideo: boolean) {
+function participantsFor(video: boolean) {
   return {
     ai_participant: 'ai',
     participants: [
-      { name: 'user', connections: [{ name: 'ai', video: userVideo, audio: true }] },
-      { name: 'ai', connections: [{ name: 'user', video: aiVideo, audio: true }] },
+      { name: 'user', connections: [{ name: 'ai', video, audio: true }] },
+      { name: 'ai', connections: [{ name: 'user', video, audio: true }] },
     ],
   }
 }
@@ -60,7 +56,6 @@ export const startRoomSession = createServerFn({ method: 'POST' })
     const isPageDriver = id.startsWith('wa-')
     const demo = isPageDriver ? null : demoById(id)
     const video = demo?.video ?? false
-    const userVideo = video && demo?.selfVideo !== false
     const server = video ? SERVERS.voicebotGpu : SERVERS.voicebot
 
     if (!FLOW_API_KEY || !server) {
@@ -110,7 +105,7 @@ export const startRoomSession = createServerFn({ method: 'POST' })
         webhookUrl,
         accent,
       ) as Json,
-      participants: participantsFor(video, userVideo) as Json,
+      participants: participantsFor(video) as Json,
       maxSeconds: ROOM_MAX_SECONDS,
     }
   })
