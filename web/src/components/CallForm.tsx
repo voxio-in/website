@@ -63,7 +63,7 @@ export default function CallForm() {
         <span className="dstep-t">Pick a desk</span>
       </div>
 
-      {/* A segmented control, not four boxes. The four desks are one choice with
+      {/* A segmented control, not five boxes. The desks are one choice with
           things you might be about to do. */}
       <div className="seg" role="radiogroup" aria-label="Pick a desk">
         {DESKS.map((d) => (

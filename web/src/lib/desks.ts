@@ -1,6 +1,6 @@
 // The desks you can ring from the /calling page.
 
-export type DeskId = 'university' | 'school' | 'opd' | 'hotel'
+export type DeskId = 'university' | 'school' | 'opd' | 'hotel' | 'nsdc'
 
 export type Desk = {
   id: DeskId
@@ -73,6 +73,26 @@ export const DESKS: Desk[] = [
       'Do you have a room for two nights from Friday?',
       'Can I get a late checkout on Sunday?',
       'Change it to a twin room instead.',
+    ],
+  },
+  /* The support desk, and the only one that is allowed to refuse. It decides
+     between resolving, deflecting, ticketing and escalating every turn, and a
+     money or grievance question is a ticket however simple it sounds — which
+     is the behaviour worth hearing on this one. */
+  {
+    id: 'nsdc',
+    label: 'NSDC Inquiry',
+    role: 'Vidya, Skill India helpline',
+    blurb:
+      'A government helpline agent for Skill India. It resolves what it can, refuses what it must — stipends and complaints become tickets, never answers — and it will not invent a number, a date or an amount.',
+    orgLabel: 'Which scheme or centre are you asking about?',
+    orgPlaceholder: 'PMKVY 4.0',
+    defaultBrand: 'Skill India Digital',
+    asks: [
+      'Mera certificate nahi aaya, course khatam ho gaya.',
+      'Mera stipend teen mahine se nahi aaya.',
+      'Will I definitely get a job after this?',
+      'Ask it for a helpline number — it will not read one out.',
     ],
   },
 ]

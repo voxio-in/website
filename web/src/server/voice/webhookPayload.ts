@@ -4,6 +4,10 @@ type Turn = { role?: string; content?: string };
 
 type RunningResponse = {
   session_id?: string;
+  /** Only streaming fragments carry this; a finished node's post does not. */
+  node?: string;
+  streaming?: boolean;
+  chunk?: string;
   out?: unknown;
   error?: string;
 };
@@ -25,17 +29,31 @@ type Payload = {
   turns?: unknown;
 };
 
-function spokenText(out: unknown): string | null {
-  if (typeof out === "string") return out.trim() || null;
+/* The vision report is concatenated straight into the transcription node's
+   own string, inside this tag. It is context for the model, not something the
+   caller said, so it never belongs in a transcript. */
+const VISUAL_CONTEXT = /<turn-visual-context>[\s\S]*?<\/turn-visual-context>/gi;
+
+function clean(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.replace(VISUAL_CONTEXT, '').trim();
+  return text || null;
+}
+
+/** A node's output dict, unwrapping the `out_dict` some nodes nest it in. */
+function outObject(out: unknown): Record<string, unknown> | null {
   if (!out || typeof out !== "object") return null;
   const o = out as Record<string, unknown>;
-  const candidate =
-    o.speak ??
-    (o.out_dict as Record<string, unknown> | undefined)?.speak ??
-    o.text;
-  return typeof candidate === "string" && candidate.trim()
-    ? candidate.trim()
-    : null;
+  const inner = o.out_dict;
+  if (inner && typeof inner === "object") return inner as Record<string, unknown>;
+  return o;
+}
+
+function spokenText(out: unknown): string | null {
+  if (typeof out === "string") return clean(out);
+  const o = outObject(out);
+  if (!o) return null;
+  return clean(o.speak) ?? clean(o.text);
 }
 
 /** The id the post belongs to, wherever this version of the gateway put it. */
@@ -49,19 +67,89 @@ export function sessionIdOf(body: Payload | null): string | undefined {
   );
 }
 
+/* ---------- one turn, read live ----------
+
+   A per-turn post is a bag of node outputs, not a conversation: the caller's
+   words arrive on the transcription node as `user_input` , the agent's reply on
+   the response node as `speak` , and between them sit two kinds of noise —
+   `streaming : true` fragments of that same reply , and the filler node's own
+   short `speak` ("Theek hai") , which is latency cover rather than something
+   said.
+
+   Fragments are dropped outright ; the whole line arrives on the response node
+   regardless. The filler is handled by taking the LAST `speak` in the post
+   rather than the first : the filler node runs before the real one , so the
+   real reply overwrites it. That is deliberate — a non-streaming post carries
+   no `node` name to filter on, so position is the only thing left to use. */
+function turnOf(body: Payload): Turn[] {
+  let said: string | null = null;
+  let replied: string | null = null;
+
+  for (const response of body.responses ?? []) {
+    if (response?.streaming) continue;
+    const out = outObject(response?.out);
+    if (!out) continue;
+
+    said = clean(out.user_input) ?? said;
+    replied = spokenText(response?.out) ?? replied;
+  }
+
+  const turns: Turn[] = [];
+  if (said) turns.push({ role: 'user', content: said });
+  if (replied) turns.push({ role: 'assistant', content: replied });
+  return turns;
+}
+
+/* The `start` post and the first `running` post overlap on the greeting, and a
+   retried delivery repeats a whole turn, so an append that does not check would
+   double every line it lands on.
+
+   The comparison is against the TAIL AS A BLOCK, not line by line: a turn
+   arrives as a pair (what was said, what was answered) , and a per-line check
+   would compare the incoming user line against the stored agent line, match
+   nothing, and let the whole pair through again. */
+function appended(existing: Turn[], incoming: Turn[]): Turn[] {
+  const tail = existing.slice(-incoming.length);
+
+  const repeat =
+    tail.length === incoming.length &&
+    tail.every(
+      (turn, i) =>
+        turn.role === incoming[i]!.role && turn.content === incoming[i]!.content,
+    );
+
+  if (repeat) return existing;
+
+  /* A partial overlap — the greeting arriving on `start` and again on the
+     first `running` post — is one line, so it is caught by the same check at
+     length 1. */
+  const last = existing[existing.length - 1];
+  const fresh =
+    last &&
+    incoming[0] &&
+    last.role === incoming[0].role &&
+    last.content === incoming[0].content
+      ? incoming.slice(1)
+      : incoming;
+
+  return fresh.length ? [...existing, ...fresh] : existing;
+}
+
 export function nextTranscript(
   body: Payload,
   existing: Turn[],
 ): Turn[] | null {
+  /* The finished transcript, when it comes, is authoritative — it is the
+     agent's own history and carries both sides in the order they happened. It
+     replaces rather than appends. */
   const history = body['session-data']?.state?.conversation_history;
   if (history) return history;
 
-  const live = (body.responses ?? [])
-    .map((r) => spokenText(r?.out))
-    .filter((t): t is string => Boolean(t))
-    .map((content) => ({ role: 'assistant', content }));
+  const turn = turnOf(body);
+  if (!turn.length) return null;
 
-  return live.length ? [...existing, ...live] : null;
+  const next = appended(existing, turn);
+  return next.length === existing.length ? null : next;
 }
 
 /** Whether this post says the session is over. */
@@ -94,20 +182,13 @@ export type SceneBeat = {
   score?: string;
 };
 
-function outObject(out: unknown): Record<string, unknown> | null {
-  if (!out || typeof out !== "object") return null;
-  const o = out as Record<string, unknown>;
-  const inner = o.out_dict;
-  if (inner && typeof inner === "object") return inner as Record<string, unknown>;
-  return o;
-}
-
 /** The beats carried by one post, in order, ready to append. */
 export function sceneBeats(body: Payload, from: number): SceneBeat[] {
   const beats: SceneBeat[] = [];
   let n = from;
 
   for (const response of body.responses ?? []) {
+    if (response?.streaming) continue;
     const out = outObject(response?.out);
     if (!out) continue;
 

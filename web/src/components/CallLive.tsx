@@ -81,7 +81,7 @@ export default function CallLive({
           ? `${turns.length} turn${turns.length === 1 ? '' : 's'} — here is how it went.`
           : gaveUp
             ? 'The call may still have happened; we just stopped polling for it.'
-            : 'Answer it like any call. The conversation appears here when it ends.'}
+            : 'Answer it like any call. The conversation appears here as you have it.'}
       </p>
 
       {/* The prompts, moved here from the old sidebar. This is the moment they

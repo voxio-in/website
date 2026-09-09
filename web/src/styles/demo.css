@@ -62,6 +62,9 @@
 
 .seg {
   display: flex;
+  /* Five desks do not fit one row on a narrow card, and an ellipsised
+     "Hospital OPD" is worse than a second row. */
+  flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
   border-radius: 11px;
@@ -69,7 +72,9 @@
   background: rgba(255, 255, 255, 0.03);
 }
 .seg-o {
-  flex: 1 1 0;
+  /* auto, not 0: the label sets the minimum, so wrapping happens instead of
+     truncation. Grow still fills the row when there are only two or three. */
+  flex: 1 1 auto;
   min-width: 0;
   padding: 9px 6px;
   border: 0;
