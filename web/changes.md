@@ -23,7 +23,7 @@ What works, what's still open or half-finished.
 ## 2026-09-29 — Lab Equipment Support agent, on /calling and in the browser demos
 
 **What changed**
-- New agent "Asha, analyser service desk". It works in Hindi and English, like the NSDC desk.
+- New agent "Rachel, analyser service desk" (first named Asha). It works in Hindi and English, like the NSDC desk.
 - It covers lab testing machines that are not working and questions about increasing capacity.
 - It walks the caller through safe first checks: power, the restart order, and QC after a lot
   change.
@@ -43,6 +43,8 @@ Hindi and English like NSDC.
 - NSDC's generated call setup is byte-identical before and after the split, checked with
   `dump-customs.mjs nsdc` and `cmp`.
 - The company is Roche Diagnostics by default.
+- The greeting is in English. From the caller's first reply the support engine's language rules
+  choose Hindi, English or Hinglish.
 - The voice is ElevenLabs `eleven_flash_v2_5`, from the `ELEVENLABS_VOICE_ID_LAB` voice id. With
   it unset, it falls back to the premade "Rachel", `21m00Tcm4TlvDq8ikWAM`. The other desks keep
   Sarvam `simran`.

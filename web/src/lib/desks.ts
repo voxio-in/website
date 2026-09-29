@@ -101,7 +101,7 @@ export const DESKS: Desk[] = [
   {
     id: 'lab',
     label: 'Lab Equipment Support',
-    role: 'Asha, analyser service desk',
+    role: 'Rachel, analyser service desk',
     blurb:
       'A service desk for lab testing machines, in Hindi or English. It walks you through the safe first checks, turns error codes and upgrade requests into tickets, and stops you the moment something sounds unsafe.',
     orgLabel: 'Which equipment company are you calling?',

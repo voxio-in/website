@@ -41,9 +41,10 @@ const GREETINGS: Record<Exclude<DeskId, 'university'>, string> = {
   nsdc:
     `नमस्कार, Skill India हेल्पलाइन में आपका स्वागत है। मैं विद्या हूँ, एक AI असिस्टेंट। ` +
     `यह कॉल रिकॉर्ड हो रही है। बताइए, मैं आपकी क्या मदद कर सकती हूँ?`,
+  /* English opening; the support engine's language rules take over from the caller's first reply. */
   lab:
-    `नमस्कार, {{BRAND}} सर्विस डेस्क। मैं आशा हूँ, एक AI असिस्टेंट। यह कॉल रिकॉर्ड हो रही है। ` +
-    `बताइए, मशीन में क्या दिक्कत आ रही है?`,
+    `Hello, you have reached the {{BRAND}} service desk. I am Rachel, an AI assistant, and this call is recorded. ` +
+    `What is the problem with your machine?`,
 }
 
 function fill(text: string, brand: string): string {
