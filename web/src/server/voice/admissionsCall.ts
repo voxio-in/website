@@ -26,17 +26,6 @@ export type NimcCustomsOptions = {
   webhookUrl?: string;
 };
 
-/* The lab desk's ElevenLabs voice; the env overrides it. v3 is the most expressive
-   model and the slowest to start speaking. */
-const LAB_ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID_LAB || "OtEfb2LVzIE45wdYe54M";
-
-function ttsFor(desk: DeskId) {
-  if (desk === "lab") {
-    return { service: "elevenlabs", voice: LAB_ELEVENLABS_VOICE, model: "eleven_v3" };
-  }
-  return { service: "sarvam", speaker: "simran" };
-}
-
 export function buildNimcCustoms({
   desk = "university",
   brand,
@@ -166,7 +155,7 @@ export function buildNimcCustoms({
       },
       "webhook-url": webhookUrl,
     },
-    tts_id: ttsFor(desk),
+    tts_id: { service: "sarvam", speaker: "simran" },
 
     stt_id: {
       service: "soniox",

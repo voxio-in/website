@@ -45,13 +45,9 @@ Hindi and English like NSDC.
 - The company is Roche Diagnostics by default.
 - The greeting is in English. From the caller's first reply the support engine's language rules
   choose Hindi, English or Hinglish.
-- The voice is ElevenLabs `eleven_v3` with voice `OtEfb2LVzIE45wdYe54M`. `ELEVENLABS_VOICE_ID_LAB`
-  overrides the voice. The other desks keep Sarvam `simran`.
-- The backend's ElevenLabs client uses the HTTP `text_to_speech.stream` call, which accepts v3.
-  v3 is the slowest ElevenLabs model to start speaking, so replies may start later than on the
-  Sarvam desks.
-- `dump-customs.mjs lab` gives the English greeting with Roche, Soniox `hi`/`en`, and
-  `tts_id: {service: elevenlabs, voice: OtEfb2LVzIE45wdYe54M, model: eleven_v3}`.
+- The voice is Sarvam `simran`, the same as NSDC. ElevenLabs was tried and reverted.
+- `dump-customs.mjs lab` gives the English greeting with Roche, Soniox `hi`/`en`, and Sarvam
+  `simran`.
 - `buildRoomCustoms('lab')` gives the same graph with the room webhook.
 - `tsc --noEmit` was exit 0 when the desk was added. After the SDK removal it fails in
   `dashboard/test/*` and `server/dashboard/*`, which this change does not touch.
