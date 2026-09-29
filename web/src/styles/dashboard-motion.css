@@ -1,0 +1,175 @@
+/* Animated icons, the dashboard's version of the site's card glyphs.
+   Every icon (components/dashboard/Icon.tsx) is drawn in parts; while the
+   button, link or row holding it is hovered, the parts act out what the icon
+   does, looping gently. At rest every icon is still. */
+
+.db svg[data-icon] { overflow: visible; }
+.db svg[data-icon] :is(g, path, circle) { transform-box: fill-box; transform-origin: center; }
+
+/* Parts that only show up during the scene. */
+.db svg[data-icon] :is(.i-spark, .i-ripple, .i-star, .i-flow) { opacity: 0; }
+.db svg[data-icon="phone"] .i-wave, .db svg[data-icon="voice"] .i-wave { opacity: 0.35; }
+
+/* Hover colours fade in instead of snapping, on buttons, tabs, chips and rows. */
+.db :is(a, [data-row-link], tr, .db-side2-item, .db-panel-item, .db-conn, .db-pills button) { transition: background-color 0.35s ease, color 0.3s ease, border-color 0.35s ease, box-shadow 0.35s ease, scale 0.25s ease; }
+.db tr > td { transition: background-color 0.35s ease; }
+
+/* Connection chips grow a touch and are links to their setting. */
+.db .db-conn.is-link { cursor: pointer; }
+.db .db-conn.is-link:hover { scale: 1.04; color: var(--db-accent-text); background: rgba(94, 230, 200, 0.12); }
+.db .db-conn.is-link:hover svg { color: var(--db-accent-text); }
+
+/* A press still reads as a press. */
+@media (prefers-reduced-motion: no-preference) {
+  .db :is(button, [role="button"], .db-btn, .db-iconbtn, .db-copyjson):not(:disabled) { transition: scale 0.12s ease, background-color 0.35s ease, border-color 0.35s ease, color 0.3s ease, box-shadow 0.35s ease; }
+  .db :is(button, [role="button"], .db-btn, .db-iconbtn, .db-copyjson):not(:disabled):active { scale: 0.96; }
+  .db [data-tip]:hover::after { animation: db-tip 0.14s ease-out; }
+
+  /* ------------------------------------------------------------ the scenes
+     `:is(...)` below is "anything you can point at that holds the icon". */
+
+  /* home: the door opens and closes */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="home"] .i-door { transform-origin: left center; animation: i-door 1.8s ease-in-out infinite; }
+
+  /* flows: the path draws from node to node, nodes light in turn */
+  .db svg[data-icon="flows"] .i-draw { stroke-dasharray: 30; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="flows"] .i-draw { animation: i-draw 1.8s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="flows"] .i-dot { animation: i-light 1.8s ease-in-out infinite; }
+
+  /* voice / phone: sound waves ripple outward */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg:is([data-icon="voice"], [data-icon="phone"]) .i-wave { animation: i-wave 1.4s ease-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="phone"] .i-ring { animation: i-ring 1.4s ease-in-out infinite; }
+
+  /* avatar: blinks */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="avatar"] .i-blink { animation: i-blink 2.2s ease-in-out infinite; }
+
+  /* book: the lines turn like a page */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="book"] .i-page { transform-origin: left center; animation: i-page 1.6s ease-in-out infinite; }
+
+  /* plug: pushes in, sparks */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="plug"] .i-prongs { animation: i-plug 1.6s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="plug"] .i-spark { animation: i-spark 1.6s ease-in-out infinite; }
+
+  /* code: brackets open, the slash types */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="code"] .i-l { animation: i-open-l 1.4s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="code"] .i-r { animation: i-open-r 1.4s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="code"] .i-slash { animation: i-light 0.7s steps(2) infinite; }
+
+  /* settings / rotate: turns */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg:is([data-icon="settings"], [data-icon="rotate"]) .i-spin { animation: i-spin 2.4s linear infinite; }
+
+  /* copy: the back sheet slides out from the front one */
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="copy"] .i-back { animation: i-copy 1.3s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="copy"] .i-front { animation: i-copy-front 1.3s ease-in-out infinite; }
+
+  /* check: draws itself, wherever it appears */
+  .db svg[data-icon="check"] .i-tick { stroke-dasharray: 1; animation: i-tick 0.4s ease-out both; }
+
+  /* edit: the pen writes a line */
+  .db svg[data-icon="edit"] .i-ink { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="edit"] .i-pen { animation: i-write 1.4s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="edit"] .i-ink { animation: i-ink 1.4s ease-in-out infinite; }
+
+  /* trash: the lid lifts and drops */
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="trash"] .i-lid { transform-origin: right bottom; animation: i-lid 1.2s ease-in-out infinite; }
+
+  /* search: the lens scans */
+  .db :is(a, button, [role="button"], [data-row-link], label, .db-search):hover svg[data-icon="search"] .i-lens { animation: i-scan 1.6s ease-in-out infinite; }
+
+  /* plus / close: a quarter turn */
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg:is([data-icon="plus"], [data-icon="close"]) .i-turn { transition: rotate 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); rotate: 90deg; }
+  .db svg:is([data-icon="plus"], [data-icon="close"]) .i-turn { transition: rotate 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+  /* panel: the divider slides open and shut */
+  .db :is(a, button, [role="button"]):hover svg[data-icon="panel"] .i-divider { animation: i-divider 1.4s ease-in-out infinite; }
+
+  /* back / logout: the arrow leaves and comes back */
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="back"] .i-arrowl { animation: i-left 1.1s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], .db-side2-item):hover svg[data-icon="logout"] .i-exit { animation: i-exit 1.3s ease-in-out infinite; }
+
+  /* sun: rays turn and breathe; moon: stars twinkle */
+  .db :is(a, button, [role="button"], .db-side2-item):hover svg[data-icon="sun"] .i-rays { animation: i-rays 3s linear infinite; }
+  .db :is(a, button, [role="button"], .db-side2-item):hover svg[data-icon="sun"] .i-core { animation: i-breathe 1.5s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], .db-side2-item):hover svg[data-icon="moon"] .i-moon { animation: i-rock 2s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], .db-side2-item):hover svg[data-icon="moon"] .i-star { animation: i-twinkle 1.6s ease-in-out infinite; }
+
+  /* webhook: a pulse travels round the loop */
+  .db svg[data-icon="webhook"] .i-flow { stroke-dasharray: 0.12 0.88; stroke-width: 2.4; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="webhook"] .i-flow { opacity: 1; animation: i-flow 1.6s linear infinite; }
+
+  /* chart: bars grow in turn */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="chart"] .i-bar { transform-origin: bottom center; animation: i-grow 1.5s ease-in-out infinite; }
+
+  /* list: the bullets tick off one by one */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="list"] .i-pt { animation: i-pop 1.5s ease-in-out infinite; }
+
+  /* sliders: the knobs slide */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="sliders"] .i-knob { animation: i-slide 1.8s ease-in-out infinite; }
+
+  /* cursor: clicks */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="cursor"] .i-click { animation: i-click 1.4s ease-in-out infinite; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="cursor"] .i-ripple { animation: i-spark 1.4s ease-in-out infinite; }
+
+  /* bolt: flickers on */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="bolt"] .i-flash { animation: i-flash 1.6s ease-in-out infinite; }
+
+  /* eye: blinks and looks around; eye-off: the slash draws */
+  .db :is(a, button, [role="button"]):hover svg[data-icon="eye"] .i-lidd { animation: i-lidblink 2s ease-in-out infinite; }
+  .db :is(a, button, [role="button"]):hover svg[data-icon="eye"] .i-pupil { animation: i-look 2s ease-in-out infinite; }
+  .db svg[data-icon="eyeOff"] .i-slashd { stroke-dasharray: 1; }
+  .db :is(a, button, [role="button"]):hover svg[data-icon="eyeOff"] .i-slashd { animation: i-tick 0.9s ease-in-out infinite alternate; }
+
+  /* play: pulses forward */
+  .db :is(a, button, [role="button"], [data-row-link]):hover svg[data-icon="play"] .i-go { animation: i-go 1s ease-in-out infinite; }
+
+  /* calendar: the day hops along */
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="calendar"] .i-day { animation: i-days 2s steps(1) infinite; }
+
+  /* grid: a cell walks the grid */
+  .db svg[data-icon="grid"] .i-cell { fill: currentColor; opacity: 0; stroke: none; }
+  .db :is(a, button, [role="button"], [data-row-link], .db-side2-item, .db-panel-item):hover svg[data-icon="grid"] .i-cell { opacity: 0.5; animation: i-cells 2.4s steps(1) infinite; }
+
+  /* Staggered parts */
+  .db svg[data-icon] .i-b { animation-delay: 0.18s !important; }
+  .db svg[data-icon] .i-c { animation-delay: 0.36s !important; }
+}
+
+@keyframes db-tip { from { opacity: 0; translate: -4px 0; } to { opacity: 1; translate: 0 0; } }
+
+@keyframes i-door { 0%, 100% { scale: 1 1; } 40%, 60% { scale: 0.25 1; } }
+@keyframes i-draw { 0% { stroke-dashoffset: 30; } 55%, 100% { stroke-dashoffset: 0; } }
+@keyframes i-light { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes i-wave { 0% { opacity: 0; scale: 0.7; } 40% { opacity: 1; } 100% { opacity: 0; scale: 1.08; } }
+@keyframes i-ring { 0%, 50%, 100% { rotate: 0deg; } 10%, 30% { rotate: -12deg; } 20%, 40% { rotate: 12deg; } }
+@keyframes i-blink { 0%, 42%, 50%, 100% { scale: 1 1; } 46% { scale: 1 0.1; } }
+@keyframes i-page { 0%, 100% { scale: 1 1; opacity: 1; } 45% { scale: -0.2 1; opacity: 0.3; } 55% { scale: 0.2 1; opacity: 0.3; } }
+@keyframes i-plug { 0%, 100% { translate: 0 0; } 45%, 60% { translate: 0 2px; } }
+@keyframes i-spark { 0%, 40%, 100% { opacity: 0; } 55%, 70% { opacity: 1; } }
+@keyframes i-open-l { 0%, 100% { translate: 0 0; } 50% { translate: -2px 0; } }
+@keyframes i-open-r { 0%, 100% { translate: 0 0; } 50% { translate: 2px 0; } }
+@keyframes i-spin { to { rotate: 360deg; } }
+@keyframes i-copy { 0%, 100% { translate: 0 0; } 45%, 65% { translate: -2px -2px; } }
+@keyframes i-copy-front { 0%, 100% { translate: 0 0; } 45%, 65% { translate: 1px 1px; } }
+@keyframes i-tick { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes i-write { 0%, 100% { translate: 0 0; rotate: 0deg; } 30% { translate: -2px 1px; rotate: -6deg; } 60% { translate: 2px 1px; rotate: 4deg; } }
+@keyframes i-ink { 0%, 15% { stroke-dashoffset: 1; opacity: 1; } 70% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes i-lid { 0%, 100% { rotate: 0deg; translate: 0 0; } 35%, 60% { rotate: 18deg; translate: 0 -2px; } }
+@keyframes i-scan { 0%, 100% { translate: 0 0; } 25% { translate: 1.5px -1.5px; } 50% { translate: -1.5px -1px; } 75% { translate: -1px 1.5px; } }
+@keyframes i-divider { 0%, 100% { translate: 0 0; } 50% { translate: 5px 0; } }
+@keyframes i-left { 0%, 100% { translate: 0 0; opacity: 1; } 45% { translate: -4px 0; opacity: 0; } 55% { translate: 3px 0; opacity: 0; } }
+@keyframes i-exit { 0%, 100% { translate: 0 0; opacity: 1; } 45% { translate: 5px 0; opacity: 0; } 55% { translate: -4px 0; opacity: 0; } }
+@keyframes i-rays { to { rotate: 360deg; } }
+@keyframes i-breathe { 0%, 100% { scale: 1; } 50% { scale: 1.15; } }
+@keyframes i-rock { 0%, 100% { rotate: 0deg; } 50% { rotate: -14deg; } }
+@keyframes i-twinkle { 0%, 100% { opacity: 0; scale: 0.4; } 50% { opacity: 1; scale: 1; } }
+@keyframes i-flow { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes i-grow { 0%, 100% { scale: 1 1; } 40% { scale: 1 0.35; } }
+@keyframes i-pop { 0%, 60%, 100% { scale: 1; } 25% { scale: 2.2; } }
+@keyframes i-slide { 0%, 100% { translate: 0 0; } 33% { translate: 3px 0; } 66% { translate: -3px 0; } }
+@keyframes i-click { 0%, 100% { scale: 1; translate: 0 0; } 45% { scale: 0.85; translate: -1px -1px; } }
+@keyframes i-flash { 0%, 100% { opacity: 1; } 20% { opacity: 0.2; } 28% { opacity: 1; } 36% { opacity: 0.4; } 44% { opacity: 1; } }
+@keyframes i-lidblink { 0%, 44%, 52%, 100% { scale: 1 1; } 48% { scale: 1 0.1; } }
+@keyframes i-look { 0%, 100% { translate: 0 0; } 25% { translate: -2px 0; } 70% { translate: 2px 0; } }
+@keyframes i-go { 0%, 100% { translate: 0 0; } 50% { translate: 2px 0; } }
+@keyframes i-days { 0% { translate: 0 0; } 25% { translate: 4px 0; } 50% { translate: 8px 0; } 75% { translate: 4px 3px; } }
+@keyframes i-cells { 0% { translate: 0 0; } 25% { translate: 5.5px 0; } 50% { translate: 11px 5px; } 75% { translate: 0 10px; } }

@@ -34,9 +34,13 @@ type Payload = {
    caller said, so it never belongs in a transcript. */
 const VISUAL_CONTEXT = /<turn-visual-context>[\s\S]*?<\/turn-visual-context>/gi;
 
+/* The page driver's reply carries a marker wherever the screen should move.
+   It is timing for the runtime, not something said. */
+const WEB_ACTION = /<\|web_action\|>/g;
+
 function clean(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const text = value.replace(VISUAL_CONTEXT, '').trim();
+  const text = value.replace(VISUAL_CONTEXT, '').replace(WEB_ACTION, '').replace(/\s{2,}/g, ' ').trim();
   return text || null;
 }
 

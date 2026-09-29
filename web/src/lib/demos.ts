@@ -1,6 +1,8 @@
 // The browser demos on /avatar — the ones you talk to through the page rather
 // than over the phone.
 
+import { deskById } from './desks'
+
 export type DemoId =
   | 'interview'
   | 'navigator'
@@ -14,6 +16,7 @@ export type DemoId =
   | 'pr'
   | 'vps'
   | 'jl'
+  | 'lab'
 
 export type Demo = {
   id: DemoId
@@ -205,7 +208,22 @@ const JEREMY: Demo = {
   faceKind: 'pose',
 }
 
-export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR, JEREMY]
+/* The /calling lab desk, talked to through the page. Its copy is the desk's own,
+   and the room runs the desk's graph (roomCustoms), so greeting and prompt stay empty. */
+const LAB_DESK = deskById('lab')
+const LAB: Demo = {
+  id: 'lab',
+  label: LAB_DESK.label,
+  role: LAB_DESK.role,
+  blurb: LAB_DESK.blurb,
+  asks: LAB_DESK.asks,
+  opener: '“Hello, hamari machine pe error aa raha hai.”',
+  greeting: '',
+  systemPrompt: '',
+  video: false,
+}
+
+export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR, JEREMY, LAB]
 
 /* Muthu is the demo that shows the thing that is actually hard — a face the
    model chooses, turn by turn — so it is the one the page opens on. */

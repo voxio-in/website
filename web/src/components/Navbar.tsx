@@ -525,6 +525,11 @@ export default function Navbar() {
             ) : null}
 
             <div className="glass-bar glass-bar--cta">
+              {/* Log in also covers sign-up: /login links to it, and sends
+                  anyone already signed in straight to the dashboard. */}
+              <Link className="btn btn-ghost header-cta header-login" to="/login" onClick={leave}>
+                Log in
+              </Link>
               <Link className="btn btn-solid header-cta" to="/contact" onClick={leave}>
                 Contact us
               </Link>

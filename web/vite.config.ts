@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 // The static site still lives in the repo root and is served by serve.mjs on
 // :8123 while pages are ported one at a time. Two consequences here:
@@ -21,7 +22,10 @@ export default defineConfig(({ mode }) => {
   const publicHost = env.PUBLIC_URL ? new URL(env.PUBLIC_URL).hostname : null
 
   return {
-    resolve: { tsconfigPaths: true },
+    // The @voxio/* packages are linked from the local SDK checkout
+    // (../../voice-bot-sdk), which has its own React. Two Reacts on one page
+    // break every hook, so the site's copy wins.
+    resolve: { tsconfigPaths: true, dedupe: ['react', 'react-dom'] },
     publicDir: fileURLToPath(new URL('../public', import.meta.url)),
     server: {
       fs: { allow: [repoRoot] },
@@ -32,6 +36,9 @@ export default defineConfig(({ mode }) => {
         publicHost ? [publicHost] : [],
       ),
     },
-    plugins: [tanstackStart(), viteReact()],
+    // @visx 4 alpha (bklit charts) ships ESM with extensionless imports that
+    // Node can't resolve during SSR; bundling it through Vite fixes that.
+    ssr: { noExternal: [/^@visx\//] },
+    plugins: [tailwindcss(), tanstackStart(), viteReact()],
   }
 })

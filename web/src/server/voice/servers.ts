@@ -18,6 +18,12 @@ export const SERVERS = {
 
   /** Telephony. Not the same host as either of the above. */
   callbot: host(process.env.VX_CALLBOT ?? process.env.VOXIO_GATEWAY),
+
+  /** Text chat with a flow (the SDK's chat: /agents/start_session, /agents/process_input). */
+  chat: host(process.env.VX_CHAT, 'chat.voxio.in'),
+
+  /** Config store (flows, numbers, agents) — the dashboard reads and writes here. */
+  database: host(process.env.VX_DATABASE),
 } as const
 
 export type ServerName = keyof typeof SERVERS

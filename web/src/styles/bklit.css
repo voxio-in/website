@@ -1,0 +1,75 @@
+/* Tailwind for the bklit charts only: theme + utilities, no preflight, and
+   only the chart sources are scanned — so nothing leaks into the site. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "../components/bklit";
+
+/* bklit's dark: variants follow the dashboard theme. */
+@custom-variant dark (&:where(.db:not([data-theme="light"]), .db:not([data-theme="light"]) *));
+
+.db {
+  --foreground: #e8f3f4;
+  --muted-foreground: rgba(232, 243, 244, 0.55);
+  --border: rgba(255, 255, 255, 0.1);
+
+  --chart-background: #072830;
+  --chart-foreground: #e8f3f4;
+  --chart-foreground-muted: rgba(232, 243, 244, 0.55);
+  --chart-label: rgba(232, 243, 244, 0.6);
+  --chart-line-primary: #5ee6c8;
+  --chart-line-secondary: #7aa9ff;
+  --chart-grid: rgba(255, 255, 255, 0.07);
+  --chart-crosshair: rgba(94, 230, 200, 0.6);
+  --chart-indicator-color: #e8f3f4;
+  --chart-indicator-secondary-color: #7aa9ff;
+  --chart-tooltip-background: #0b3640;
+  --chart-tooltip-foreground: #e8f3f4;
+  --chart-marker-background: #072830;
+  --chart-marker-border: #5ee6c8;
+  --chart-marker-foreground: #e8f3f4;
+  --chart-marker-badge-background: #5ee6c8;
+  --chart-marker-badge-foreground: #03171c;
+  --chart-segment-background: rgba(94, 230, 200, 0.08);
+  --chart-segment-line: rgba(94, 230, 200, 0.4);
+  --chart-brush-border: rgba(255, 255, 255, 0.2);
+  --chart-1: #5ee6c8;
+  --chart-2: #7aa9ff;
+  --chart-3: #c79bff;
+  --chart-4: #ffc670;
+  --chart-5: #ff8fa3;
+}
+.db[data-theme="light"] {
+  --foreground: #0c2a30;
+  --muted-foreground: rgba(12, 42, 48, 0.6);
+  --border: rgba(3, 30, 36, 0.12);
+  --chart-background: #ffffff;
+  --chart-foreground: #0c2a30;
+  --chart-foreground-muted: rgba(12, 42, 48, 0.6);
+  --chart-label: rgba(12, 42, 48, 0.65);
+  --chart-line-primary: #0f9e83;
+  --chart-line-secondary: #4a7fe0;
+  --chart-grid: rgba(3, 30, 36, 0.08);
+  --chart-crosshair: rgba(15, 158, 131, 0.6);
+  --chart-indicator-color: #0c2a30;
+  --chart-indicator-secondary-color: #4a7fe0;
+  --chart-tooltip-background: #ffffff;
+  --chart-tooltip-foreground: #0c2a30;
+  --chart-marker-background: #ffffff;
+  --chart-marker-border: #0f9e83;
+  --chart-marker-foreground: #0c2a30;
+  --chart-marker-badge-background: #0f9e83;
+  --chart-marker-badge-foreground: #ffffff;
+  --chart-segment-background: rgba(15, 158, 131, 0.08);
+  --chart-segment-line: rgba(15, 158, 131, 0.4);
+  --chart-brush-border: rgba(3, 30, 36, 0.2);
+  --chart-1: #0f9e83;
+  --chart-2: #4a7fe0;
+  --chart-3: #9b6ae0;
+  --chart-4: #d9982c;
+  --chart-5: #e0587a;
+}
+
+/* The tooltip's text utilities aren't in Tailwind's theme; map them here so
+   they follow the dashboard theme. */
+.db .text-chart-tooltip-foreground { color: var(--chart-tooltip-foreground); }
+.db .text-chart-tooltip-muted { color: var(--chart-foreground-muted); }

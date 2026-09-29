@@ -3,7 +3,8 @@
 // that a pooled connection cannot hold, so they use the direct host.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -72,4 +73,258 @@ model RoomSession {
   updatedAt  DateTime  @default(now()) @updatedAt
 
   @@index([ip, createdAt])
+}
+
+// ---------------------------------------------------------------- Voxio data
+//
+// These tables mirror the backend's MongoDB collections (vx-backend-monorepo
+// database service, db `voxioagents_db`): the same collection names as tables
+// and the same field names as columns (@map), so the backend can move from
+// Mongo to this database with its documents unchanged. Mongo's id arrays
+// (user.flows, flow.sessions, flow.numbers…) become foreign keys instead.
+// Columns marked "dashboard" have no Mongo counterpart yet.
+
+// Mongo `users`. Also the dashboard login: `password` is a scrypt hash.
+model User {
+  id              String    @id @default(cuid())
+  username        String?   @unique
+  password        String
+  role            UserRole  @default(user)
+  email           String    @unique
+  name            String
+  apiKey          String    @unique @map("api_key")
+  apiKeyRotatedAt DateTime? @map("api_key_rotated_at") // dashboard
+  integrations    Json      @default("[]") // dashboard: connected apps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  authSessions AuthSession[]
+  flows        Flow[]
+  agents       Agent[]
+  stt          Stt[]
+  tts          Tts[]
+  numbers      PhoneNumber[]
+  faces        Face[]
+  knowledge    KnowledgeBase[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  reseller
+  user
+}
+
+// One signed-in browser (dashboard only). The cookie carries a random token;
+// only its SHA-256 is stored, so a database leak can't be replayed as a login.
+model AuthSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+// Mongo `agents`: the workflow graph the engine runs.
+model Agent {
+  id         String @id @default(cuid())
+  userId     String @map("user_id")
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflow   Json
+  webhookUrl String @default("") @map("webhook-url")
+  flows      Flow[]
+
+  @@index([userId])
+  @@map("agents")
+}
+
+// Mongo `flows`. Keys the engine reads with hyphens keep them.
+model Flow {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId         String   @map("agent_id")
+  agent           Agent    @relation(fields: [agentId], references: [id])
+  flowName        String   @map("flow_name")
+  apiKey          String   @unique @map("api_key")
+  processType     String   @default("speech-native") @map("process-type")
+  xml             String   @default("")
+  kbs             String[]
+  // { version, expressions: [{uuid,label,usage}], transitions: [{from,to,uuid,label,usage}] }
+  faces           Json     @default("{}")
+  sttId           String?  @map("stt_id")
+  stt             Stt?     @relation(fields: [sttId], references: [id], onDelete: SetNull)
+  ttsId           String?  @map("tts_id")
+  tts             Tts?     @relation(fields: [ttsId], references: [id], onDelete: SetNull)
+  visionId        Json?    @map("vision_id")
+  runningVisionId Json?    @map("running_vision_id")
+  // Mongo keeps runtime knobs as extra top-level keys ('warmup-agent',
+  // 'pre-fire-config', 'inactivity'…); here they live together.
+  runtime         Json     @default("{}")
+  webhookSecret   String?  @map("webhook-secret") // dashboard
+  webhookEvents   String[] @map("webhook-events") // dashboard
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  sessions   CallSession[]
+  numbers    PhoneNumber[]
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@index([agentId])
+  @@map("flows")
+}
+
+// Mongo `stt`: a provider config; provider-specific keys go in `config`.
+model Stt {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   String
+  config    Json     @default("{}")
+  name      String? // dashboard: set on saved voice presets
+  isPreset  Boolean  @default(false) @map("is_preset") // dashboard
+  createdAt DateTime @default(now()) @map("created_at")
+  flows     Flow[]
+
+  @@index([userId])
+  @@map("stt")
+}
+
+// Mongo `tts`, same shape as `stt`.
+model Tts {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   String
+  config    Json     @default("{}")
+  name      String?
+  isPreset  Boolean  @default(false) @map("is_preset")
+  createdAt DateTime @default(now()) @map("created_at")
+  flows     Flow[]
+
+  @@index([userId])
+  @@map("tts")
+}
+
+// Mongo `sessions`: one call or web session.
+model CallSession {
+  id                 String   @id @default(cuid())
+  sessionId          String   @unique
+  flowId             String   @map("flow_id")
+  flow               Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  recordingUrl       String?
+  startTime          DateTime
+  endTime            DateTime
+  type               String
+  totalConnectedTime Float
+  totalAiTime        Float
+  totalHumanTime     Float
+  timeRatio          Float    @default(0)
+  transcription      Json     @default("[]")
+  humanTokens        Int
+  aiTokens           Int
+  tokenRatio         Float    @default(0)
+  from               String? // dashboard
+  to                 String? // dashboard
+  status             String? // dashboard
+  extra              Json     @default("{}") // dashboard: replay media, web actions
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+
+  @@index([flowId, startTime])
+  @@map("sessions")
+}
+
+// Mongo `numbers`: a number Voxio provisioned for a user. `flowApiKey` is the
+// flow it's attached to (null = unattached); it follows the flow's key on rotate.
+model PhoneNumber {
+  id          String    @id @default(cuid())
+  phoneNumber String    @unique @map("phone_number")
+  userApiKey  String    @map("user_api_key")
+  user        User      @relation(fields: [userApiKey], references: [apiKey], onDelete: Cascade, onUpdate: Cascade)
+  flowApiKey  String?   @map("flow_api_key")
+  flow        Flow?     @relation(fields: [flowApiKey], references: [apiKey], onDelete: SetNull, onUpdate: Cascade)
+  provider    String?
+  label       String?
+  attachedAt  DateTime? @map("attached_at") // dashboard
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  @@index([userApiKey])
+  @@index([flowApiKey])
+  @@map("numbers")
+}
+
+// Mongo `faces`: an avatar face clip, keyed by uuid (the Hugging Face filename).
+model Face {
+  uuid      String   @id
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   @default("expression")
+  detector  String   @default("s3fd")
+  clip      Json     @default("{}")
+  media     Json     @default("{}")
+  coords    Json     @default("[]")
+  version   String   @default("")
+  label     String   @default("") // dashboard
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("faces")
+}
+
+// Knowledge bases. Mongo only keeps their ids (user.kbs, flow.kbs); names and
+// sources get tables here.
+model KnowledgeBase {
+  id        String            @id
+  userId    String            @map("user_id")
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime          @default(now()) @map("created_at")
+  sources   KnowledgeSource[]
+
+  @@index([userId])
+  @@map("knowledge_bases")
+}
+
+model KnowledgeSource {
+  id      String        @id @default(cuid())
+  kbId    String        @map("kb_id")
+  kb      KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  kind    String
+  label   String
+  status  String        @default("indexing")
+  chunks  Int           @default(0)
+  addedAt DateTime      @default(now()) @map("added_at")
+
+  @@index([kbId])
+  @@map("knowledge_sources")
+}
+
+// Every webhook POST to a flow's URL (dashboard).
+model WebhookDelivery {
+  id       String   @id @default(cuid())
+  flowId   String   @map("flow_id")
+  flow     Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  at       DateTime @default(now())
+  event    String
+  url      String
+  status   Int?
+  ms       Int
+  attempt  Int      @default(1)
+  request  Json
+  response String?
+
+  @@index([flowId, at])
+  @@map("webhook_deliveries")
 }

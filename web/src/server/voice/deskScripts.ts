@@ -1,4 +1,4 @@
-// The scripts for the other three desks.
+// The scripts for the desks other than university.
 
 import type { DeskId } from '#/lib/desks'
 import { NIMC_BRAND_TOKEN, nimcGreeting, nimcSystemPrompt } from './admissionsPrompt'
@@ -7,9 +7,14 @@ import sharedRules from './prompts/calling/shared-rules.md?raw'
 import school from './prompts/calling/school.md?raw'
 import opd from './prompts/calling/opd.md?raw'
 import hotel from './prompts/calling/hotel.md?raw'
+import supportEngine from './prompts/calling/support-engine.md?raw'
 import nsdc from './prompts/calling/nsdc.md?raw'
+import lab from './prompts/calling/lab.md?raw'
 
 const SHARED_RULES = md(sharedRules)
+
+/** A helpdesk product layer on top of the shared support engine. */
+const onSupportEngine = (product: string) => md(`${supportEngine}\n---\n---\n\n${product}`)
 
 const withRules = (template: string) =>
   render(md(template), { SHARED_RULES })
@@ -21,7 +26,8 @@ const SCRIPTS: Record<Exclude<DeskId, 'university'>, string> = {
   /* No SHARED_RULES: the support engine carries its own language, turn-length
      and number rules, and they are stricter than the shared ones. Splicing
      both in would give the model two versions of the same rule to reconcile. */
-  nsdc: md(nsdc),
+  nsdc: onSupportEngine(nsdc),
+  lab: onSupportEngine(lab),
 }
 
 const GREETINGS: Record<Exclude<DeskId, 'university'>, string> = {
@@ -35,6 +41,9 @@ const GREETINGS: Record<Exclude<DeskId, 'university'>, string> = {
   nsdc:
     `नमस्कार, Skill India हेल्पलाइन में आपका स्वागत है। मैं विद्या हूँ, एक AI असिस्टेंट। ` +
     `यह कॉल रिकॉर्ड हो रही है। बताइए, मैं आपकी क्या मदद कर सकती हूँ?`,
+  lab:
+    `नमस्कार, {{BRAND}} सर्विस डेस्क। मैं आशा हूँ, एक AI असिस्टेंट। यह कॉल रिकॉर्ड हो रही है। ` +
+    `बताइए, मशीन में क्या दिक्कत आ रही है?`,
 }
 
 function fill(text: string, brand: string): string {

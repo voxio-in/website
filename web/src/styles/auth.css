@@ -1,0 +1,85 @@
+/* /login and /signup — same ground and type as the dashboard. */
+
+.au {
+  --line: rgba(255, 255, 255, 0.09);
+  --muted: rgba(232, 243, 244, 0.6);
+  --accent: #5ee6c8;
+  min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  color: #e8f3f4; font-family: Inter, system-ui, sans-serif; font-size: 15.5px;
+  background: radial-gradient(900px 600px at 0% 0%, rgba(94, 230, 200, 0.10), transparent 60%), #03161b;
+}
+.au a { color: inherit; text-decoration: none; }
+
+.au-brand {
+  display: flex; flex-direction: column; justify-content: space-between; padding: 40px 48px;
+  border-right: 1px solid var(--line);
+  background: radial-gradient(600px 420px at 30% 70%, rgba(122, 169, 255, 0.10), transparent 70%);
+}
+.au-logo { display: inline-flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 650; }
+.au-va {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+  background: #03171c; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.16) inset;
+}
+.au-pitch h2 { margin: 0 0 26px; font-size: clamp(28px, 3vw, 40px); line-height: 1.15; font-weight: 650; letter-spacing: -0.025em; max-width: 14ch; }
+.au-pitch ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.au-pitch li { display: flex; align-items: center; gap: 14px; color: rgba(232, 243, 244, 0.82); }
+.au-pitch li span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0; color: #7ff0d6; background: rgba(94, 230, 200, 0.12); }
+.au-small { margin: 0; font-size: 13px; color: var(--muted); }
+
+.au-main { display: grid; place-items: center; padding: 40px 24px; }
+.au-card { width: min(420px, 100%); }
+.au-logo-sm { display: none; margin-bottom: 28px; }
+.au-card h1 { margin: 0; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
+.au-sub { margin: 8px 0 28px; color: var(--muted); }
+
+.au-form { display: flex; flex-direction: column; gap: 16px; }
+.au-field { display: flex; flex-direction: column; gap: 7px; }
+.au-field > span:first-child { font-size: 14px; font-weight: 500; }
+.au-inputwrap { position: relative; display: flex; }
+.au-field input {
+  width: 100%; font: inherit; color: #e8f3f4; padding: 13px 14px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045); border: 1px solid var(--line); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.au-field input:focus { border-color: rgba(94, 230, 200, 0.6); box-shadow: 0 0 0 4px rgba(94, 230, 200, 0.12); }
+.au-field.has-err input { border-color: rgba(255, 122, 122, 0.65); }
+.au-field em { font-style: normal; font-size: 13px; color: #ff9a9a; }
+.au-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; color: var(--muted); background: none; border: 0; cursor: pointer; }
+.au-eye:hover { color: #e8f3f4; background: rgba(255, 255, 255, 0.06); }
+.au-field input[type='password'], .au-inputwrap input { padding-right: 48px; }
+
+.au-rules { list-style: none; margin: -4px 0 0; padding: 0; display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.au-rules li { display: inline-flex; align-items: center; gap: 6px; }
+.au-rules li::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); }
+.au-rules li.is-ok { color: #7ff0d6; }
+.au-rules li.is-ok::before { background: #5ee6c8; }
+
+.au-alert { padding: 11px 14px; border-radius: 12px; font-size: 14px; color: #ffb3b3; background: rgba(255, 122, 122, 0.08); border: 1px solid rgba(255, 122, 122, 0.3); }
+.au-submit {
+  margin-top: 6px; font: inherit; font-weight: 600; font-size: 15.5px; cursor: pointer; padding: 13px; border: 0; border-radius: 12px;
+  color: #02201a; background: linear-gradient(180deg, #8ff4dc, #4fd8ba); box-shadow: 0 10px 26px -12px rgba(94, 230, 200, 0.7);
+  transition: transform 0.1s, opacity 0.15s;
+}
+.au-submit:active:not(:disabled) { transform: scale(0.99); }
+.au-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.au-foot { margin: 26px 0 0; text-align: center; color: var(--muted); font-size: 14.5px; }
+.au-foot a { color: #7ff0d6; font-weight: 500; }
+.au-foot a:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .au { grid-template-columns: 1fr; }
+  .au-brand { display: none; }
+  .au-logo-sm { display: inline-flex; }
+}
+
+.au-or { display: flex; align-items: center; gap: 12px; margin: 22px 0 14px; color: var(--muted); font-size: 13px; }
+.au-or::before, .au-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.au-demo {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
+  font: inherit; font-weight: 600; color: #e8f3f4; padding: 13px 14px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); transition: background 0.15s, border-color 0.15s;
+}
+.au-demo small { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.au-demo:hover:not(:disabled) { background: rgba(94, 230, 200, 0.07); border-color: rgba(94, 230, 200, 0.4); }
+.au-demo:disabled { opacity: 0.6; cursor: not-allowed; }

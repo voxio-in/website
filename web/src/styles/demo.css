@@ -389,7 +389,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: auto;
   border: 0;
   border-radius: 0;
   background: #fff;
@@ -518,8 +518,9 @@
   overflow: hidden;
 }
 
-/* The visitor cannot scroll this frame — the agent does — so the bottom edge
-   has to read as a fold rather than as a sliced word. */
+/* The rebuilt sites are whole sites, and the dare is to try one yourself, so
+   the frame scrolls. The fold still marks the bottom edge as "more below"
+   rather than a sliced word. */
 .wastage-fold {
   position: absolute;
   left: 0;

@@ -1,6 +1,6 @@
 // The desks you can ring from the /calling page.
 
-export type DeskId = 'university' | 'school' | 'opd' | 'hotel' | 'nsdc'
+export type DeskId = 'university' | 'school' | 'opd' | 'hotel' | 'nsdc' | 'lab'
 
 export type Desk = {
   id: DeskId
@@ -93,6 +93,25 @@ export const DESKS: Desk[] = [
       'Mera stipend teen mahine se nahi aaya.',
       'Will I definitely get a job after this?',
       'Ask it for a helpline number — it will not read one out.',
+    ],
+  },
+  /* The same support engine as NSDC, as an equipment service desk: first-level
+     checks it can walk through, everything else a ticket, and a safety stop
+     that overrides the lot. */
+  {
+    id: 'lab',
+    label: 'Lab Equipment Support',
+    role: 'Asha, analyser service desk',
+    blurb:
+      'A service desk for lab testing machines, in Hindi or English. It walks you through the safe first checks, turns error codes and upgrade requests into tickets, and stops you the moment something sounds unsafe.',
+    orgLabel: 'Which equipment company are you calling?',
+    orgPlaceholder: 'Your lab equipment supplier',
+    defaultBrand: 'LabCare Diagnostics',
+    asks: [
+      'Machine pe error aa raha hai, samples nahi chal rahe.',
+      'We run two hundred samples a day. How do we double that?',
+      'QC fail ho raha hai since morning.',
+      'Say you smell something burning — see what it does.',
     ],
   },
 ]

@@ -24,17 +24,17 @@ export const SURFACES: Surface[] = [
     id: 'clinic',
     label: 'A hospital portal',
     task: 'Get an appointment',
-    site: 'Civil Hospital — Patient Services',
-    host: 'hms.civilhospital.gov.in',
+    site: 'Online OPD Registration — Government Hospitals',
+    host: 'eopd-registration.gov.in',
     hard:
-      'A department list written for doctors, not patients. You have chest pain; the menu offers Cardiology, Cardiothoracic and Internal Medicine, and picking wrong costs you the slot.',
-    dare: 'Try booking the first free cardiology slot this week.',
+      'A seven-step wizard that starts with a map of India. Ninety-odd hospitals in Delhi alone, two named almost like yours; twenty-four departments in medical language; the nearest date always full; and a code sent to a phone before anything is booked.',
+    dare: 'Try booking the earliest cardiology slot at Civil Hospital, Shastri Nagar.',
     blurb:
-      'The appointment system every government hospital runs: a department list in medical language, a doctor list with no free slots, and a form that clears itself if you get one field wrong.',
+      'The national appointment portal every government hospital sits behind: state, hospital, mode, type, department, date, phone, form — each step empty until the one before it is right.',
     asks: [
       'My father has chest pain, earliest appointment please.',
       'Something this week, mornings only.',
-      'He is sixty two, and he has the ABHA number.',
+      'He is sixty two, and he does not have the ABHA number.',
     ],
   },
   {
@@ -42,15 +42,15 @@ export const SURFACES: Surface[] = [
     label: 'A university portal',
     task: 'Find the thing that is buried',
     site: 'Meridian Institute of Technology',
-    host: 'meridian.edu.in/student',
+    host: 'meridian.edu.in',
     hard:
-      'The re-evaluation form is four levels down, filed under Examinations — not with the results, which is where everybody looks for it.',
+      'Eleven menus of links, a ticker, a carousel and five tabs of announcements. The re-evaluation form is not in any menu — it is row sixteen of the examination branch’s notices. And the fee table parents find first is next year’s, for new admissions.',
     dare: 'Try to find the re-evaluation form yourself.',
     blurb:
-      'Four levels of menu, a table of circulars and a form that lives three clicks past where anyone looks. Ask for what you actually want and watch it dig.',
+      'A real university site’s shape: mega menus, announcement tabs, a notices table fifteen rows a page. Ask for what you actually want and watch it dig.',
     asks: [
-      'I need the re-evaluation form for last semester.',
-      'When does the fee payment window close?',
+      'I need the re-evaluation form for semester five.',
+      'What are the BTech fees this semester?',
       'Where do I get a bonafide certificate?',
     ],
   },
@@ -58,16 +58,16 @@ export const SURFACES: Surface[] = [
     id: 'rail',
     label: 'A train booking',
     task: 'Book a ticket',
-    site: 'Passenger Reservation System',
-    host: 'irctc-reservation.gov.in',
+    site: 'RailConnect — Passenger Reservation System',
+    host: 'railconnect-reservation.in',
     hard:
-      'Station codes, a quota dropdown nobody understands, and a date field that only takes one format. Nine fields before you can even see a train.',
-    dare: 'Try booking Jaipur to Delhi on the twenty sixth.',
+      'A language popup before anything. Station boxes that only take a picked suggestion, with seven Delhis to pick from. A Book Now that stays dead until you load a class. A form that will not continue until you answer the insurance question.',
+    dare: 'Try booking Jaipur to New Delhi on the twenty sixth, AC three tier.',
     blurb:
-      'The government booking flow, faithfully: station codes, a quota dropdown, a results table, then passenger details. Say where you are going and it does the rest.',
+      'The railway booking flow, faithfully: popup, suggestion boxes, custom dropdowns, per-class availability, a login wall, passenger details and a captcha. Say where you are going and it does the rest.',
     asks: [
-      'Book me Delhi to Jaipur on the fourteenth.',
-      'I want the earliest train, AC three tier.',
+      'Book me Jaipur to Delhi on the twenty sixth, AC.',
+      'The earliest train, whatever class.',
       'Add a passenger, twenty eight, male.',
     ],
   },
@@ -78,14 +78,14 @@ export const SURFACES: Surface[] = [
     site: 'bazaar.in',
     host: 'bazaar.in/footwear',
     hard:
-      'Twenty four products, a sponsored row, three badges on every card and a filter rail that hides the one thing you asked for.',
+      'A login popup, a hundred and sixty products twenty four to a page, sponsored cards ranked first and dressed like the rest, and "exclude out of stock" hidden in a filter section that starts closed.',
     dare: 'Find running shoes under four thousand that are actually in stock.',
     blurb:
-      'Twenty four products and no idea which one. Describe what you need and the price you have in mind, and it picks, explains why, and puts it in the basket.',
+      'A real marketplace listing: search, a filter rail of collapsed sections, sort, pages, and a product page that will not take your order until you pick a size.',
     asks: [
-      'I need running shoes under four thousand.',
+      'I need running shoes under four thousand, size nine.',
       'Something for a two year old, not plastic.',
-      'Add the cheapest one that is in stock.',
+      'Noise cancelling headphones under five thousand.',
     ],
   },
 

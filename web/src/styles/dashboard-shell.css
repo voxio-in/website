@@ -1,0 +1,112 @@
+/* The shell: main sidebar (icons + names, collapsible to icons with hover
+   labels), the flow menu beside it inside a flow, and a top bar with the
+   collapse button and breadcrumbs. Loaded last; overrides the older rail. */
+
+.db {
+  --side: 244px;
+  --side-min: 72px;
+  --panel: 248px;
+  --topbar: 56px;
+  grid-template-columns: var(--side) 1fr;
+  transition: grid-template-columns 0.2s ease;
+}
+.db.is-collapsed { grid-template-columns: var(--side-min) 1fr; }
+.db.has-panel { grid-template-columns: var(--side) var(--panel) 1fr; }
+.db.is-collapsed.has-panel { grid-template-columns: var(--side-min) var(--panel) 1fr; }
+
+/* ---------- main sidebar ---------- */
+.db-side2 {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 12px;
+  background: rgb(var(--glass) / 0.78); backdrop-filter: blur(12px); border-right: 1px solid var(--hair);
+  overflow: visible; position: relative; z-index: 30;
+}
+.db-side2-brand { display: flex; align-items: center; gap: 12px; padding: 6px 6px 16px; margin-bottom: 6px; border-bottom: 1px solid var(--hair); }
+.db-side2-brand .db-side2-text { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+/* The Voxio mark, as on the site and favicon. */
+.db-va {
+  display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px;
+  font-size: 16.5px; font-weight: 700; letter-spacing: 0.04em; color: #fff;
+  background: #03171c; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.16) inset;
+}
+.db-side2-items { display: flex; flex-direction: column; gap: 2px; }
+.db-side2-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--hair); }
+.db-side2-item {
+  position: relative; display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 12px;
+  border-radius: 11px; color: var(--db-muted); font-size: 16.5px; font-weight: 500; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.db-side2-item svg { flex-shrink: 0; }
+.db-side2-item:hover { background: rgb(var(--ink) / 0.05); color: var(--db-text); }
+.db-side2-item.is-active { background: rgba(94, 230, 200, 0.12); color: var(--db-accent-text); }
+.db-side2-text { overflow: hidden; text-overflow: ellipsis; }
+
+/* Collapsed: icons only, centred; the label shows on hover. */
+.db.is-collapsed .db-side2 { padding: 14px 10px; }
+.db.is-collapsed .db-side2-text { display: none; }
+.db.is-collapsed .db-side2-brand { justify-content: center; padding: 6px 0 16px; }
+.db.is-collapsed .db-side2-item { justify-content: center; padding: 0; }
+.db.is-collapsed .db-side2 [data-tip]:hover::after,
+.db.panel-mini .db-panel [data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  padding: 7px 12px; border-radius: 9px; white-space: nowrap; pointer-events: none; z-index: 90;
+  font-size: 15px; font-weight: 500; color: var(--db-text);
+  background: var(--db-pop2); border: 1px solid var(--hair); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: db-fade 0.1s ease-out;
+}
+
+/* ---------- flow menu ---------- */
+.db-panel { padding: 18px 14px; }
+
+/* Folded flow menu: an icon strip, same as the collapsed rail. */
+.db.panel-mini { --panel: 68px; }
+.db.panel-mini .db-panel { padding: 18px 10px; overflow: visible; }
+.db.panel-mini .db-panel-title, .db.panel-mini .db-panel-name, .db.panel-mini .db-panel-label { display: none; }
+.db.panel-mini .db-panel-head { justify-content: center; padding: 2px 0 14px; }
+.db.panel-mini .db-panel-group { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--hair); }
+.db.panel-mini .db-panel-group:first-of-type { border-top: 0; margin-top: 0; }
+.db.panel-mini .db-panel-item { justify-content: center; padding: 10px 0; }
+.db-panel-item, .db-panel-avatar { position: relative; }
+.db { transition: grid-template-columns 0.2s ease; }
+.db-panel-head { padding: 2px 8px 14px; margin-bottom: 6px; border-bottom: 1px solid var(--hair); }
+
+/* ---------- column: top bar + page ---------- */
+.db-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.db-topbar {
+  display: flex; align-items: center; gap: 4px; height: var(--topbar); flex-shrink: 0; padding: 0 20px 0 14px;
+  border-bottom: 1px solid var(--hair); background: rgb(var(--glass) / 0.7); backdrop-filter: blur(10px);
+}
+.db-topbar .db-iconbtn { width: 34px; height: 34px; }
+.db-topbar-sep { width: 1px; height: 18px; background: var(--hair); margin: 0 10px 0 6px; }
+.db-crumbs { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 16px; }
+.db-crumb { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--db-muted); }
+.db-crumb svg { color: rgb(var(--ink-text) / 0.3); flex-shrink: 0; }
+.db-crumb a { color: var(--db-muted); padding: 4px 6px; border-radius: 7px; white-space: nowrap; }
+.db-crumb a:hover { color: var(--db-text); background: rgb(var(--ink) / 0.05); }
+.db-crumb b { color: var(--db-text); font-weight: 600; padding: 4px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-col > .db-main { flex: 1; min-height: 0; overflow: auto; }
+.db-burger2 { display: none !important; }
+.db-burger { display: none !important; }
+
+@media (max-width: 900px) {
+  .db, .db.is-collapsed, .db.has-panel, .db.is-collapsed.has-panel { grid-template-columns: 1fr; }
+  .db-side2, .db-panel { position: fixed; top: 0; bottom: 0; z-index: 60; transform: translateX(-110%); transition: transform 0.2s; }
+  .db-side2 { left: 0; width: var(--side); }
+  .db.is-collapsed .db-side2-text { display: inline; }
+  .db.is-collapsed .db-side2-item { justify-content: flex-start; padding: 0 12px; }
+  .db-panel { left: var(--side); width: min(var(--panel), calc(100vw - var(--side))); }
+  .db.nav-open .db-side2, .db.nav-open .db-panel { transform: none; }
+  .db.nav-open .db-side2 { box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5); }
+  .db-collapse { display: none !important; }
+  .db-burger2 { display: inline-grid !important; }
+  .db-crumb:not(:last-child):not(:nth-last-child(2)) { display: none; }
+}
+
+/* Signed-in person at the bottom of the sidebar. */
+.db-user { height: auto; min-height: 52px; padding: 8px 10px; cursor: default; }
+.db-user-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; font-size: 15.5px; font-weight: 650; color: var(--db-on-fill); background: linear-gradient(135deg, var(--db-accent-text), #7aa9ff); }
+.db-user-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.db-user-text b { font-size: 15.5px; color: var(--db-text); overflow: hidden; text-overflow: ellipsis; }
+.db-user-text small { font-size: 13px; color: var(--db-muted); overflow: hidden; text-overflow: ellipsis; }
+.db-logout-item, .db-theme-item { width: 100%; border: 0; background: none; font: inherit; cursor: pointer; text-align: left; }
+.db-logout-item:hover { color: var(--db-err-text); }
+.db.is-collapsed .db-user { padding: 8px 0; }

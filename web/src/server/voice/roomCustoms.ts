@@ -11,6 +11,8 @@ import { buildTanCustoms } from './roleplays/tanCustoms'
 import { buildVpsCustoms } from './roleplays/vpsCustoms'
 import type { SurfaceId } from '#/lib/surfaces'
 import { buildWebActionCustoms } from './webActionCustoms'
+import { deskById, type DeskId } from '#/lib/desks'
+import { buildNimcCustoms } from './admissionsCall'
 
 const ROLEPLAYS: Partial<
   Record<DemoId, (userName: string, accent?: AccentId) => unknown>
@@ -22,6 +24,11 @@ const ROLEPLAYS: Partial<
   jl: buildJeremyCustoms,
 }
 
+/** Browser demos that are a /calling desk heard through the page. */
+const PHONE_DESKS: Partial<Record<DemoId, DeskId>> = {
+  lab: 'lab',
+}
+
 export function buildRoomCustoms(
   id: DemoId,
   webhookUrl: string,
@@ -30,13 +37,19 @@ export function buildRoomCustoms(
   const demo = demoById(id)
 
   if (id.startsWith('wa-')) {
-    return buildWebActionCustoms(id.slice(3) as SurfaceId, accent)
+    return buildWebActionCustoms(id.slice(3) as SurfaceId, accent, webhookUrl)
   }
 
   const roleplay = ROLEPLAYS[id]
   if (roleplay) {
     setRoleplayWebhook(webhookUrl)
     return roleplay('you', accent)
+  }
+
+  // The phone desk's own graph, so the room gets its Hindi and English ears and voice.
+  const desk = PHONE_DESKS[id]
+  if (desk) {
+    return buildNimcCustoms({ desk, brand: deskById(desk).defaultBrand, webhookUrl })
   }
 
   return {

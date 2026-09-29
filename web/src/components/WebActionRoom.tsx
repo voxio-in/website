@@ -3,39 +3,35 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import {
-  CareSurface,
-  ClinicSurface,
-  RailSurface,
-  ShopSurface,
-  UniversitySurface,
-} from '#/components/surfaces'
+import { CareSurface } from '#/components/surfaces'
+import { ClinicSite } from '#/components/sites/ClinicSite'
+import { describe, pageStats, perform, type WebAction } from '#/components/sites/driver'
+import { RailSite } from '#/components/sites/RailSite'
+import { ShopSite } from '#/components/sites/ShopSite'
+import { UniversitySite } from '#/components/sites/UniversitySite'
 import { DEFAULT_SURFACE, SURFACES, surfaceById, type SurfaceId } from '#/lib/surfaces'
 import AccentPicker from '#/components/AccentPicker'
 import { DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { endRoomSession, startRoomSession, type RoomStart } from '#/server/room'
 
 const SURFACE_VIEWS: Record<SurfaceId, () => React.ReactElement> = {
-  clinic: ClinicSurface,
-  university: UniversitySurface,
-  rail: RailSurface,
-  shop: ShopSurface,
+  clinic: ClinicSite,
+  university: UniversitySite,
+  rail: RailSite,
+  shop: ShopSite,
   care: CareSurface,
 }
 
 type Phase = 'idle' | 'asking' | 'connecting' | 'live' | 'ended' | 'failed'
 
-type Action = {
-  action: 'focus' | 'fill_field' | 'click' | 'scroll_to'
-  selector?: string
-  value?: string
-}
-
 type LogEntry = { id: string; label: string; status: 'pending' | 'ok' | 'error' }
 
-const TYPE_MS = 55
-
 const SILENCE_MS = 320
+
+/* An action whose words never arrive — two markers back to back, or a reply
+   that opens on one — would otherwise wait for speech that is not coming,
+   while the runtime waits the full fifteen seconds for our ack. */
+const NO_SPEECH_MS = 1200
 
 function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
   if (pc.iceGatheringState === 'complete') return Promise.resolve()
@@ -51,21 +47,12 @@ function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
   })
 }
 
-/** A human sentence for the log, from the action the model sent. */
-function describe(a: Action): string {
-  const field = (a.selector || '').replace(/^#(hp|uni|rail|shop)-/, '').replace(/-/g, ' ')
-  switch (a.action) {
-    case 'fill_field':
-      return `Typed “${a.value ?? ''}” into ${field}`
-    case 'click':
-      return `Pressed ${field}`
-    case 'focus':
-      return `Moved to ${field}`
-    case 'scroll_to':
-      return `Scrolled to ${field}`
-    default:
-      return 'Did something unrecognised'
-  }
+function PageSize({ stats }: { stats: { elements: number; clickable: number; ids: number } }) {
+  return (
+    <span className="wachrome-stats" title="Counted live from the page in the frame">
+      {stats.elements.toLocaleString('en-IN')} elements · {stats.clickable.toLocaleString('en-IN')} clickable · {stats.ids ? `${stats.ids} ids` : 'no ids planted for the agent'}
+    </span>
+  )
 }
 
 export default function WebActionRoom() {
@@ -89,14 +76,18 @@ export default function WebActionRoom() {
   const sessionRef = useRef<{ id: string; startedAt: number } | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
 
-  const queueRef = useRef<{ id: string; action: Action }[]>([])
+  const queueRef = useRef<{ id: string; turn: number; action: WebAction; at: number }[]>([])
   const heardSpeechRef = useRef(false)
+  const lastLoudRef = useRef(0)
+  const turnRef = useRef<number | null>(null)
   const runningRef = useRef(false)
+  const [stats, setStats] = useState<{ elements: number; clickable: number; ids: number } | null>(null)
 
   const hangUp = useCallback((next: Phase = 'ended') => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     queueRef.current = []
+    turnRef.current = null
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
     dcRef.current = null
@@ -123,7 +114,30 @@ export default function WebActionRoom() {
 
   useEffect(() => () => hangUp('idle'), [hangUp])
 
+  /* How big the page in the frame really is, counted live. It is the honest
+     version of "this site is hard": the number a person would never count and
+     the agent has to work through anyway. */
   const open = phase === 'connecting' || phase === 'live'
+  useEffect(() => {
+    const measure = () => {
+      const stage = stageRef.current
+      if (stage) setStats(pageStats(stage))
+    }
+    measure()
+    const t = setInterval(measure, 1500)
+    return () => clearInterval(t)
+  }, [surfaceId, open])
+
+  // Lets the page be driven by hand from the console while working on it.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const w = window as unknown as { __waPerform?: (a: WebAction) => Promise<string> }
+    w.__waPerform = (a) => (stageRef.current ? perform(stageRef.current, a) : Promise.resolve('error'))
+    return () => {
+      delete w.__waPerform
+    }
+  }, [])
+
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -150,96 +164,21 @@ export default function WebActionRoom() {
     return () => clearTimeout(t)
   }, [phase, left, hangUp])
 
-  const run = useCallback(async (action: Action): Promise<'ok' | 'error'> => {
-    const stage = stageRef.current
-    if (!stage || !action.selector) return 'error'
-
-    let el: HTMLElement | null = null
-    try {
-      el = stage.querySelector<HTMLElement>(action.selector)
-    } catch {
-      return 'error'
-    }
-    if (!el) return 'error'
-
-    el.classList.add('wa-hit')
-    const clear = (ms: number) =>
-      new Promise<void>((r) => setTimeout(() => {
-        el?.classList.remove('wa-hit')
-        r()
-      }, ms))
-
-    switch (action.action) {
-      case 'fill_field': {
-        const value = action.value ?? ''
-        const input = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-        input.focus({ preventScroll: true })
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        if (input.tagName === 'SELECT') {
-          const select = input as HTMLSelectElement
-          const want = value.trim().toLowerCase()
-          const option =
-            Array.from(select.options).find((o) => o.text.toLowerCase() === want) ??
-            Array.from(select.options).find((o) => o.text.toLowerCase().includes(want))
-          if (!option) {
-            await clear(300)
-            return 'error'
-          }
-          select.value = option.value
-          select.dispatchEvent(new Event('change', { bubbles: true }))
-          await clear(500)
-          return 'ok'
-        }
-        input.value = ''
-        for (const ch of value) {
-          input.value += ch
-          input.dispatchEvent(new Event('input', { bubbles: true }))
-          await new Promise((r) => setTimeout(r, TYPE_MS))
-        }
-        await clear(400)
-        return 'ok'
-      }
-      case 'click': {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        await new Promise((r) => setTimeout(r, 500))
-        el.click()
-        await clear(300)
-        return 'ok'
-      }
-      case 'focus': {
-        el.focus({ preventScroll: true })
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        await clear(800)
-        return 'ok'
-      }
-      case 'scroll_to': {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        await clear(600)
-        return 'ok'
-      }
-      default:
-        await clear(200)
-        return 'error'
-    }
-  }, [])
-
   const drain = useCallback(async () => {
     if (runningRef.current) return
-    if (!heardSpeechRef.current) return
     const next = queueRef.current.shift()
     if (!next) return
 
     runningRef.current = true
     heardSpeechRef.current = false
-    const status = await run(next.action)
+    const stage = stageRef.current
+    const status = stage ? await perform(stage, next.action) : 'error'
     setLog((prev) => prev.map((e) => (e.id === next.id ? { ...e, status } : e)))
     if (dcRef.current?.readyState === 'open') {
-      dcRef.current.send(
-        JSON.stringify({ type: 'web_action_ack', id: next.id, status }),
-      )
+      dcRef.current.send(JSON.stringify({ type: 'web_action_ack', id: next.id, status }))
     }
     runningRef.current = false
-  }, [run])
+  }, [])
 
   const watchLevel = useCallback(
     (stream: MediaStream) => {
@@ -251,9 +190,13 @@ export default function WebActionRoom() {
       ctx.createMediaStreamSource(stream).connect(analyser)
 
       const data = new Uint8Array(analyser.frequencyBinCount)
-      let wasSpeaking = false
-      let quietSince = 0
 
+      /* An action runs in the pause after the clause in front of it. The
+         runtime sends it at the marker, usually while that clause is still
+         playing here and sometimes just after — "heard speech" is set by the
+         clause and cleared by the action that consumes it, so either order
+         works. With no clause at all (two markers back to back) it runs once
+         the line has been quiet for long enough. */
       const tick = (now: number) => {
         analyser.getByteFrequencyData(data)
         let sum = 0
@@ -262,17 +205,17 @@ export default function WebActionRoom() {
 
         if (loud) {
           heardSpeechRef.current = true
-          quietSince = 0
-        } else if (wasSpeaking) {
-          quietSince = now
+          lastLoudRef.current = now
         }
 
-        if (!loud && quietSince && now - quietSince > SILENCE_MS) {
-          quietSince = 0
-          void drain()
+        const head = queueRef.current[0]
+        if (head && !loud && !runningRef.current) {
+          const quiet = now - lastLoudRef.current
+          if (heardSpeechRef.current ? quiet > SILENCE_MS : now - head.at > NO_SPEECH_MS && quiet > SILENCE_MS) {
+            void drain()
+          }
         }
 
-        wasSpeaking = loud
         setSpeaking(loud)
         rafRef.current = requestAnimationFrame(tick)
       }
@@ -312,13 +255,25 @@ export default function WebActionRoom() {
         try {
           const msg = JSON.parse(event.data)
           if (msg?.type !== 'web_action') return
-          const action = msg.action as Action
-          setLog((prev) => [
-            ...prev,
-            { id: msg.id, label: describe(action), status: 'pending' },
-          ])
-          queueRef.current.push({ id: msg.id, action })
-          heardSpeechRef.current = false
+          const action = msg.action as WebAction
+          const turn = typeof msg.turn_id === 'number' ? msg.turn_id : 0
+
+          /* A new reply means the old one was talked over. The runtime has
+             already abandoned its actions, so running them now would move the
+             page under a reply that no longer mentions them. */
+          if (turnRef.current !== null && turn !== turnRef.current) {
+            const stale = new Set(queueRef.current.map((q) => q.id))
+            queueRef.current = []
+            if (stale.size) setLog((prev) => prev.filter((e) => !stale.has(e.id)))
+          }
+          turnRef.current = turn
+
+          // Speech heard long before this action is from an earlier clause,
+          // not the one in front of it — do not let it trigger the action.
+          if (performance.now() - lastLoudRef.current > 1000) heardSpeechRef.current = false
+
+          setLog((prev) => [...prev, { id: msg.id, label: describe(action), status: 'pending' }])
+          queueRef.current.push({ id: msg.id, turn, action, at: performance.now() })
         } catch {
         }
       }
@@ -419,6 +374,7 @@ export default function WebActionRoom() {
                 onClick={() => {
                   setSurfaceId(s.id)
                   setLog([])
+                  setPinned(null)
                 }}
               >
                 {s.label}
@@ -444,6 +400,7 @@ export default function WebActionRoom() {
                 <i />
                 <i />
                 <span className="wachrome-url">{surface.host}</span>
+                {stats ? <PageSize stats={stats} /> : null}
               </div>
               <div className="wastage-body">
                 <div
@@ -453,9 +410,8 @@ export default function WebActionRoom() {
                 >
                   <Surface />
                 </div>
-                {/* The fold. The visitor cannot scroll this — the agent does —
-                    so the bottom edge has to say "there is more down here"
-                    rather than ending on a sliced word. */}
+                {/* The fold: the site carries on below, and the visitor can
+                    scroll it to take the dare before handing it over. */}
                 <div className="wastage-fold" aria-hidden="true" />
               </div>
             </div>
@@ -505,6 +461,7 @@ export default function WebActionRoom() {
               <i />
               <i />
               <span className="wachrome-url">{surface.host}</span>
+              {stats ? <PageSize stats={stats} /> : null}
             </div>
             <div
               className="wa-stage"

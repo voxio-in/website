@@ -4,6 +4,12 @@ import type { SurfaceId } from '#/lib/surfaces'
 import { buildVoiceCustoms } from './roleplays/shared'
 import { accentSpeech, type AccentId } from '#/lib/accents'
 
+import { opdForPrompt } from '#/lib/sites/clinic'
+import { calendarForPrompt, trainsForPrompt } from '#/lib/sites/rail'
+import { catalogForPrompt } from '#/lib/sites/shop'
+import { datesForPrompt } from '#/lib/sites/uni'
+import { DAYS, MONTHS_LONG, startOfDay } from '#/lib/sites/util'
+
 import { md, render } from './prompts/render'
 import craftRules from './prompts/webnav/craft.md?raw'
 import clinicPage from './prompts/webnav/clinic.md?raw'
@@ -29,9 +35,25 @@ type PageSpec = {
   page: string
 }
 
+/* The rebuilt sites work out their calendars from today — the next cardiology
+   day, the re-evaluation deadline, which trains run on the twenty sixth — so
+   the page notes are rendered per session, from the same functions the pages
+   draw with. */
+function facts(): Record<string, string> {
+  const today = startOfDay(new Date())
+  return {
+    TODAY: `${DAYS[today.getDay()]} ${today.getDate()} ${MONTHS_LONG[today.getMonth()]} ${today.getFullYear()}`,
+    CALENDAR: calendarForPrompt(today),
+    TRAINS: trainsForPrompt(),
+    CATALOG: catalogForPrompt(),
+    OPD: opdForPrompt(today),
+    DATES: datesForPrompt(today),
+  }
+}
+
 const PAGES: Record<SurfaceId, PageSpec> = {
   clinic: {
-    greeting: 'Civil Hospital appointments. Who is the appointment for?',
+    greeting: 'Civil Hospital appointments. What is the trouble, and who is it for?',
     greetings: {
       japanese: 'シビル病院の予約受付です。どなたの予約でしょうか。',
     },
@@ -65,9 +87,14 @@ const PAGES: Record<SurfaceId, PageSpec> = {
   },
 }
 
-export function buildWebActionCustoms(surface: SurfaceId, accent?: AccentId) {
+export function buildWebActionCustoms(
+  surface: SurfaceId,
+  accent?: AccentId,
+  webhookUrl = '',
+) {
   const spec = PAGES[surface]
   const greeting = (accent && spec.greetings?.[accent]) || spec.greeting
+  const page = render(spec.page, facts())
 
   return {
     'warmup-agent': true,
@@ -106,7 +133,7 @@ export function buildWebActionCustoms(surface: SurfaceId, accent?: AccentId) {
                 user_input: { type: 'str', description: 'What the user just said.' },
               },
               prompt_template: 'base_llm',
-              system_prompt: `${spec.page}
+              system_prompt: `${page}
 
 ${accentSpeech(accent)}
 
@@ -114,10 +141,10 @@ ${CRAFT}
 
 THE SHAPE OF A REPLY, so the markers and the speech line up:
 {
-  "speak": "Fees sit under academics rather than admissions, sir. ${MARKER} And fee payment is the third one here. ${MARKER} Sixty two thousand for the semester, and the window shuts on the eighteenth.",
+  "speak": "Fees sit under students rather than admissions, sir. ${MARKER} And fee payment is the first one here. ${MARKER} Seventy one thousand two hundred for the semester, without hostel.",
   "actions": [
-    {"action": "click", "selector": "#uni-tab-academics"},
-    {"action": "click", "selector": "#uni-ac-fees"}
+    {"action": "click", "target": "Students"},
+    {"action": "click", "target": "Fee Payment", "within": "Students"}
   ]
 }`,
               service: 'groq',
@@ -155,7 +182,7 @@ THE SHAPE OF A REPLY, so the markers and the speech line up:
         },
         start_node: 'greeting',
       },
-      'webhook-url': '',
+      'webhook-url': webhookUrl,
     },
     ...buildVoiceCustoms({ preFire: false, accent }),
   }

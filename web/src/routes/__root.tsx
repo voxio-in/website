@@ -7,6 +7,7 @@ import {
   Scripts,
   createRootRoute,
   Outlet,
+  useRouterState,
 } from '@tanstack/react-router'
 
 import bundleCss from '#/styles/bundle.css?url'
@@ -141,6 +142,24 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+/** The marketing site's backdrop and nav, for every route but the dashboard. */
+function SiteChrome() {
+  const pathname = useRouterState({ select: (st) => st.location.pathname })
+  if (pathname.startsWith('/dashboard') || pathname === '/login' || pathname === '/signup') return null
+  return (
+    <>
+      {/* The site background, for every route. Here rather than per page:
+          the component was four chances for them to drift apart. */}
+      <AuroraBackdrop />
+      <div className="grain" aria-hidden="true" />
+      <Navbar />
+      {/* Deliberately pulling up at the top of any page goes back to the
+          home page. Stands itself out on "/", where there is nothing above. */}
+      <PullToHome />
+    </>
+  )
+}
+
 function RootDocument() {
   return (
     <html lang="en">
@@ -177,14 +196,7 @@ function RootDocument() {
         <PerfTier />
         <BootVeil />
         <RouteProgress />
-        {/* The site background, for every route. Here rather than per page:
-            the component was four chances for them to drift apart. */}
-        <AuroraBackdrop />
-        <div className="grain" aria-hidden="true" />
-        <Navbar />
-        {/* Deliberately pulling up at the top of any page goes back to the
-            itself out on "/", where there is nothing above. */}
-        <PullToHome />
+        <SiteChrome />
         {/* TEMPORARY — applies the hero tuner's saved value on every route. */}
         <Outlet />
         <Scripts />

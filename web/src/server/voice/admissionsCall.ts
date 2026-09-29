@@ -22,11 +22,14 @@ export type NimcCustomsOptions = {
   desk?: DeskId;
   /** Institution name substituted into the script and the greeting. */
   brand?: string;
+  /** Overrides the call webhook; the browser room posts to its own. */
+  webhookUrl?: string;
 };
 
 export function buildNimcCustoms({
   desk = "university",
   brand,
+  webhookUrl = NIMC_WEBHOOK_URL,
 }: NimcCustomsOptions = {}) {
   const org = brand || "";
   return {
@@ -150,7 +153,7 @@ export function buildNimcCustoms({
         },
         start_node: "greeting",
       },
-      "webhook-url": NIMC_WEBHOOK_URL,
+      "webhook-url": webhookUrl,
     },
     tts_id: { service: "sarvam", speaker: "simran" },
 
