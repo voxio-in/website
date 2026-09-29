@@ -22,9 +22,9 @@ export default defineConfig(({ mode }) => {
   const publicHost = env.PUBLIC_URL ? new URL(env.PUBLIC_URL).hostname : null
 
   return {
-    // The @voxio/* packages are linked from the local SDK checkout
-    // (../../voice-bot-sdk), which has its own React. Two Reacts on one page
-    // break every hook, so the site's copy wins.
+    // @voxio/* resolve to a stand-in (src/lib/voxio-sdk-off.ts) via tsconfig
+    // paths. When the real SDK comes back from a linked checkout with its own
+    // React, dedupe keeps the site's copy: two Reacts break every hook.
     resolve: { tsconfigPaths: true, dedupe: ['react', 'react-dom'] },
     publicDir: fileURLToPath(new URL('../public', import.meta.url)),
     server: {

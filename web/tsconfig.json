@@ -6,7 +6,11 @@
     "module": "ESNext",
     "paths": {
       "#/*": ["./src/*"],
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@voxio/client": ["./src/lib/voxio-sdk-off.ts"],
+      "@voxio/react": ["./src/lib/voxio-sdk-off.ts"],
+      "@voxio/server": ["./src/lib/voxio-sdk-off.ts"],
+      "@voxio/widget": ["./src/lib/voxio-sdk-off.ts"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],

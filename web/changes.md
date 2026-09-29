@@ -52,6 +52,19 @@ Hindi and English like NSDC.
 
 ---
 
+## 2026-09-29 — Voxio SDK unplugged so the site deploys
+
+**What changed**
+- `@voxio/client`, `/react`, `/server` and `/widget` are removed from `package.json`. They were
+  `file:../../voice-bot-sdk/...` links, which don't exist on the server, so the voxio.in build failed.
+- `tsconfig.json` "paths" now points all four names at `src/lib/voxio-sdk-off.ts`, a stand-in
+  that throws "Testing is turned off" when used. No other imports changed.
+
+**State now**
+The whole site builds without the SDK. On the dashboard Test tab, browser, chat and phone tests
+fail with that message; every other page works. To restore the SDK, drop the four "paths"
+entries and add the packages back once they're published.
+
 ## 2026-09-29 — Demo login removed
 
 **What changed**
