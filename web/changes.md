@@ -42,10 +42,15 @@ Hindi and English like NSDC.
 **State now**
 - NSDC's generated call setup is byte-identical before and after the split, checked with
   `dump-customs.mjs nsdc` and `cmp`.
-- `dump-customs.mjs lab` gives a Hindi greeting with the brand, Soniox `hi`/`en` and Sarvam
-  `simran`.
+- The company is Roche Diagnostics by default.
+- The voice is ElevenLabs `eleven_flash_v2_5`, from the `ELEVENLABS_VOICE_ID_LAB` voice id. With
+  it unset, it falls back to the premade "Rachel", `21m00Tcm4TlvDq8ikWAM`. The other desks keep
+  Sarvam `simran`.
+- `dump-customs.mjs lab` gives the Hindi greeting with Roche, Soniox `hi`/`en`, and the
+  ElevenLabs `tts_id`.
 - `buildRoomCustoms('lab')` gives the same graph with the room webhook.
-- `tsc --noEmit` exit 0.
+- `tsc --noEmit` was exit 0 when the desk was added. After the SDK removal it fails in
+  `dashboard/test/*` and `server/dashboard/*`, which this change does not touch.
 - No live call or browser session has been run.
 - The /calling desk only appears when `VOXIO_FLOW_API_KEY_LAB` is set, or when the shared
   `VOXIO_FLOW_API_KEY` fallback is set. It is added to `.env.example`.

@@ -26,6 +26,17 @@ export type NimcCustomsOptions = {
   webhookUrl?: string;
 };
 
+/* Flash v2.5 speaks Hindi and English with the lowest start delay. The voice id
+   comes from the env; the fallback is ElevenLabs' premade "Rachel". */
+const LAB_ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID_LAB || "21m00Tcm4TlvDq8ikWAM";
+
+function ttsFor(desk: DeskId) {
+  if (desk === "lab") {
+    return { service: "elevenlabs", voice: LAB_ELEVENLABS_VOICE, model: "eleven_flash_v2_5" };
+  }
+  return { service: "sarvam", speaker: "simran" };
+}
+
 export function buildNimcCustoms({
   desk = "university",
   brand,
@@ -155,7 +166,7 @@ export function buildNimcCustoms({
       },
       "webhook-url": webhookUrl,
     },
-    tts_id: { service: "sarvam", speaker: "simran" },
+    tts_id: ttsFor(desk),
 
     stt_id: {
       service: "soniox",

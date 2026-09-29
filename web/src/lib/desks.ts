@@ -105,8 +105,8 @@ export const DESKS: Desk[] = [
     blurb:
       'A service desk for lab testing machines, in Hindi or English. It walks you through the safe first checks, turns error codes and upgrade requests into tickets, and stops you the moment something sounds unsafe.',
     orgLabel: 'Which equipment company are you calling?',
-    orgPlaceholder: 'Your lab equipment supplier',
-    defaultBrand: 'LabCare Diagnostics',
+    orgPlaceholder: 'Roche Diagnostics',
+    defaultBrand: 'Roche Diagnostics',
     asks: [
       'Machine pe error aa raha hai, samples nahi chal rahe.',
       'We run two hundred samples a day. How do we double that?',
