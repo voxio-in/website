@@ -26,13 +26,13 @@ export type NimcCustomsOptions = {
   webhookUrl?: string;
 };
 
-/* Flash v2.5 speaks Hindi and English with the lowest start delay. The voice id
-   comes from the env; the fallback is ElevenLabs' premade "Rachel". */
-const LAB_ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID_LAB || "21m00Tcm4TlvDq8ikWAM";
+/* The lab desk's ElevenLabs voice; the env overrides it. v3 is the most expressive
+   model and the slowest to start speaking. */
+const LAB_ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID_LAB || "OtEfb2LVzIE45wdYe54M";
 
 function ttsFor(desk: DeskId) {
   if (desk === "lab") {
-    return { service: "elevenlabs", voice: LAB_ELEVENLABS_VOICE, model: "eleven_flash_v2_5" };
+    return { service: "elevenlabs", voice: LAB_ELEVENLABS_VOICE, model: "eleven_v3" };
   }
   return { service: "sarvam", speaker: "simran" };
 }
