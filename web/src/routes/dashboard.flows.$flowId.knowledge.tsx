@@ -57,7 +57,7 @@ function KnowledgeTab() {
           <Icon name="flows" size={15} />
           {ragNodes.length
             ? `Your workflow looks things up in ${ragNodes.length} step${ragNodes.length > 1 ? 's' : ''}.`
-            : <>Your workflow doesn’t look anything up yet — add a Knowledge lookup step in the <Link to="/dashboard/flows/$flowId/workflow" params={{ flowId: flow.key }} className="db-textlink">Workflow</Link>.</>}
+            : <>Your workflow doesn’t look anything up yet. Add a Knowledge lookup step in the <Link to="/dashboard/flows/$flowId/workflow" params={{ flowId: flow.key }} className="db-textlink">Workflow</Link>.</>}
         </p>
       </section>
       <SaveBar dirty={dirty} status={status} onSave={commit} onReset={reset} />

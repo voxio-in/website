@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { CopyJson } from '#/components/dashboard/controls'
+import { CopyButton } from '#/components/dashboard/controls'
 import { KnobList } from '#/components/dashboard/KnobInput'
 import { SaveBar, useDraft } from '#/components/dashboard/ui'
 import { BEHAVIOUR_GROUPS, knobsIn } from '#/lib/dashboard/knobs'
@@ -22,22 +22,22 @@ function Behaviour() {
   const values = draft as Record<string, unknown>
 
   return (
-    <div className="db-page">
+    <div className="db-page db-bigform">
       <header className="db-pagehead">
         <div>
           <h1 className="db-h1">Behaviour</h1>
           <p className="db-sub">How your agent takes turns and handles silence.</p>
         </div>
+        {/* One copy for every behaviour setting. */}
+        <CopyButton value={Object.fromEntries(BEHAVIOUR_GROUPS.flatMap((g) => knobsIn(g)).map((k) => [k.key, values[k.key] ?? k.default]))} label="Copy config" />
       </header>
       <div className="db-settings">
         {BEHAVIOUR_GROUPS.map((g) => {
           const knobs = knobsIn(g)
-          const snapshot = Object.fromEntries(knobs.map((k) => [k.key, values[k.key] ?? k.default]))
           return (
             <section key={g} className="db-setcard">
               <div className="db-setcard-head">
                 <h2 className="db-h2">{TITLES[g]}</h2>
-                <CopyJson value={snapshot} />
               </div>
               <KnobList knobs={knobs} values={values} onChange={(k, v) => set(k as keyof FlowDoc, v as never)} />
             </section>

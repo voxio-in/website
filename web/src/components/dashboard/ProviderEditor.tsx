@@ -30,7 +30,8 @@ export default function ProviderEditor({ kind, value, onChange }: { kind: 'stt' 
 
   return (
     <div className="db-provider">
-      <div className="db-provtiles" role="radiogroup" aria-label="Provider">
+      {/* Providers as one connected group; the chosen one is filled. */}
+      <div className="db-provtiles db-provgroup" role="radiogroup" aria-label="Provider">
         {list.map((p) => (
           <button key={p.service} type="button" role="radio" aria-checked={!unset && p.service === cfg.service}
             className={`db-provtile${!unset && p.service === cfg.service ? ' is-on' : ''}`}
@@ -48,34 +49,57 @@ export default function ProviderEditor({ kind, value, onChange }: { kind: 'stt' 
         </p>
       )}
 
-      {basic.length > 0 && (
-        <div className="db-fieldgrid">
-          {basic.map((f) => <FieldCtl key={`${f.key}-${f.label}`} f={f} value={cfg[f.key]} onChange={(v) => set(f.key, v)} />)}
-        </div>
-      )}
+      {basic.length > 0 && <FieldGroup fields={basic} cfg={cfg} set={set} />}
 
       {rest.length > 0 && (
         <div className={`db-more${more ? ' is-open' : ''}`}>
-          <button type="button" className="db-more-btn" onClick={() => setMore(!more)} aria-expanded={more}>
+          <button type="button" className="db-more-btn db-more-row" onClick={() => setMore(!more)} aria-expanded={more}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m9 6 6 6-6 6" /></svg>
             More settings <span className="db-more-n">{rest.length}</span>
           </button>
-          {more && (
-            <div className="db-fieldgrid">
-              {rest.map((f) => <FieldCtl key={`${f.key}-${f.label}`} f={f} value={cfg[f.key]} onChange={(v) => set(f.key, v)} />)}
-            </div>
-          )}
+          {more && <FieldGroup fields={rest} cfg={cfg} set={set} />}
         </div>
       )}
     </div>
   )
 }
 
-function FieldCtl({ f, value, onChange }: { f: ProviderField; value: unknown; onChange: (v: unknown) => void }) {
-  const v = value ?? f.default
-  const wide = f.kind === 'tags' || (f.kind === 'text' && !!f.placeholder && f.placeholder.length > 30)
+/**
+ * Fields as connected rows, like the Echobotics opening form: short fields share a row
+ * (up to three), sliders go two to a row, tag lists take a whole row below. Each cell
+ * gets round corners only where it touches the group's outer edge.
+ */
+function FieldGroup({ fields, cfg, set }: { fields: ProviderField[]; cfg: ProviderConfig; set: (k: string, v: unknown) => void }) {
+  const size = (f: ProviderField) => (f.kind === 'tags' ? 'wide' : f.kind === 'slider' ? 'slider' : 'short')
+  const MAX = { short: 3, slider: 2, wide: 1 } as const
+  const rows: ProviderField[][] = []
+  for (const f of fields) {
+    const last = rows[rows.length - 1]
+    if (last && size(last[0]) === size(f) && last.length < MAX[size(f)]) last.push(f)
+    else rows.push([f])
+  }
   return (
-    <div className={`db-field${wide ? ' is-wide' : ''}${f.kind === 'bool' ? ' is-inline' : ''}`}>
+    <div className="db-fgroup">
+      {rows.map((row, r) => (
+        <div className="db-fgroup-row" key={r}>
+          {row.map((f, c) => {
+            const corner = [
+              r === 0 && c === 0 ? 'tl' : '', r === 0 && c === row.length - 1 ? 'tr' : '',
+              r === rows.length - 1 && c === 0 ? 'bl' : '', r === rows.length - 1 && c === row.length - 1 ? 'br' : '',
+            ].filter(Boolean).join(' ')
+            return <FieldCtl key={`${f.key}-${f.label}`} f={f} value={cfg[f.key]} onChange={(v) => set(f.key, v)} corner={corner} />
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FieldCtl({ f, value, onChange, corner }: { f: ProviderField; value: unknown; onChange: (v: unknown) => void; corner?: string }) {
+  const v = value ?? f.default
+  const wide = f.kind === 'tags'
+  return (
+    <div className={`db-field db-fcell${wide ? ' is-wide' : ''}${f.kind === 'bool' ? ' is-inline' : ''}`} data-corner={corner || undefined}>
       <Label info={f.help}>{f.label}</Label>
       {f.kind === 'select' && <Dropdown value={v as string} options={f.options ?? []} onChange={onChange} aria-label={f.label} />}
       {f.kind === 'bool' && <Toggle on={!!v} onChange={onChange} />}

@@ -1,0 +1,49 @@
+/* BranchedMenu: a tree sidebar whose branches draw in and fold away. */
+.bm { display: flex; flex-direction: column; gap: 6px; color: var(--bm-color); font-family: inherit; }
+
+.bm-head {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  padding: 0 8px 0 6px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 0.82em; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--bm-color); opacity: 0.6; border-radius: var(--bm-radius);
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.bm-head:hover { opacity: 1; background: rgba(255, 255, 255, 0.04); }
+.bm-chev { transition: transform var(--bm-fold) cubic-bezier(0.3, 0.7, 0.2, 1); }
+.bm-group.is-open .bm-chev { transform: rotate(90deg); }
+
+/* Folding animates the row height via a 0fr → 1fr grid track. */
+.bm-fold { display: grid; transition: grid-template-rows var(--bm-fold) cubic-bezier(0.3, 0.7, 0.2, 1); }
+.bm-fold-inner { overflow: hidden; min-height: 0; }
+.bm-group:not(.is-open) .bm-fold-inner { opacity: 0; transition: opacity var(--bm-fold); }
+.bm-group.is-open .bm-fold-inner { opacity: 1; transition: opacity var(--bm-fold); }
+
+.bm-tree { position: relative; }
+.bm-lines { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.bm-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: bm-draw ease-out forwards; }
+@keyframes bm-draw { to { stroke-dashoffset: 0; } }
+
+.bm-items { list-style: none; margin: 0; padding: 0 0 0 calc(var(--bm-indent) - 6px); }
+.bm-items li { display: flex; align-items: center; }
+.bm-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; height: calc(var(--bm-row) - 4px);
+  padding: 0 10px; border: 0; border-radius: var(--bm-radius); background: none; cursor: pointer;
+  font: inherit; text-align: left; color: var(--bm-color); opacity: 0.72;
+  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+}
+.bm-group.is-open .bm-item { animation: bm-in var(--bm-draw) ease-out both; }
+@keyframes bm-in { from { opacity: 0; transform: translateX(-6px); } to { transform: none; } }
+.bm-item:hover { opacity: 1; background: rgba(255, 255, 255, 0.05); }
+.bm-item.is-on { opacity: 1; color: var(--bm-accent); background: color-mix(in srgb, var(--bm-accent) 12%, transparent); font-weight: 600; }
+.bm-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm-icon { flex-shrink: 0; opacity: 0.85; }
+.bm-item:focus-visible { outline: 2px solid var(--bm-accent); outline-offset: -2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bm-draw { animation: none; stroke-dashoffset: 0; }
+  .bm-group.is-open .bm-item { animation: none; }
+  .bm-fold, .bm-chev { transition: none; }
+}
+
+/* Sub-items: a touch smaller, so the levels read at a glance. */
+.bm-item.is-sub { font-size: 0.93em; height: calc(var(--bm-row) - 8px); }

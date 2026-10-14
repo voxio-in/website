@@ -3,29 +3,18 @@
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import Icon, { type IconName } from '#/components/dashboard/Icon'
+import { AsciiAssembly } from '#/components/AsciiAssembly'
+import Icon from '#/components/dashboard/Icon'
 
+import '#/styles/ascii-assembly.css'
 import '#/styles/auth.css'
-
-const POINTS: { icon: IconName; text: string }[] = [
-  { icon: 'phone', text: 'Answer calls in natural voices, day and night' },
-  { icon: 'flows', text: 'Design the conversation without writing code' },
-  { icon: 'chart', text: 'See every call, minute and transcript' },
-]
 
 export function AuthLayout({ title, sub, children, foot }: { title: string; sub: string; children: React.ReactNode; foot: React.ReactNode }) {
   return (
     <div className="au">
       <aside className="au-brand">
         <Link to="/" className="au-logo"><span className="au-va">VA</span>Voxio</Link>
-        <div className="au-pitch">
-          <h2>Voice agents that sound human.</h2>
-          <ul>
-            {POINTS.map((p) => (
-              <li key={p.text}><span><Icon name={p.icon} size={17} /></span>{p.text}</li>
-            ))}
-          </ul>
-        </div>
+        <AsciiAssembly className="au-art" caption="Voice agents that sound human." />
         <p className="au-small">© Voxio</p>
       </aside>
       <main className="au-main">

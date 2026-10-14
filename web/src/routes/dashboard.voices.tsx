@@ -25,7 +25,7 @@ const blank = (kind: 'stt' | 'tts'): VoicePreset => {
 // Ready-made setups offered when a section is empty; picking one opens it in the editor.
 const EXAMPLES: Record<'stt' | 'tts', { name: string; blurb: string; config: VoicePreset['config'] }[]> = {
   tts: [
-    { name: 'Simran (Hinglish)', blurb: 'Warm Indian English and Hindi', config: { service: 'sarvam', speaker: 'simran', language: 'en-IN' } },
+    { name: 'Simran (Hinglish)', blurb: 'Warm Indian English and Hindi', config: { service: 'sarvam', voice: 'simran', language: 'en-IN' } },
     { name: 'Thalia (US English)', blurb: 'Clear, friendly American voice', config: { service: 'deepgram', model: 'aura-2-thalia-en' } },
   ],
   stt: [
@@ -75,7 +75,7 @@ function Voices() {
                 <span>{sec.sub}</span>
               </div>
               <div className="db-voicesec-actions">
-                <button className="db-btn db-primary db-btn-icon" onClick={() => setEdit(blank(sec.kind))}><Icon name="plus" size={17} />{sec.add}</button>
+                <button className="db-btn db-btn-icon" onClick={() => setEdit(blank(sec.kind))}><Icon name="plus" size={17} />{sec.add}</button>
               </div>
             </div>
             {!list.length ? (
@@ -117,7 +117,7 @@ function Voices() {
 
       {edit && (
         <Dialog wide title={edit.id ? edit.name || 'Edit voice' : edit.kind === 'tts' ? 'New speaking voice' : 'New listening setup'}
-          sub={edit.used_by.length ? `Used by ${edit.used_by.length} flow${edit.used_by.length > 1 ? 's' : ''} — saving updates all of them.` : undefined}
+          sub={edit.used_by.length ? `Used by ${edit.used_by.length} flow${edit.used_by.length > 1 ? 's' : ''}. Saving updates all of them.` : undefined}
           onClose={() => setEdit(null)}>
           <label className="db-field">
             <span className="db-flabel">Name</span>

@@ -16,6 +16,7 @@ export type DemoId =
   | 'pr'
   | 'vps'
   | 'jl'
+  | 'mc'
   | 'lab'
 
 export type Demo = {
@@ -208,6 +209,25 @@ const JEREMY: Demo = {
   faceKind: 'pose',
 }
 
+/* An oncology first visit: breaking CT results to a newly diagnosed patient.
+   Runs on Jeremy's voice, ears and face; the workflow is its own (marciaCustoms). */
+const MARCIA: Demo = {
+  id: 'mc',
+  label: 'Sharing scan results',
+  role: 'Marcia Campbell, a newly diagnosed patient',
+  blurb:
+    'Forty six, stomach cancer confirmed two weeks ago, and she has not been told what her CT showed. Most of it is good news, one finding is not yet known, and she will only tell you what frightens her if you ask.',
+  asks: [
+    'Ask what she already understands before you share anything.',
+    'Explain the pancreas finding without using the word cyst unexplained.',
+    'Ask what worries her most.',
+  ],
+  opener: '“Hello Ms Campbell, I’m the oncology doctor. What have you been told so far?”',
+  greeting: '',
+  systemPrompt: '',
+  video: true,
+}
+
 /* The /calling lab desk, talked to through the page. Its copy is the desk's own,
    and the room runs the desk's graph (roomCustoms), so greeting and prompt stay empty. */
 const LAB_DESK = deskById('lab')
@@ -223,7 +243,7 @@ const LAB: Demo = {
   video: false,
 }
 
-export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR, JEREMY, LAB]
+export const DEMOS: Demo[] = [INTERVIEW, NAVIGATOR, MUTHU, TANAKA, CHERYL, NAIR, JEREMY, MARCIA, LAB]
 
 /* Muthu is the demo that shows the thing that is actually hard — a face the
    model chooses, turn by turn — so it is the one the page opens on. */

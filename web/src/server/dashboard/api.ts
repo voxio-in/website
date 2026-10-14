@@ -4,17 +4,22 @@
 // back marked in `mock`. Values travel as JSON strings so server-function
 // serialisation never has to reason about the open-ended document shape.
 
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
+import { Voxio } from 'voxioagent/server'
 import { randomUUID } from 'node:crypto'
 
 import { db, withDb } from '#/server/db'
-import { SERVERS } from '#/server/voice/servers'
+import { playableUrl } from '#/server/r2.server'
+import { AVATAR_VOICEBOT, SERVERS } from '#/server/voice/servers'
 import { currentUser } from '#/server/session.server'
 import { LIVE_WRITABLE } from '#/lib/dashboard/knobs'
 import { billedMinutes } from '#/lib/dashboard/client'
 import type { Account, Delivery, FlowDoc, FlowSummary, Result, Session, TestCall, TestSetup, TestTurn } from '#/lib/dashboard/types'
 import { TEMPLATES } from '#/lib/workflow/templates'
-import { blankFlow, load, mutate, newKey, type Overlay } from './store.server'
+import { extractWorkflow, withStart, type Workflow } from '#/lib/workflow/convert'
+import { TTS_PROVIDERS, tidyTts } from '#/lib/dashboard/providers'
+import { blankFlow, load, markFlowDeleted, mutate, newKey, rekeyFlow, type Overlay } from './store.server'
+import { accountClient, accountKey, createErrorText, createOnBackend, ON_BACKEND, sessionRecordOf, settingsOf } from './flows.server'
 import { cancelTestCall as sdkCancelCall, getSessionRecord, getTestCall, placeTestCall, sdkErrorText, sdkServerReady } from './test.server'
 import type { AuthUser } from '#/server/session.server'
 
@@ -22,7 +27,6 @@ const USER_API_KEY = process.env.VOXIO_USER_API_KEY
 const FROM_NUMBER = process.env.VOXIO_FROM_NUMBER
 
 const urlOf = (h: string) => (!h ? null : /^(localhost|127\.|\d+\.\d+\.\d+\.\d+)/.test(h) ? `http://${h}` : `https://${h}`)
-const DB = () => urlOf(SERVERS.database)
 const CALLBOT = () => urlOf(SERVERS.callbot)
 
 const wire = <T,>(r: Result<T>) => JSON.stringify(r)
@@ -39,7 +43,8 @@ function liveKeys(me: AuthUser): { key: string; env: string }[] {
   const seen = new Set<string>()
   const out: { key: string; env: string }[] = []
   for (const [env, key] of Object.entries(process.env)) {
-    if (env.startsWith('VOXIO_FLOW_API_KEY') && key && !seen.has(key)) {
+    // VX_FLOW_API_KEY is the /avatar demos' flow; the voice server records those sessions.
+    if ((env.startsWith('VOXIO_FLOW_API_KEY') || env === 'VX_FLOW_API_KEY') && key && !seen.has(key)) {
       seen.add(key)
       out.push({ key, env })
     }
@@ -47,17 +52,24 @@ function liveKeys(me: AuthUser): { key: string; env: string }[] {
   return out
 }
 
+// Live flows go through the SDK: read with the flow's own key, written as the signed-in user.
 async function fetchLive(key: string): Promise<Record<string, any>> {
-  const db = DB()
-  if (!db) throw new Error('VX_DATABASE is not set')
-  const res = await fetch(`${db}/flow?keys=all`, { headers: { api_key: key } })
-  if (!res.ok) throw new Error(`database returned ${res.status}`)
-  return res.json()
+  return (await new Voxio({ flowKey: key, environment: 'gpu' }).flows.get(key, { keys: ['all'] })) as Record<string, any>
+}
+
+/**
+ * A sessions row as the voice server writes it: session.mp4 in recordingUrl,
+ * the user's camera in extra.cameraRecordingUrl. Both sit in a private
+ * bucket, so sign them.
+ */
+function liveSession(r: Record<string, any>): Session {
+  const camera = r.extra?.cameraRecordingUrl
+  return { ...r, recordingUrl: playableUrl(r.recordingUrl ?? undefined), clientVideoUrl: playableUrl(typeof camera === 'string' ? camera : undefined) } as Session
 }
 
 /** The live flow document in the dashboard's shape, with its mock overlay applied. */
 function fromLive(key: string, doc: Record<string, any>, overlay: Overlay): FlowDoc {
-  const { agent_id, stt_id, tts_id, faces, numbers, sessions, _id, api_key, createdAt, updatedAt, created_at, ...knobs } = doc
+  const { agent_id, stt_id, tts_id, faces, numbers, sessions, user_id, api_key, created_at, updated_at, ...knobs } = doc
   const faceManifest = Array.isArray(faces)
     ? { version: null, expressions: faces, transitions: doc.transitions ?? [] }
     : faces ?? { version: null, expressions: [], transitions: [] }
@@ -67,11 +79,11 @@ function fromLive(key: string, doc: Record<string, any>, overlay: Overlay): Flow
     source: 'live',
     mock: [],
     flow_name: doc.flow_name ?? 'Untitled flow',
-    created_at: created_at ?? createdAt,
+    created_at,
     workflow: agent_id?.workflow ?? { nodes: {} },
     'webhook-url': agent_id?.['webhook-url'] ?? '',
     stt: stt_id ?? null,
-    tts: tts_id ?? null,
+    tts: tidyTts(tts_id ?? null),
     kbs: doc.kbs ?? [],
     faces: faceManifest,
     vision_id: doc.vision_id ?? null,
@@ -79,7 +91,7 @@ function fromLive(key: string, doc: Record<string, any>, overlay: Overlay): Flow
     integrations: [],
     'web-actions': [],
     numbers: (numbers ?? []).filter(Boolean).map((n: any) => ({ phone_number: n.phone_number, provider: 'plivo' })),
-    sessions: (sessions ?? []).filter(Boolean),
+    sessions: (sessions ?? []).filter(Boolean).map(liveSession),
     deliveries: [],
   }
   for (const [k, v] of Object.entries(overlay)) {
@@ -93,22 +105,16 @@ function fromLive(key: string, doc: Record<string, any>, overlay: Overlay): Flow
 async function getFlowDoc(me: AuthUser, key: string): Promise<FlowDoc> {
   const store = await load(me)
   const own = store.flows[key]
-  if (own) return { ...own, source: 'mock', mock: ['*'] }
+  // Stored recording URLs are raw R2 links; sign them on the way out, never in the store.
+  if (own) return { ...own, source: 'mock', mock: ['*'], sessions: own.sessions.map((x) => ({ ...x, recordingUrl: playableUrl(x.recordingUrl) })) }
   if (!liveKeys(me).some((l) => l.key === key)) throw new Error('Flow not found')
   return fromLive(key, await fetchLive(key), store.overlays[key] ?? {})
 }
 const isLiveFor = (me: AuthUser, key: string) => liveKeys(me).some((l) => l.key === key)
 
-async function putLive(key: string, body: Record<string, unknown>) {
-  const db = DB()
-  if (!db) throw new Error('VX_DATABASE is not set')
-  if (!USER_API_KEY) throw new Error('VOXIO_USER_API_KEY is not set')
-  const res = await fetch(`${db}/flow`, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json', api_key: key, user_api_key: USER_API_KEY },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) throw new Error(`database returned ${res.status}: ${(await res.text()).slice(0, 200)}`)
+async function putLive(me: AuthUser, key: string, body: Record<string, unknown>) {
+  // `runtime` goes to the data server as-is: the body is already in its document shape.
+  await (await accountClient(me)).flows.update(key, { runtime: body })
 }
 
 // ---------------------------------------------------------------- flows
@@ -121,6 +127,7 @@ export const listFlows = createServerFn({ method: 'GET' }).handler(async (): Pro
   const summary = (f: FlowDoc): FlowSummary => ({
     key: f.key,
     name: f.flow_name,
+    createdAt: f.created_at,
     source: f.source,
     sessions: f.sessions.length,
     minutes: f.sessions.reduce((a, s) => a + billedMinutes(s.totalConnectedTime), 0),
@@ -139,6 +146,8 @@ export const listFlows = createServerFn({ method: 'GET' }).handler(async (): Pro
       rows.push({ key, name: env.replace(/^VOXIO_FLOW_API_KEY_?/, '').toLowerCase() || 'default', source: 'live', sessions: 0, minutes: 0, connections: [], error: errMsg(e) })
     }
   }))
+  // Newest first; flows without a date (live ones that failed to load) go last.
+  rows.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
   return wire({ ok: true, data: rows })
 })
 
@@ -156,52 +165,96 @@ export const patchFlow = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
-    const patch = JSON.parse(data.patch) as Record<string, unknown>
+    return wire(await applyFlowPatch(me, data.key, JSON.parse(data.patch) as Record<string, unknown>))
+  })
+
+/**
+ * A flow as the dashboard sees it; for server code outside this file (the Assistant).
+ * Server-only: this file is imported by pages, and the build strips these from the browser bundle.
+ */
+export const readFlowDoc = createServerOnlyFn((me: AuthUser, key: string) => getFlowDoc(me, key))
+
+/**
+ * Saves part of a flow the way the dashboard's own Save does: own flows in the
+ * store; live flows split between PUT /flow and the overlay. Used by patchFlow
+ * and by the Assistant when a change is applied.
+ */
+export const applyFlowPatch = createServerOnlyFn(async (me: AuthUser, key: string, input: Record<string, unknown>): Promise<Result<FlowDoc>> => {
+    const patch = { ...input }
     for (const k of ['key', 'source', 'mock', 'sessions']) delete patch[k]
     const store = (await load(me))
 
-    if (store.flows[data.key]) {
-      await mutate(me, (s) => { Object.assign(s.flows[data.key], patch) })
-      return wire({ ok: true, data: await getFlowDoc(me, data.key) })
+    if (store.flows[key]) {
+      await mutate(me, (s) => { Object.assign(s.flows[key], patch) })
+      return { ok: true, data: await getFlowDoc(me, key) }
     }
-    if (!isLiveFor(me, data.key)) return fail('Flow not found.')
+    if (!isLiveFor(me, key)) return { ok: false, reason: 'Flow not found.' }
 
     // Live: split into what PUT /flow takes and what goes to the overlay.
     const body: Record<string, any> = {}
     const toOverlay: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(patch)) {
-      if (k === 'workflow') (body.agent ??= {}).workflow = v
+      if (k === 'workflow') (body.agent ??= {}).workflow = withStart(v as Workflow)
       else if (k === 'webhook-url') (body.agent ??= {})['webhook-url'] = v
       else if (k === 'faces') { const f = v as FlowDoc['faces']; body.faces = f.expressions; body.transitions = f.transitions }
+      else if (k === 'tts') body.tts = tidyTts(v as FlowDoc['tts'])
       else if (LIVE_WRITABLE.has(k)) body[k] = v
       else toOverlay[k] = v
     }
     try {
-      if (Object.keys(body).length) await putLive(data.key, body)
-    } catch (e) { return fail(`Save failed: ${errMsg(e)}`) }
-    if (Object.keys(toOverlay).length) await mutate(me, (s) => { s.overlays[data.key] = { ...(s.overlays[data.key] ?? {}), ...toOverlay } })
-    const note = undefined
-    try { return wire({ ok: true, data: await getFlowDoc(me, data.key), note }) } catch (e) { return fail(errMsg(e)) }
-  })
+      if (Object.keys(body).length) await putLive(me, key, body)
+    } catch (e) { return { ok: false, reason: `Save failed: ${errMsg(e)}` } }
+    if (Object.keys(toOverlay).length) await mutate(me, (s) => { s.overlays[key] = { ...(s.overlays[key] ?? {}), ...toOverlay } })
+    try { return { ok: true, data: await getFlowDoc(me, key) } } catch (e) { return { ok: false, reason: errMsg(e) } }
+})
 
 export const createFlow = createServerFn({ method: 'POST' })
-  .inputValidator((d: { name: string; template: string }) => d)
+  .inputValidator((d: { name: string; template: string; workflow?: string; tts?: { service: string; [k: string]: unknown } }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
     const tpl = TEMPLATES.find((t) => t.id === data.template) ?? TEMPLATES[0]
-    const flow = blankFlow(newKey('flow'), data.name.trim() || 'Untitled flow', structuredClone(tpl.workflow))
+    // A voice from an import file: only a provider the dashboard knows, only plain values.
+    const tts = data.tts && TTS_PROVIDERS.some((p) => p.service === data.tts!.service)
+      ? Object.fromEntries(Object.entries(data.tts).filter(([, v]) => typeof v === 'string' && v.length <= 200)) as FlowDoc['tts']
+      : null
+    // An imported workflow (JSON) wins over the template.
+    const imported = data.workflow ? extractWorkflow(JSON.parse(data.workflow)) : null
+    if (data.workflow && !imported) return fail('The imported JSON has no workflow in it.')
+    const draft = blankFlow('pending', data.name.trim() || 'Untitled flow', withStart(imported ?? structuredClone(tpl.workflow)))
+    if (tts) draft.tts = tts
+    // Created on the backend first (with the user's account key), then kept here under its key.
+    let key: string
+    try { key = await createOnBackend(me, settingsOf(draft)) } catch (e) { return fail(createErrorText(e)) }
+    const flow: FlowDoc = { ...draft, key, [ON_BACKEND]: true }
     await mutate(me, (s) => { s.flows[flow.key] = flow })
     return wire({ ok: true, data: flow.key, note: undefined })
   })
 
+/**
+ * Deletes a flow from the dashboard but keeps its history: the key stops
+ * working at once (rotated through the SDK; re-keyed here if that fails), the
+ * flow is stamped deleted and its numbers are freed. Its sessions and webhook
+ * logs stay, shown as "Flow deleted". The SDK's flows.delete would remove them.
+ */
 export const deleteFlow = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
     if (!(await load(me)).flows[data.key]) return fail('This flow can’t be deleted from here yet.')
-    await mutate(me, (s) => { delete s.flows[data.key] })
+    let dead: string
+    try {
+      dead = (await (await accountClient(me)).flows.rotateKey(data.key)).flowKey
+    } catch {
+      dead = newKey('flow')
+      await rekeyFlow(me, data.key, dead)
+    }
+    try {
+      await markFlowDeleted(me, dead)
+    } catch (e) {
+      return fail(`The flow’s key was turned off, but it couldn’t be marked deleted: ${errMsg(e)}`)
+    }
     return wire({ ok: true, data: null })
   })
 
@@ -294,14 +347,15 @@ export const placeCall = createServerFn({ method: 'POST' })
     if (!own && !isLiveFor(me, data.key)) return fail('Flow not found.')
     const live = !own
 
-    if (live && callbot && USER_API_KEY && from) {
+    const userKey = live ? await accountKey(me).catch(() => '') : ''
+    if (live && callbot && userKey && from) {
       try {
         const path = data.when ? '/plivo/outbound/schedule' : '/plivo/outbound'
         const body: Record<string, unknown> = { 'from-number': from, 'to-number': to, customs }
         if (data.when) body.datetimezone = data.when
         const res = await fetch(`${callbot}${path}`, {
           method: 'POST',
-          headers: { 'content-type': 'application/json', user_api_key: USER_API_KEY, flow_api_key: data.key },
+          headers: { 'content-type': 'application/json', user_api_key: userKey, flow_api_key: data.key },
           body: JSON.stringify(body),
         })
         const text = await res.text()
@@ -322,11 +376,24 @@ export const placeCall = createServerFn({ method: 'POST' })
       const target = st.flows[data.key] ?? (st.overlays[data.key] ??= {})
       target.sessions = [s, ...((target.sessions as Session[]) ?? [])]
     })
-    const why = !live ? 'This flow isn’t connected to the voice backend' : !callbot ? 'VX_CALLBOT is not set' : !from ? 'No from-number (VOXIO_FROM_NUMBER)' : 'VOXIO_USER_API_KEY is not set'
-    return wire({ ok: true, data: s.sessionId, note: `Not dialled — ${why}.` })
+    const why = !live ? 'This flow isn’t connected to the voice backend' : !callbot ? 'VX_CALLBOT is not set' : !from ? 'No from-number (VOXIO_FROM_NUMBER)' : 'Your account has no API key'
+    return wire({ ok: true, data: s.sessionId, note: `Not dialled. ${why}.` })
   })
 
 // ---------------------------------------------------------------- account
+
+/** Just the account's faces: one small query, for pages that only need those. */
+export const getAvatars = createServerFn({ method: 'GET' }).handler(async (): Promise<string> => {
+  const me = await currentUser()
+  if (!me) return fail('Please log in again.')
+  const rows = await withDb(() => db.face.findMany({ where: { userId: me.id }, orderBy: { createdAt: 'asc' }, select: { uuid: true, label: true, detector: true, clip: true, media: true, createdAt: true } }))
+  const avatars: Account['avatars'] = rows.map((f) => {
+    const clip = f.clip as { frames?: number; fps?: number }
+    const media = f.media as { preview?: string; preview_type?: 'image' | 'video' }
+    return { uuid: f.uuid, label: f.label, detector: f.detector as 'dwpose' | 's3fd', frames: clip.frames ?? 0, fps: clip.fps ?? 25, created_at: f.createdAt.toISOString(), preview: playableUrl(media.preview), previewType: media.preview_type }
+  })
+  return wire({ ok: true, data: avatars })
+})
 
 export const getAccount = createServerFn({ method: 'GET' }).handler(async (): Promise<string> => {
     const me = await currentUser()
@@ -425,15 +492,18 @@ export const accountOp = createServerFn({ method: 'POST' })
 
 // ---------------------------------------------------------------- overview
 
-export type OverviewFlow = { key: string; name: string; source: 'live' | 'mock'; sessions: Session[] }
+export type OverviewFlow = { key: string; name: string; source: 'live' | 'mock'; sessions: Session[]; deleted?: boolean }
 
-/** Every flow with its sessions (transcripts stripped), for account-wide usage. */
+/** Every flow with its sessions, for account-wide usage. Transcripts come as one short string, for search. */
 export const getOverview = createServerFn({ method: 'GET' }).handler(async (): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
   const store = (await load(me))
-  const slim = (ss: Session[]) => ss.map(({ transcription: _t, ...s }) => ({ ...s, transcription: [] }))
+  const text = (t: unknown) => (typeof t === 'string' ? t : Array.isArray(t) ? t.map((x) => (x as { content?: string })?.content ?? '').join(' ') : '').slice(0, 1500)
+  const slim = (ss: Session[]) => ss.map(({ transcription, ...s }) => ({ ...s, transcription: text(transcription) }))
   const flows: OverviewFlow[] = Object.values(store.flows).map((f) => ({ key: f.key, name: f.flow_name, source: 'mock', sessions: slim(f.sessions) }))
+  // Deleted flows' sessions still count, labelled as such.
+  for (const [key, f] of Object.entries(store.deleted ?? {})) flows.push({ key, name: f.name, source: 'mock', sessions: slim(f.sessions), deleted: true })
   await Promise.all(liveKeys(me).filter(({ key }) => !store.flows[key]).map(async ({ key }) => {
     try {
       const f = fromLive(key, await fetchLive(key), store.overlays[key] ?? {})
@@ -484,10 +554,9 @@ export const getNumbers = createServerFn({ method: 'GET' }).handler(async (): Pr
 // ---------------------------------------------------------------- duplicate
 
 /**
- * Copy a flow: its workflow, voice, behaviour, knowledge and avatar settings.
- * Sessions, numbers and deliveries belong to the original and aren't copied.
- * The copy gets its own key (and lives in the dashboard store until the backend
- * can create flows for an account).
+ * Copy a flow: its workflow, voice, behaviour and avatar settings. Sessions,
+ * numbers and deliveries belong to the original and aren't copied. The copy is
+ * created on the backend (with the user's account key) and gets the key it returns.
  */
 export const duplicateFlow = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string }) => d)
@@ -497,10 +566,11 @@ export const duplicateFlow = createServerFn({ method: 'POST' })
     let src: FlowDoc
     try { src = await getFlowDoc(me, data.key) } catch (e) { return fail(`Couldn’t copy this flow: ${errMsg(e)}`) }
     const copy = structuredClone(src) as FlowDoc
-    copy.key = newKey('flow')
+    copy.flow_name = `${src.flow_name} (copy)`
+    try { copy.key = await createOnBackend(me, settingsOf(copy)) } catch (e) { return fail(createErrorText(e)) }
+    ;(copy as Record<string, unknown>)[ON_BACKEND] = true
     copy.source = 'mock'
     copy.mock = []
-    copy.flow_name = `${src.flow_name} (copy)`
     copy.created_at = new Date().toISOString()
     copy.sessions = []
     copy.numbers = []
@@ -514,8 +584,8 @@ export const duplicateFlow = createServerFn({ method: 'POST' })
 
 // Everything the Test tab does goes through the Voxio SDK (test.server.ts on
 // this side, @voxio/client in the browser). Only flows the voice servers can
-// run are testable: today that is the live ones, since dashboard-made flows
-// live only in our tables until the backend reads from them.
+// run are testable: live ones, imported ones, and ones created or duplicated
+// here (flows.server.ts creates those on the backend).
 
 const NOT_ON_SERVERS = 'This flow isn’t on the voice servers yet, so it can’t take calls. It will be once your account is connected.'
 
@@ -534,14 +604,17 @@ async function canSee(me: AuthUser, key: string) {
 
 /**
  * Whether the voice servers can run this flow for this account: a configured
- * live flow, or one of its own flows imported from the backend's Mongo by
- * scripts/migrate-mongo.mjs (those keep their Mongo _id, 24 hex, as their id).
+ * live flow, one of its own flows imported from the backend's Mongo by
+ * scripts/migrate-mongo.mjs (those keep their Mongo _id, 24 hex, as their id),
+ * or one created or duplicated here, which goes to the backend through the SDK.
  */
 async function onVoiceServers(me: AuthUser, key: string): Promise<{ ok: boolean; imported: boolean }> {
   if (isLiveFor(me, key)) return { ok: true, imported: false }
-  const row = await withDb(() => db.flow.findFirst({ where: { apiKey: key, userId: me.id }, select: { id: true } }))
+  const row = await withDb(() => db.flow.findFirst({ where: { apiKey: key, userId: me.id }, select: { id: true, runtime: true } }))
   const imported = !!row && /^[0-9a-f]{24}$/.test(row.id)
-  return { ok: imported, imported }
+  // Made in the dashboard through the SDK: the backend has it too.
+  const created = !!row && (row.runtime as Record<string, unknown> | null)?.[ON_BACKEND] === true
+  return { ok: imported || created, imported }
 }
 
 export const getTestSetup = createServerFn({ method: 'GET' })
@@ -552,6 +625,11 @@ export const getTestSetup = createServerFn({ method: 'GET' })
     if (!(await canSee(me, data.key))) return fail('Flow not found.')
     const { ok: testable, imported } = await onVoiceServers(me, data.key)
     const baseUrl = urlOf(SERVERS.voicebot) ?? ''
+    // The tester's account key goes with the flow key (as user_api_key). It is
+    // their own, on their own dashboard: Developers shows it anyway.
+    const account = testable
+      ? await withDb(() => db.user.findUnique({ where: { id: me.id }, select: { apiKey: true } }))
+      : null
     const setup: TestSetup = {
       testable: testable && !!baseUrl,
       reason: !testable ? NOT_ON_SERVERS : !baseUrl ? 'No voice server is configured (VX_VOICEBOT).' : undefined,
@@ -561,6 +639,8 @@ export const getTestSetup = createServerFn({ method: 'GET' })
       // Tests authenticate with the flow's own key. It is the owner's, on their
       // own dashboard, and the Overview shows it anyway.
       flowKey: testable ? data.key : undefined,
+      userKey: account?.apiKey,
+      avatarUrl: `https://${AVATAR_VOICEBOT}`,
       imported,
     }
     return wire({ ok: true, data: setup })
@@ -598,7 +678,7 @@ export const testCallStatus = createServerFn({ method: 'GET' })
       if (ENDED.has(call.status) && call.sessionId) {
         const rec = await getSessionRecord(call.sessionId).catch(() => null)
         if (rec) {
-          out.transcript = rec.transcript.map((t) => ({ role: t.role === 'agent' ? 'assistant' : 'user', content: t.text }))
+          out.transcript = rec.transcript.map((t: { role: string; text: string }) => ({ role: t.role === 'agent' ? 'assistant' : 'user', content: t.text }))
           out.seconds = rec.seconds
         }
       }
@@ -623,12 +703,41 @@ export const cancelTestCall = createServerFn({ method: 'POST' })
  * own tables store it; live flows are recorded by the voice server itself
  * (recording: true), and their overlay isn't persisted, so nothing is written.
  */
+/** A session's recording and full transcript from the voice server, for the replay dialog. */
+export const getSessionRecording = createServerFn({ method: 'GET' })
+  .inputValidator((d: { key: string; id: string }) => d)
+  .handler(async ({ data }): Promise<string> => {
+    const me = await currentUser()
+    if (!me) return fail('Please log in again.')
+    const rec = await sessionRecordOf(me, data.key, data.id)
+    const own = (await load(me)).flows[data.key]
+    if (!rec) {
+      // The voice server doesn't have it; a stored URL may still need signing.
+      const stored = own?.sessions.find((y) => y.sessionId === data.id)?.recordingUrl
+      return stored ? wire({ ok: true, data: { recordingUrl: playableUrl(stored), transcript: [] } }) : fail('No recording yet.')
+    }
+    if (own && (rec.recordingUrl || rec.transcript.length)) {
+      // Keep it, so the next open doesn't have to ask again.
+      await mutate(me, (st) => {
+        const x = st.flows[data.key]?.sessions.find((y) => y.sessionId === data.id)
+        if (!x) return
+        if (rec.recordingUrl) x.recordingUrl = rec.recordingUrl
+        if (!hasData(x.transcription) && rec.transcript.length >= (Array.isArray(x.transcription) ? x.transcription.length : 0)) x.transcription = rec.transcript.slice(0, 500)
+      })
+    }
+    // The bucket is private: hand out signed links, keep the raw URLs stored.
+    return wire({ ok: true, data: { ...rec, recordingUrl: playableUrl(rec.recordingUrl), cameraUrl: playableUrl(rec.cameraUrl) } })
+  })
+
+/** True when a saved transcript has the agent's extra data lines, which the voice server's copy lacks. */
+const hasData = (t: unknown) => Array.isArray(t) && t.some((x) => (x as { data?: boolean } | null)?.data)
+
 export const saveTestSession = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string; session: string }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
-    const input = JSON.parse(data.session) as { sessionId: string; type: string; startTime: string; seconds: number; status: string; transcript: TestTurn[]; to?: string }
+    const input = JSON.parse(data.session) as { sessionId: string; type: string; startTime: string; seconds: number; status: string; transcript: TestTurn[]; to?: string; actions?: Session['actions']; wire?: Session['wire'] }
     const own = !!(await load(me)).flows[data.key]
     if (!own) {
       if (!isLiveFor(me, data.key)) return fail('Flow not found.')
@@ -640,10 +749,27 @@ export const saveTestSession = createServerFn({ method: 'POST' })
       endTime: new Date(Date.parse(input.startTime) + seconds * 1000).toISOString(),
       totalConnectedTime: seconds, totalAiTime: 0, totalHumanTime: 0, aiTokens: 0, humanTokens: 0,
       status: input.status, to: input.to, transcription: input.transcript.slice(0, 500), test: true,
+      ...(input.actions?.length ? { actions: input.actions.slice(0, 200) } : {}),
+      // The log is already redacted in the browser; the last 300 entries are plenty to read back.
+      ...(input.wire?.length ? { wire: input.wire.slice(-300) } : {}),
     }
+    // The voice server's record has the recording and both sides of the talk; prefer it when it's ready.
+    const rec = await sessionRecordOf(me, data.key, input.sessionId)
+    if (rec?.recordingUrl) s.recordingUrl = rec.recordingUrl
+    // Use the server's transcript only when it has at least as many turns as ours, and never over
+    // one carrying the agent's extra data (movements, expressions, diagnosis): the server's has only words.
+    if (rec && !hasData(input.transcript) && rec.transcript.length >= input.transcript.length) s.transcription = rec.transcript.slice(0, 500)
     await mutate(me, (st) => {
       const f = st.flows[data.key]
-      if (f && !f.sessions.some((x) => x.sessionId === s.sessionId)) f.sessions = [s, ...f.sessions]
+      if (!f) return
+      // The voice server usually archives the session into this same table first, with only
+      // the spoken words. Add what only the test saw to that row instead of dropping it.
+      const row = f.sessions.find((x) => x.sessionId === s.sessionId)
+      if (!row) { f.sessions = [s, ...f.sessions]; return }
+      row.test = true
+      if (s.actions) row.actions = s.actions
+      if (s.wire) row.wire = s.wire
+      if (hasData(input.transcript) && !hasData(row.transcription)) row.transcription = input.transcript.slice(0, 500)
     })
     return wire({ ok: true, data: null })
   })

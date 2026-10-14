@@ -11,6 +11,8 @@ import SiteFooter from '#/components/SiteFooter'
 import { useReveal } from '#/components/useReveal'
 import { submitContact } from '#/server/contact'
 
+import { AsciiAssembly } from '#/components/AsciiAssembly'
+import '#/styles/ascii-assembly.css'
 import '#/styles/forms.css'
 import '#/styles/contact.css'
 
@@ -78,6 +80,8 @@ function Contact() {
   return (
     <>
       <div className="scroll contact-scroll">
+
+        <AsciiAssembly className="contact-art rise" />
 
         <div className="masthead rise">
           <span className="eyebrow">Contact us</span>

@@ -47,13 +47,21 @@ export function validate(graph: Graph): Issue[] {
   }
   for (const id of ids) if (!state.get(id) && type.get(id) !== 'input') visit(id)
 
-  // Variables available: anything any node declares it writes. Coarse, but catches typos.
-  const produced = new Set<string>()
+  // Variables available: anything any node declares it writes, the workflow's own
+  // variables, and each AI step's shared memory. Coarse, but catches typos.
+  const produced = new Set<string>(keysOf((graph.extra as { variables?: unknown }).variables))
   for (const n of graph.nodes) {
     const p = n.data.parameters
     if (n.data.type === 'input') keysOf(p.input_variables).forEach((k) => produced.add(k))
     keysOf(p.output_variables).forEach((k) => produced.add(k))
     keysOf(p.llm_return_type).forEach((k) => produced.add(k))
+    if (typeof p.history_key === 'string' && p.history_key) produced.add(p.history_key)
+  }
+  // What some step reads or passes along: an AI step's answers that land here are used.
+  const consumed = new Set<string>()
+  for (const n of graph.nodes) {
+    keysOf(n.data.parameters.input_variables).forEach((k) => consumed.add(k))
+    keysOf(n.data.parameters.variables).forEach((k) => consumed.add(k))
   }
 
   for (const n of graph.nodes) {
@@ -79,8 +87,9 @@ export function validate(graph: Graph): Issue[] {
     }
     for (const v of keysOf(p.variables)) if (!produced.has(v)) at('warning', `Passes “${v}”, which no node writes.`)
 
-    if (LLM_TYPES.has(n.data.type) && !keysOf(p.llm_return_type).includes('speak'))
-      at('warning', 'No “speak” in Returns — this node will be silent.')
+    // Silent on purpose is fine when a later step uses its answers (e.g. a Say step shows them).
+    if (LLM_TYPES.has(n.data.type) && !keysOf(p.llm_return_type).includes('speak') && !keysOf(p.llm_return_type).some((k) => consumed.has(k)))
+      at('warning', 'No “speak” in Returns and no step uses its answers — it does nothing the caller can notice.')
     if ((n.data.type === 'llm' || n.data.type === 'llm-streaming') && !String(p.system_prompt ?? '').trim())
       at('warning', 'Empty system prompt.')
     if (n.data.type === 'rag' && !String(p.collection_name ?? '').trim()) at('error', 'Pick a knowledge base.')

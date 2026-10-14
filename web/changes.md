@@ -18,6 +18,597 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-15 — Subtler group colours, matched to Echobotics
+
+**What changed**
+- New tokens on `.db`: `--cell` (4.5% ink dark, 3.5% light), `--cell-hi` (hover) and `--cell-sel`, a tonal accent at about 16%. Echobotics cells sit about 4% off the card (#141414 on #0a0a0a dark), and ours were 6% white over teal, which read as washed grey-teal. Every connected cell, field cell, toolbar cell and the provider group now uses these tokens (17 rules in `dashboard-m3.css`).
+- Selected options are tonal (`.is-sel`: tint plus accent text) instead of filled. This covers chart Minutes/Sessions and the date range, Custom, This flow only / Shared voice, the chosen provider and the Default look. The solid accent is kept for the one main action (`.is-lead`: Save, New flow, Test, Apply, Send) and for Mute while muted.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Voice, Behaviour, date picker and workflow card in the grouped style
+
+**What changed**
+- Custom date range popover: each end's date and time are one connected pair, and Cancel and Apply are one connected pair (Apply filled).
+- Flow Overview: the workflow card is a "D", as on Echobotics' Next step. The card has a light accent tint, and Edit workflow fills its right edge with a 44px round end. It stacks on phones.
+- Voice tab:
+  - The Listening and Speaking headings are 24px.
+  - This flow only · Shared voice · Copy config is one connected group.
+  - The page header has a Copy config for everything: STT, TTS, shared-voice refs and audio settings.
+  - Providers (Deepgram · Soniox · Sarvam, and Deepgram Aura · Sarvam · ElevenLabs · Google · Resemble) are one connected group with the chosen one filled.
+- `ProviderEditor` lays fields out as connected cells (`FieldGroup`): short fields share a row (up to three), sliders go two to a row, and tag lists (Languages, Boost words) take a full row below. Corners are round only on the group's outer edge. The whole More settings row opens and closes it, and its fields use the same cells.
+- Behaviour tab: one Copy config in the header replaces the per-section ones, the section headings are 24px and the labels larger.
+- Dropdowns: 44px fields with 16px text. Menus have 48px rows edge to edge, the chosen row is neutral with its check, and the option notes still show beside the menu.
+- Saving on these tabs shows the thinking orb in the Save button (from the earlier `SaveBar` change).
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Selection group springs into the toolbar; icon animations play once
+
+**What changed**
+- Flows: ticking rows no longer shows a separate bulk bar. A connected group (count · Export · Delete · Clear) springs in at the toolbar's right end, left of Import / New flow. It grows from zero width with a slight overshoot (motion spring: stiffness 520, damping 24) and pushes the add group along. It springs back out on Clear.
+- `dashboard-motion.css`: the icon scenes no longer fire on hovering a table row (`[data-row-link]` removed from 32 selectors), only on the button or link itself. They play once on hover instead of looping (`infinite` became `1`, and the eye-off tick plays `2 alternate` so it ends where it began).
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Flows table: clipped names, labelled add buttons, M3 checkboxes
+
+**What changed**
+- Flow names in the Flows table use `clipName` (48 characters, cut at a word, full name on hover) and stay on one line, ellipsized past 36ch.
+- Import and New flow show their labels all the time, still as one connected group with New flow filled.
+- Row checkboxes in `.db-flows` tables are M3: an 18px box with a 2px outline. Checked, it fills with the accent and the check scales in. A 40px round state layer appears on hover and focus.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Actions as expanding icon groups
+
+**What changed**
+- Flows toolbar: Import and New flow (filled) are one connected icon group that widens on hover to show each label. The home page's All flows link uses the same style.
+- Flows table rows: Test · Edit · Duplicate · Export · Delete are one expanding icon group (36px). They're quiet until the row is hovered, and Delete turns red on hover.
+- `docs/DESIGN.md` B2a records the rule.
+
+**State now**
+`vite build` passes. Not checked in a browser. The flow header (Test · Duplicate · Export) keeps its text labels, as asked earlier.
+
+## 2026-10-15 — Lists, charts and date ranges in the Echobotics style
+
+**What changed**
+- `TableCard` is rebuilt after Echobotics' ListToolbar. It takes `title`, `description`, `search` (with `count`), `filters` and `actions` instead of `tools` and `count`.
+  - The layout is a 20px section heading, one connected toolbar, the page's buttons at its right end, the table in a bordered box, and the pager under it.
+  - The search cell shows "x of y" (the filtered count of the total).
+  - Filter chips become toolbar cells: 40px, neutral surface, 2px apart, round outer ends.
+  - It's used by the home page's Recent sessions, the Flows list and each flow's Sessions.
+- `UsageChart` header: the title (18px) and one line ("1,240 minutes · last 30 days" or the custom dates) on the left. Metric and range are on the right as connected groups with the chosen cell filled, and a divider sits under the header.
+- The range presets read 7 days · 30 days · 90 days (were 7 days, 1 Month, 3 Months). Custom is the group's last cell and opens the existing calendar (`DateRangeButton cell`).
+- `docs/DESIGN.md` has a new section B2a with these rules.
+
+**State now**
+`vite build` passes. Not checked in a browser. The 12 months and All presets from Echobotics aren't added: `Range` only knows 7, 30 and 90.
+
+## 2026-10-15 — Session dialog layout, M3 video sliders, natural video shape
+
+**What changed**
+- Session dialog: no KPI cards (minutes, channel, status). The title is 26px and the date 16px. The transcript is on the left under a 22px heading, with a copy icon at the heading's right. The recording is on the right and stays in view while the transcript scrolls. Website steps, actions and the Raw log sit under the transcript. Raw is a single button by the close button. Below 900px it becomes one column with the video first.
+- `VideoPlayer`: the seek bar and a new volume slider (beside mute) use the dashboard's M3 slider, a thick track with a gap round a bar handle, recoloured for the black frame. The video has no fixed aspect ratio, so square or wide clips keep their shape, up to 72% of the screen height.
+- The avatar look preview wrapper is renamed `.db-lookplayer`. It had reused `.db-player`, the session audio player's class, and was restyling it.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Keep the agent's data lines in saved sessions; replay with sound
+
+**What changed**
+- `saveTestSession` and `getSessionRecording` no longer replace a saved transcript that has the agent's data lines (movements, expressions, end diagnosis, scores) with the voice server's transcript, which has only words (`hasData` in `server/dashboard/api.ts`). Before, the server's copy won whenever it had at least as many turns, so replays showed only speech.
+- `VideoPlayer` autoplays with sound. If the browser blocks that, it falls back to muted and the mute button shows it. Session replay no longer forces mute.
+
+**State now**
+`vite build` passes. Sessions saved before this fix already lost their data lines and can't be recovered. New tests keep them, along with the raw log and website actions.
+
+## 2026-10-15 — Session replay tools, custom video player
+
+**What changed**
+- A test now saves its website actions (`actions`) and its message log (`wire`) with the session, in `CallSession.extra`. The log is redacted in the browser as before, and only the last 300 entries are kept. `BrowserResult` carries `actions`.
+- The session dialog (`ReplayDialog`) has a Copy transcript / Raw group beside the close button. It lists "What it did on your website" when there are actions. Raw opens the saved log in the same `WirePanel` as the live test, read-only with no Clear button.
+- New `kit/VideoPlayer.tsx`: a custom player with a big play button, seek line, play/pause, back and forward 10 s, time, mute, download (fetches the file so signed cross-origin links save too) and full screen. It has keyboard shortcuts (space/k, ←/→, m, f), and the controls fade while playing. It's used for the look preview on the Avatar tab and the agent video in session replay, where the caller's camera still follows it.
+
+**State now**
+`vite build` passes. Not checked in a browser. Only sessions tested from now on have actions and a raw log; older ones show Copy transcript only.
+
+## 2026-10-15 — Neutral surfaces for connected groups and fields
+
+**What changed**
+- Connected buttons (`.db-gbtn`), grouped fields (`.db-gfield`) and the Avatar add pair use a neutral surface, `rgb(var(--ink) / 0.06)` rising to 0.08 or 0.09 on hover, instead of the mint tonal fill. This matches the Echobotics form style and works in both themes.
+- Field labels are 13px, sentence case and muted, and values are 17px. Focus shows a faint outline.
+- The Default look shows a subtle selected state rather than a solid mint fill. Delete is red text on the neutral surface.
+- Each look row has no boxed card: the thumbnail and its group sit straight on the section.
+- Only the main action (`.is-lead`, e.g. Save, Test) keeps the accent fill. Mute (when on) and End in the live call bar keep their colours.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Avatar tab redesign, grouped Save bar
+
+**What changed**
+- Avatar tab: the Looks and Smooth changes headings are 22px, and the two add options are 18px.
+- Each look is a 64px thumbnail plus one connected group: Name · When to use it · Face ID (copy, shows "Copied") · Default / Make default · Play bigger · Delete.
+- Clicking the thumbnail or the play button opens the look in a dialog player: black 16:9 frame, video with native controls, autoplay and loop, or the still photo.
+- "Choose from your avatars" and "Upload new looks" are one connected pair that stacks below 840px.
+- `SaveBar` (every tab): Discard and Save are one connected group. While saving, the thinking orb shows inside the Save button ("Saving"), not in the message area.
+
+**State now**
+`vite build` passes. Not checked in a browser. Restart the preview server to see it.
+
+## 2026-10-15 — Quiet the Prisma "kind: Closed" errors
+
+**What changed**
+`src/server/db.ts` sends Prisma logs through events and drops "Error in PostgreSQL connection: Error { kind: Closed }" and similar closed-connection lines. Every other error, and warnings in dev, still print. `withDb` uses the same pattern.
+
+**Why**
+Neon closes idle connections when the compute suspends or the pooler drops idle clients, and each pooled connection logged one error line. No query failed: the next query reconnects, and `withDb` retries one that raced the close.
+
+**State now**
+`vite build` passes. If a real query ever fails with a closed connection outside `withDb`, it still surfaces as a thrown error in that request.
+
+## 2026-10-15 — Test dialog: floating face by default, larger live bar
+
+**What changed**
+- A call with the agent's face now opens in Floating face. The saved layout key moved to `vx-test-layout-v2`, so earlier picks reset once.
+- The layout picker (Side by side · Floating face · Face only · Chat only) and the Mute mic / End group are 44px tall with 15px text and 18 to 20px icons.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Test dialog: larger controls, grouped buttons, steadier state
+
+**What changed**
+- Start talking (56px) and Settings for this test (48px) are the same width, up to 440px and centred. Cancel while connecting is a full 48px button.
+- Mute mic and End form one connected group, with End tinted red. The message box and Send form another, with Send filled.
+- After a test, View in sessions and Copy transcript are a connected group.
+- Text in the test dialog is larger: 16px base, 17px state label, 22px connecting label.
+- `LivePanel` shows a move between speaking, listening and thinking only after the new state has held 200 ms (`useSteady`). Connecting, ended and error show at once.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-15 — Test page: clipped name, connected test tiles
+
+**What changed**
+- `clipName` / `NAME_MAX` moved to `lib/dashboard/client.ts`. The Test page heading and the test dialog title use the same 48-character whole-word cut as Overview, and the heading shows the full name on hover.
+- Talk in the browser, Chat with it and Call my phone are now one connected group. The tiles sit 2px apart with 28px outer corners and 8px inner ones, and each keeps its own icon, text and button. Below 840px they stack, rounding the top of the first tile and the bottom of the last.
+
+**State now**
+`vite build` passes. The first run failed with Windows os error 1450 (out of system resources) while loading icon files, and the rerun was clean. Not checked in a browser.
+
+## 2026-10-14 — Flow header: one-row name, connected button groups
+
+**What changed**
+- The flow name on a flow's Overview stays on one row. Past 48 characters it is cut at the last whole word with "…", and hovering shows the full name. CSS ellipsis covers narrow screens.
+- The API key row (`KeyChip`, also used on Developers) has Reveal, Copy and Rotate as an M3 connected icon group. The hovered or focused button widens to show its label and closes again on leaving. Rotate still asks first.
+- On the right are Test (filled), Duplicate and Export as one connected group with text, then the Created date.
+- The new `.db-btngroup` / `.db-gbtn` styles are in `dashboard-m3.css`.
+
+**State now**
+`vite build` passes. Not checked in a browser.
+
+## 2026-10-14 — First pass of design-brief fixes
+
+**What changed**
+- One filled button per screen. Edit workflow, Attach and the Voices Add buttons are outlined. The Test page fills only the first test that can run. Knowledge hides its header button while the empty state shows.
+- Lip-sync options read Standard and Detailed instead of Wav2Lip and MuseTalk.
+- Deleting a face, or an unused flow, happens at once with Undo. `undoToast()` in `components/ui/halo-toast.tsx` hides the item and sends the delete when the toast closes. Halo toasts gained an `action` button. A flow with connections or sessions still asks first.
+- Sentence dashes in on-screen text replaced with full stops, commas or a middle dot.
+
+**Why**
+These were the violations listed in `docs/DESIGN.md` section B3.
+
+**State now**
+`vite build` passes. Not checked in a browser. Open items: `<Mock>` still renders nothing, and a pending Undo delete is dropped if the tab closes first.
+
+## 2026-10-14 — Design brief for the whole UI
+
+**What changed**
+Added `docs/DESIGN.md`. It sets out who uses Voxio, the seven presentation rules (taken from the Echobotics hiring design brief), Material 3 tokens decoded from the Figma kit (colour roles, shape, type, state layers, breakpoints), text rules from the Echobotics house style, and a list of the places the dashboard breaks the rules today.
+
+**Why**
+Screens were being designed one at a time with no shared rules. The brief is the reference every UI change follows.
+
+**State now**
+Docs only, no code changed. The violations in section B3 are open and get fixed when each screen is touched.
+
+## 2026-10-09 — 山本健二: emotion on (eleven_v3 tags)
+
+**What changed**
+The patient `llm` node has `emotion: true, emotion_tts: 'eleven_v3'`, so the engine appends `agent/assets/prompts/tagging/eleven_v3.md`. The patient prompt now allows English v3 tags in `speak`. A closing section caps them at about one per three replies, only on pain or hesitation, and bans stage-Osaka speech. Without it, the appended tagging prompt led to `[sighs]` on almost every line and to わて/まっせ. Checked over 3 replays: after the closing section, tags appear on 1–2 of 5 replies (pain lines only), with no わて/まっせ.
+
+## 2026-10-09 — Test panel: user lines from `out.user_input`, extra keys as raw JSON; patient on eleven_v3
+
+**What changed**
+- The browser and avatar Test panels (`BrowserTest.tsx`) only showed the caller's words when the server sent `user_input` at the top level. A transcription step sends it as `{ out: { user_input } }`, so it never showed. Both places are read now, and a line already shown from the voice server's transcript isn't added twice.
+- Any keys an `out` sends besides the spoken text and delivery settings (`frame`, `end_diagnosis`, `score`, `feedback`…) appear as a separate "Agent · data" bubble of raw JSON (`LivePanel.tsx`, `.db-bubble.is-data`). These bubbles are left out of the saved test transcript.
+- The 山本健二 flow's TTS is now ElevenLabs `eleven_v3` with Riku (`KJje3wzepLiSIQjVGCB6`). Measured: a 2-sentence line took 4.5–6.5 s to synthesize (Otani: 28 s, not used).
+
+**State now**
+Built. Open finding (not fixed): the flow's `reset_frame` never runs. The `conditional` writes `__next_route__` into the shared state, and sibling `response1` takes that route as its own. Even if it ran, `set_expression` switches faces at once, so it would cut the pain face short.
+
+## 2026-10-09 — Japanese patient → 山本健二 with avatar faces; face labels saved
+
+**What changed**
+- I rewrote the `vk_fwdjid…` flow. The patient is now 山本健二: 52, heavyset Osaka taxi driver, Osaka dialect. He has "left shoulder pain" that is really exertional angina he plays down; the cardiac red flag is the trap. The rubric's 5 case items and the STT key terms follow the new case. The voice is the ElevenLabs library's Riku (`KJje3wzepLiSIQjVGCB6`, deep middle-aged ja-JP male).
+- Avatar: faces `main` / `chest_pain` / `shoulder_pain` (labelled from their clips) are on the flow with no transitions, and video is on (the same participants graph as Sampl_7). The patient LLM returns `frame` with `speak`, the way the roleplays do (Muthu, Tanaka, VPS); `response1` sends it. A new `reset_frame` out node then sends `frame: "main"`, so a pain face lasts one line.
+- `/api/faces` ignored the label typed on the Avatars page. The SDK upload takes no label, so the face row had none. It now writes the label onto the row after upload. I labelled the three existing faces by hand.
+
+**State now**
+Built. Not tried live: whether the backend plays `reset_frame` after the line's audio rather than over it.
+
+## 2026-10-09 — Japanese virtual-patient flow (account sk1@gmail.com)
+
+**What changed**
+A new flow on the account with user key `user_EFge…`: 「模擬患者(日本語)中村恵子・右肩の痛み(大阪弁)」, key `vk_fwdjid…`. It has the same graph as the Virtual Patient Simulator's flows: patient interview → `end_diagnosis` branch → scored feedback → clinical-reasoning debrief. All three prompts are in Japanese: an Osaka-dialect patient (58, frozen shoulder) who withholds information, a feedback prompt that follows the OSCE interview station with a voice-of-the-patient section, and a Socratic reasoning tutor. It has 23 Japanese rubric items in `feedback_questions`. STT is Soniox `stt-rt-v4` (`ja`, strict, medical key terms), and TTS is ElevenLabs Flash v2.5 with the library voice Hiyori (`AP6mVmGgRkbG5mCR7fCS`, native ja-JP). Japanese backchannels (はい。/ええ。…) are in `ignore-words` so they don't interrupt the patient. Inactivity nudges are off. It was created with the SDK (`flows.create`, gpu); the backend wrote the Neon row, and `on-backend` was set by hand.
+
+**Why**
+The user wants a Japanese version of the VPS based on the localisation research (D:\vx\research\reports).
+
+**State now**
+The flow is created but no call has been run yet. The VPS's own flows still had placeholder feedback and reasoning prompts at the time.
+
+## 2026-10-09 — Jules-style ASCII logo; Word-style caret; branched docs menu
+
+**What changed**
+- **`AsciiAssembly`** (`src/components/AsciiAssembly.tsx`), modelled on jules.google's HeroLogo: "VoxioAgents" as ASCII art on a canvas (rasterised from real text: dense cells M W N K X, edges x l c, slivers : ; , . '). An endless random loop: a character pops out every 700 ms and drifts off in colour (leaving "."), and an "@" agent walks the grid to the nearest loose one, carries it back to its exact slot and puts it down. Same timings as Jules. Pauses off screen / in hidden tabs; still for reduced motion. On login/signup it fills the brand panel ("Voice agents that sound human."); on Contact it's a dark hero panel above the heading.
+- **`SmoothCaret`** (mounted in `__root`): every text input and textarea on the site gets a drawn caret that glides to each new position (90 ms) like Word's smooth typing; solid while typing, blinking when idle. Number fields, selections and reduced-motion users keep the native caret.
+- **`BranchedMenu`** (`src/components/ui/BranchedMenu.tsx`): the docs sidebar is now a tree; branches draw in when a group opens and fold away when it closes; the current page and its branch are lit. API as the user specified (items/defaultOpen/defaultActive/onSelect/colours/sizes/durations). Icons from `@hugeicons/core-free-icons`. No public source matched those props, so it's built here.
+
+**State now**
+Checked in Chrome on the dev server: Contact art, caret position after typing and Home, docs menu open/select. Login/signup art not seen (the test browser is signed in, so /login redirects).
+
+## 2026-10-09 — Watermelon/shadcn components; date+time range; soft-delete flows; pagination; agent volume
+
+**What changed**
+- **Component base.** shadcn (`components.json`) installs Radix primitives into `src/components/base-ui`; dashboard pieces built from them live in `src/components/dashboard/kit`. Tailwind scans only `bklit`, `base-ui` and `dashboard/kit`. Their colours are `--sh-*` tokens on `:root` (light theme via `:root:has(.db[data-theme=light])`), because the site already owns `--accent`, `--border`… and popovers/dialogs are portalled outside `.db`.
+- **Tailwind utilities are now unlayered.** `site.css` has an unlayered `* { margin: 0; padding: 0 }`, and an unlayered rule beats every layered one, so every Tailwind padding/margin was being zeroed. This was the bklit crosshair date chip "stuck to its text" (and the earlier `.bk-tip` workaround). The chip also uses the chart tooltip colours now.
+- **Breadcrumbs:** Breadcrumb 1 pill (`kit/Crumbs.tsx`); last two crumbs on a phone.
+- **Chart tabs:** Minutes/Sessions and 7 days/1 Month/3 Months use Tabs 25 (`kit/SegmentTabs.tsx`).
+- **Custom range with time:** `kit/DateRange.tsx` (Starts / Ends rows, calendar + clock face `kit/ClockPicker.tsx`). A custom `Range` end can be `YYYY-MM-DDTHH:mm`; `rangeSpan`/`inRange`/`byRange` respect the time.
+- **Delete a flow, keep its history.** The old delete removed the Prisma flow row, and sessions + webhook logs cascade with it (the SDK's `flows.delete` does the same). Now: key rotated through the SDK (re-keyed in the DB if that fails), `runtime.deleted_at` stamped, numbers detached (`markFlowDeleted`). Deleted flows load into `store.deleted`, leave the flows list, and their sessions show on Home tagged "Flow deleted". Confirm dialog = Dialog 3 with an "I understand" checkbox (`kit/DeleteFlowDialog.tsx`).
+- **Pagination:** Pagination 15 (`kit/Pager.tsx`), rows per page 10/25/50; `usePaged` owns `perPage`.
+- **Agent volume in browser tests:** Popover 4 (`kit/AgentVolume.tsx`). BrowserTest gives the SDK its own `<audio>` (`env.createAudioElement`) and sets its volume; the avatar video follows. The mic button now reads "Mute mic".
+
+**Why**
+User asked for these watermelon components; the date chip had no padding; deleting a flow must keep sessions.
+
+**State now**
+Typechecks; checked in Chrome on the dev server: breadcrumbs, chart tabs, date+time card (calendar, clock), delete dialog (opened/cancelled only), pager. Not done live: an actual flow delete (needs the user's OK — it changes their data) and the volume control in a real call. In `vite dev`, Tailwind sometimes misses classes in a newly created file until `bklit.css` is touched; production builds are unaffected.
+
+## 2026-10-09 — Workflow templates rebuilt on the engine; flows list fixes
+
+**What changed**
+Templates (`src/lib/workflow/templates.ts`) rebuilt on jl-customs / nsdc-customs and the engine's node code: every template sets `start_node` and `variables`, replies loop back to `ask_for_input`, and "Branch on hang-up" uses a plain `llm` + `response` out step (a plain `llm` says nothing on its own) + a `done?` conditional. Workflows are normalised (`withStart`) at the one place the dashboard writes them to the database; the start step is `start_node` or the step nothing leads to, never key order (jsonb sorts keys). Flows list is newest first; "Create flow" is blocked while a create runs.
+
+**Why**
+Old templates: simple/ack/rag never listened again after one reply; hang-up never spoke the LLM's reply. A double-pressed Create made duplicate flows (one account: 21 flows for 7 names). start_node was lost when the store rewrote a workflow.
+
+**State now**
+All four templates pass the backend's AgentConfig check and build in WorkflowEngine. Not tried in a live call. Flows made from the old templates keep their old (broken) shape; duplicates are still in the database.
+
+## 2026-10-08 — Fix: test kept only one agent turn
+
+**What was wrong**
+The "join one reply's sentences" change decided whether to join inside a React state updater, using a flag it also changed there. React runs updaters twice in development, and no caller lines arrive to split turns. So every agent reply was merged into the first one: 5 exchanges were saved as 1.
+
+**What changed**
+- Each agent line now carries a turn number, read outside the updater. A sentence joins the last line only when the turn matches. The turn goes up each time the agent waits for input, and each time you type.
+- Saving or opening a session only uses the voice server's transcript when it has at least as many turns as ours.
+
+## 2026-10-08 — Test transcript, session recording, chat sides
+
+**What changed**
+- **Removed:** "Uses your microphone. Leaving this window ends the call." and "Talking to it now — end the call below."
+- **Agent speech in the test:** one reply can arrive as several `out` packets, one per sentence. These are now joined into one agent turn, until the agent waits for input or you type.
+- **Recording and full transcript:**
+  - New `sessionRecordOf` in `flows.server.ts` reads the voice server's own record with the user's account key, through `voxioagent/server` `sessions.get`.
+  - `saveTestSession` stores its `recordingUrl` and its two-sided transcript when they are ready.
+  - The session dialog fetches them on open if missing (`getSessionRecording`), keeps them, and shows "Looking for the recording…" or "No recording yet".
+- **Transcript layout:** the agent is on the left and the person on the right. The person is called Caller on phone, Visitor on web and video, and User in chat. The "Caller" fact is shown only for phone sessions.
+
+**State now**
+`vite build` and the typecheck pass. Whether a recording shows depends on the voice server storing a `recordingUrl` for web sessions. Not checked in a browser.
+
+## 2026-10-08 — Test console logs removed
+
+The agent's lines show in the voice test now, so the `[voxio-test]` console logs and the SDK's `debug` output are gone.
+
+## 2026-10-08 — Voice test reads the agent's `out` packets
+
+**What changed**
+- **Agent text:** the console logs showed the agent's words arrive as `{agent:{session_id, waiting_for_input:false, out:{speak:"…"}}}`, not as streamed `chunk`s. The test now reads `out.speak` (or `text`, `message`, `response`) and adds it to the transcript, with `<|…|>` markers removed.
+- **Logs:** `[voxio-test]` logs now print JSON text, so a copied log shows the packet contents.
+
+**Not fixed here**
+The voicebot only mirrors agent output; it never sends what the caller said. Caller lines will show once it sends `{"type":"transcript","role":"user","text":…}`, which the test already reads.
+
+## 2026-10-08 — Test dialog: fewer words, console logs
+
+**What changed**
+- **Removed:**
+  - the "Say hello — what you and the agent say shows up here." line;
+  - the "Show code" button (the code view no longer opens);
+  - "— used while this is open, never saved".
+- **Logging:** the voice test now logs everything to the browser console under `[voxio-test]`:
+  - each raw `{agent:…}` packet;
+  - each `reply`;
+  - state changes, other messages and errors.
+
+  It also turns on the SDK's own `debug` output, so you can see what the voice server actually sends.
+
+**Why**
+The transcript stayed empty, and this shows what is (or isn't) arriving.
+
+## 2026-10-08 — Date picker, /filter search, live test transcript (voxioagent 2.0.2)
+
+**What changed**
+- **Date picker:** the "Choose dates" panel is replaced by a calendar button (`components/dashboard/DateRange.tsx`). It opens a one-month grid in the dashboard colours: click a start day, then an end day, then Apply. When a custom range is in use, the button shows it.
+- **Search:**
+  - Home's "All flows" filter is gone. Search takes `/filter <keyword>` (or just the keyword) and matches the flow name, call type, numbers, status and transcript. `getOverview` now sends each transcript as one short string so search can read it.
+  - A flow's Sessions table works the same way.
+- **Removed:** the "N sessions in this period" and "N of M sessions" counts.
+- **Phone example:** the curl on Developers uses `$FROM_NUMBER` and `$TO_NUMBER` instead of numbers that looked real. The docs examples now say `+91XXXXXXXXXX`.
+- **Cut-off pages:** the main column is a scrolling flex column, and pages could shrink inside it. That cut Avatars and the loading skeleton off half-way. Pages no longer shrink: `.db-main > * { flex-shrink: 0 }`.
+- **Chart hover card:** it relied on Tailwind spacing that wasn't generated. It now has its own classes (`.bk-tip*`), with padding, a minimum width and bigger text.
+- **Voice test, voxioagent 2.0.2:**
+  - the agent's words now stream into the transcript from the data channel (the `reply` event);
+  - a packet that carries what the caller said (`user_input` / `transcript`) adds a user line;
+  - every `{agent:…}` packet the server sends now appears in the code view, along with `waiting for input` and `usage`. Streamed chunks are logged once, as the finished reply.
+
+**State now**
+`vite build` passes and there are no new type errors. Not checked in a browser: the extension wasn't connected, and the dev server needs a login.
+
+## 2026-10-08 — Tables, date ranges, Avatars tips fix, page clean-up
+
+**What changed**
+- **Tables:** every dashboard table now sits in one table card (`components/dashboard/TableCard.tsx`), after internal-shortlisting's tables. It has:
+  - a header bar with the title and count, plus search, filters and actions;
+  - a tinted column row;
+  - a "Showing X–Y of N · Page X of Y" footer with Previous / Next.
+
+  Pages:
+  - **Home → Recent sessions:** sessions in the chosen period, with search, an "All flows" filter and channel and status filters, 8 per page, and an "All flows" button.
+  - **Flows:** the list is paged, 10 per page.
+  - **A flow's Overview → Sessions:** search, channel and status filters, and paging. It still jumps to a session a test just made.
+- **Usage chart:**
+  - the title and total are bigger;
+  - the range is **7 days · 1 Month · 3 Months**, plus **Custom**, which opens a start/end date panel (the floating panel);
+  - charts and the Home figures follow the chosen range, through `Range`, `rangeDays`, `inRange` and `byRange` in `ui.tsx`;
+  - Home and the flow Overview both use it.
+- **Avatars:** the "For the best result" tips used the class `.db-tip`, which is also the chart tooltip's (`position: absolute`), so they floated to the top-right corner and the card looked empty. They're now `.db-advice`.
+- **Removed:**
+  - Home's "Here's how your voice agents did in the last N days.";
+  - the Flows subtitle;
+  - the Avatars subtitle;
+  - the out-of-date "mock store" note in the New flow dialog;
+  - on Developers, the "Or, with no build step…" sentence and the one-line descriptions.
+- **Developers:** step 2's choices (Voice button, Headless session, Server, Webhooks, Phone calls) are now the code block's own tabs, a size bigger.
+
+**Why**
+Requested.
+
+**State now**
+`vite build` and the typecheck pass. Not looked at in a browser.
+
+## 2026-10-08 — Cult UI pieces: code tabs, toasts, dock, floating panel, morphing test dialog, copy rows
+
+**What changed**
+Six components after Cult UI, ported to this app (no shadcn tokens) and styled in the dark blue and cyan theme, with light-mode values and reduced-motion handled. `sonner` and `lucide-react` are new dependencies; `motion` was already there.
+- **Code block** (`components/CodeBlock.tsx`, `styles/codeblock.css`): tabs with a spring underline; code that slides and unblurs in the direction you switch; a copy button whose icon turns into a check; syntax colours kept. It takes `tabs` or `code`, and can be controlled. The /docs tabs (still synced per group and remembered) and Developers use it.
+- **Copy rows** (`components/ui/copy-row.tsx`): the value plus a copy button in its own cell. Developers → SDK step 1 is now npm, pnpm and yarn rows and a script-tag row.
+- **Toasts** (`components/ui/halo-toast.tsx`, on Sonner):
+  - a frosted card with a slow gradient rim (default teal/blue/violet, success, error), a border trail on hover, letter-by-letter text and a close button;
+  - mounted once in the dashboard shell and following its theme;
+  - the workflow editor's old `wf-toast` is gone (save, save failed, "fix N errors first" are toasts now), and every save bar announces "Changes saved" / "Couldn't save" as a toast; the bar itself only says Saving… / Unsaved changes.
+- **Dock** (`components/dashboard/Dock.tsx`): when the sidebar is collapsed to icons on desktop, the rail behaves like a vertical macOS dock. Items grow toward the mouse and neighbours ease aside. The flow's own menu does the same when it's folded to icons.
+- **Floating panel** (`components/ui/floating-panel.tsx`): the workflow canvas's Templates button morphs into an anchored panel; Esc or a click outside closes it.
+- **Morphing test dialog:** `Dialog` takes an optional `layoutId`. On the flow Test tab, each tile's button grows into its test dialog and shrinks back on close, with a hidden copy holding the tile's size.
+
+**Why**
+Requested: use these components across the dashboard and docs.
+
+**State now**
+`vite build` and the typecheck pass. Nothing has been looked at in a browser, so the motion details (dock sizes, morph timing, toast placement) still need a visual check. The workflow issues list keeps its old popover, because it opens itself on save errors.
+
+## 2026-10-08 — Type during a test call
+
+**What changed**
+- The dashboard Test tab's live panel has a "Type instead of speaking…" box during a browser or avatar test. It calls `sendText()` from `voxioagent` 2.0.1, which is now installed: `{ agent: { user_input } }` goes on the call's data channel, the voice server sends it to the agent under the same session, and the reply is spoken like any other turn.
+- The voice server doesn't echo typed lines back, so the panel adds them itself; they also go into the saved test transcript.
+- The wire log ("Show code") shows each typed message, and errors now include the server's `detail`.
+- If the server refuses a message (code `rejected` with no HTTP status), the panel says "That message wasn't sent: <reason>. The call is still on." instead of the connection-error text.
+
+**Why**
+The backend and SDK now support typed input on a voice session.
+
+**State now**
+`vite build` and the typecheck pass. Not tried in a live call. The agent's replies still only arrive as audio, so the panel shows typed lines but not the agent's answers as text. The website demos (`VoiceRoom`) and `/docs` don't have typed input yet.
+
+## 2026-10-08 — Removed "Upgrading from 1.x" from the docs
+
+**What changed**
+The "Upgrading from 1.x" page and its "Reference" sidebar group are gone from /docs, and so is the Introduction's table row for the 1.x API (`initVoxioAgent` / `initVoxioChatbot`). /docs now has 18 pages, and `/docs/upgrading` returns the docs' "Page not found".
+
+**Why**
+Requested.
+
+**State now**
+`vite build` and the typecheck pass. The 1.x API still works in the package; it just isn't documented.
+
+## 2026-10-08 — Themed code blocks; Developers page as steps
+
+**What changed**
+New shared `src/components/CodeBlock.tsx` (styles in `src/styles/codeblock.css`) renders code in Voxio's own look: the site's translucent dark panel, a tab bar with a teal underline, line numbers, and an icon copy button. Syntax colours come from the brand palette: violet keywords, teal strings, blue functions. They're CSS variables, and the dashboard's light theme gets a deeper set. Highlighting uses `prism-react-renderer` (newly installed) with a small added shell grammar. The /docs code blocks and tabs now use it.
+
+The Developers page is trimmed and reordered:
+- The page subtitle, the account key help text and the Documentation card are gone, and so is the SDK card's tagline.
+- The SDK card is now **1 Install** (npm or script tag, as editor tabs), then **2 Choose what to build**: Voice button, Headless session, Server, Webhooks or Phone calls.
+- Each option shows one line of what it does, highlighted code, and a **Read the full guide** button.
+
+**Why**
+Requested: less copy, a clear order, and code that reads like an editor.
+
+**State now**
+`vite build` and the typecheck pass. Not looked at in a browser.
+
+## 2026-10-08 — Docs rewritten to the house style, plus llms.txt and .md pages
+
+**What changed**
+Every /docs page was rewritten to a house style drawn from the Google developer style guide and from how ElevenLabs, Deepgram, Sarvam, Vapi and Stripe write their docs:
+- Task headings start with a verb ("Start a session", not "Starting a session"); concept headings are nouns.
+- Every code block has a sentence before it, ending in a colon, saying what it does.
+- Placeholders are explained after the code with "Replace `X` with …".
+- Examples show what you should see: `// → …` comments or a sentence.
+- Pages where you build something open with "Before you begin", and every page ends with "Next steps".
+- UI names are bold.
+- The quickstart is now numbered steps (create a flow → copy its key → add the button → talk to it), checked against the real dashboard labels.
+
+The style rules are at the top of `src/components/docs/parts.tsx`.
+
+New building blocks:
+- `Tabs`: tabbed code for HTML / JavaScript / React, npm / pnpm / yarn, and macOS / Windows. The tab you pick is remembered across pages.
+- `Replace`, `BeforeYouBegin` and `NextSteps`.
+- The "On this page" outline is now built from each page's H2s, so it can't go stale.
+
+For AI tools:
+- Each page has **Copy page**, **View as Markdown** and **llms.txt** under its lede.
+- New routes: `/docs/llms.txt` (an index in the llmstxt.org format), `/docs/llms-full.txt` (every page in one file) and `/docs/<page>.md`.
+- Pages declare their Markdown with `rel="alternate"`.
+- All of these are generated from the same page bodies by `src/lib/docs/markdown.ts`.
+
+**Why**
+To match how established developer docs are written and to give AI tools a clean way in.
+
+**State now**
+`vite build` and the typecheck pass. The llms files were generated in-process and read through: 19 pages, 3 KB index, 53 KB full. The pages haven't been looked at in a browser.
+
+## 2026-10-08 — Public developer docs at /docs
+
+**What changed**
+New public documentation at `/docs` for `voxioagent` 2.0.0, with 18 pages in five groups:
+- **Get started:** Introduction, Quickstart, Keys and authentication, Servers and environments.
+- **Add to your site:** Script tag, Voice button, Talking avatar, Chat, React, Customising widgets.
+- **Build your own:** Headless sessions, Web actions, Errors.
+- **Server:** Server SDK, Flows, Sessions and usage, Webhooks, Phone calls.
+- **Reference:** Upgrading from 1.x.
+
+The docs have their own shell (`src/routes/docs.tsx`): a header, a searchable sidebar that becomes a menu on phones, an "On this page" outline that follows the scroll, and previous/next links. All content is in `src/lib/docs/pages.tsx` and the building blocks are in `src/components/docs/parts.tsx`; styles are in `src/styles/docs.css`. `/docs` shows the site navbar (without the aurora backdrop); the docs bar sticks just under it, and the sidebar and outline sit below both. The navbar offset is computed from the site's `--header-y` and `--nav-h` and hasn't been checked in a browser at every breakpoint. The site navbar has a Docs item (book icon) after About Us, on the main site and on the product sites. The Developers page's SDK card used to describe a `@voxio/sdk` that doesn't exist. It now shows real `voxioagent` snippets with a "Read the full guide" link per tab, plus an "Open the docs" card. The mock-key note is gone. The site footer links to Docs.
+
+**Why**
+Users need documentation for the SDK, reachable from the dashboard.
+
+**State now**
+`vite build` passes. Not checked in a browser. Signup and login stay on our database. The backend's data service reads the same Neon `users` table, so an account made at /signup has a key the backend accepts without a separate registration step. Phone calls are documented as raw REST because the SDK has no calls API.
+
+## 2026-10-08 — New and duplicated flows are created on the backend through the SDK
+
+**What changed**
+`createFlow` and `duplicateFlow` now create the flow on the backend first, with `voxioagent/server` `flows.create` signed with the creator's own account key (`User.apiKey`), on the SDK's `gpu` environment (`gpu.data.voxio.in`). The flow is then saved in our tables under the key the backend returns, with `on-backend: true` in its runtime JSON, and `onVoiceServers` treats that flag as testable. New code is in `src/server/dashboard/flows.server.ts`. If the backend refuses, nothing is saved and the user sees why. The workflow editor no longer offers the "Look up knowledge" step (`hidden: true` in the registry; existing steps still open), and the workflow page no longer loads the account's knowledge bases.
+
+**Why**
+Flows made in the dashboard existed only in our tables, so the voice servers didn't know their keys and they could never be tested.
+
+**State now**
+The 5 flows previously made in the dashboard were deleted from Neon, with their sessions, deliveries and own agents; the one attached number was detached. They were Clinic front desk and Sandbox (sample@voxio.in), Testr, and Roche ×2. 663 imported flows remain.
+
+`vite build` passes. Not tried against the backend yet. It only works for accounts whose `User.apiKey` is also a key the backend knows (the imported accounts). A brand-new signup's key is minted by us, so the backend will refuse it. Edits made afterwards are still saved only in our tables; tests send them with the call, as for imported flows.
+
+## 2026-10-08 — Test tab copy trimmed, Knowledge hidden
+
+**What changed**
+On the flow Test tab, the subtitle "Try your agent the way your callers will…" and the "This flow came from the old system…" notice are gone. Knowledge is hidden from the left rail and from the flow's Build menu (commented out like Apps). The pages still exist at their URLs, and the workflow editor's knowledge picker is unchanged.
+
+**Why**
+Requested.
+
+**State now**
+`vite build` passes. Flows created or duplicated in the dashboard still can't be tested: they exist only in our tables, so `getTestSetup` marks them not testable, and the voice server wouldn't recognise their key anyway.
+
+## 2026-10-08 — Dashboard browser test sends the tester's own keys
+
+**What changed**
+The flow Test tab's browser and avatar test is back on. It uses `voxioagent/react` instead of the stub. Every setup request it makes carries the flow's key as `flow_api_key` (sent by the SDK) and the logged-in user's own account key (`User.apiKey`) as `user_api_key`. `getTestSetup` returns that key as `userKey`, and returns `avatarUrl`, so tests with a face run on `gpu.voice.voxio.in`. `AVATAR_VOICEBOT` now lives in `server/voice/servers.ts`. voxioagent 2.0.0 has no transcript event, so the live panel only shows transcript lines if the voice server sends `{ type: 'transcript' }` messages.
+
+**Why**
+A test should run as the person testing, with their flow and their account.
+
+**State now**
+`vite build` passes. Not tried in a live test yet. The phone test is still stubbed (`@voxio/server`; 2.0.0 has no `calls`). The tester's account key is visible in their own browser, which is the same key the Developers page already shows them.
+
+## 2026-10-08 — 3D avatar runs on the account key, through a server proxy
+
+**What changed**
+The /avatar face demos now authenticate with the account (admin) key `VOXIO_USER_API_KEY` instead of `VX_FLOW_API_KEY`. The key stays on the server: `startRoomSession` gives the browser the placeholder `proxied` and `proxy: true`, and `VoiceRoom` passes the SDK an `env.fetch` that sends its two setup requests (`/rtc/ice-servers`, `/rtc/offer/audio`) to the new `/api/rtc-proxy`. The proxy removes the placeholder and forwards to `gpu.voice.voxio.in` with `flow_api_key` = `VX_FLOW_API_KEY` plus `user_api_key` = `VOXIO_USER_API_KEY`, which is what the site sent before the SDK switch. Sending the account key as `flow_api_key` gets a 401 ("No flow found for this flow_api_key"); the account key is not a flow key. It only serves a room session this server started for a face demo, less than 10 minutes old and not ended, and it overwrites `session_id` with that session's id. Audio and video still go directly between the browser and the voice server. Demos without a face and /webnav still use `VX_FLOW_API_KEY` directly.
+
+**Why**
+Avatar sessions got 401 with the RTC flow key. All flows and faces are registered under the account key, which must not reach visitors (a `VITE_` variable would put it in the page bundle).
+
+**State now**
+`vite build` passes, and the admin key is not in the client bundle. Not tried in a live call yet. `customs` and `participants` still come from the browser, so someone holding a live session id could change them for that one session.
+
+## 2026-10-08 — Browser demos now connect through the Voxio SDK
+
+**What changed**
+`VoiceRoom.tsx` (/avatar and the browser demos) and `WebActionRoom.tsx` (/webnav) no longer open WebRTC by hand. Both use `createSession` from the published SDK (`voxioagent@2.0.0`, imported as `voxioagent/client`), which handles ICE servers, the offer, retries, mute, audio levels, the avatar video track and the data channel (`hangup`, `web_action`, `web_action_ack`). /webnav keeps its own page driver and timing: the SDK's built-in action runner is off, and actions are acked through the SDK. Our `customs`, `participants` and `session_id` pass through unchanged. Demos with a face always use `gpu.voice.voxio.in` (`room.ts`). `startRoomSession` no longer sends the account `user_api_key` to the browser. The dashboard chat test now imports `voxioagent/widget`. The browser and phone tests stay on the `voxio-sdk-off.ts` stub (tsconfig paths for `@voxio/react` and `@voxio/server`): they were written against an older SDK API (`useVoxioSession().transcript`, `Voxio.calls`) that 2.0.0 doesn't have.
+
+**Why**
+Use the SDK instead of the raw endpoints.
+
+**State now**
+`vite build` passes; /avatar, /webnav and / load. Not tried in a live call yet. Phone calls, flow editing and webhooks still use the raw endpoints.
+
+## 2026-10-08 — RTC key headers, R2 session recordings
+
+**What changed**
+RTC calls send `flow_api_key` (was `api_key`); `/rtc/offer/audio` also sends `user_api_key` (`room.ts` hands `VOXIO_USER_API_KEY` to the browser). New `src/server/r2.server.ts` signs hour-long links to recordings in the private R2 bucket (or uses `R2_PUBLIC_BASE_URL` if set); `getSessionRecording` returns signed links, plus `extra.cameraRecordingUrl`, and the replay dialog shows avatar sessions as face + camera video.
+
+**Why**
+Voicebot renamed the RTC header (old one gets 422) and now uploads `session.mp4`/`camera.mp4` to R2.
+
+**State now**
+Signed links verified against the two test recordings (206 from R2). Replay dialog not tried in a browser. The user key is visible to /avatar visitors. The /avatar demo flow (`VX_FLOW_API_KEY`) is now listed on the dashboard for live accounts; its rows' recordings are signed and avatar ones (`extra.avatar`) play as face + camera video.
+
+## 2026-10-07 — ICE api_key header, new avatar face
+
+**What changed**
+`/rtc/ice-servers` fetches in `VoiceRoom.tsx` and `WebActionRoom.tsx` now send the `api_key` header (the flow key already sent on `/rtc/offer/audio`). The /avatar face (`JEREMY_FACES`, shared by Jeremy and Marcia) is now `e3ec3023-7b7c-4559-8c21-ff4db0264bab`.
+
+**Why**
+The voice backend now requires `api_key` on the RTC connection; new face render requested.
+
+**State now**
+Typechecks for the touched files. Not tried in a live call.
+
+## 2026-10-01 — Marcia Campbell avatar demo
+
+**What changed**
+New /avatar demo `mc` (Marcia Campbell, oncology first visit). The workflow is the one supplied as-is (Groq openai/gpt-oss-120b, patient persona + feedback grader); prompts live in `src/server/voice/prompts/roleplays/marcia/`, graph in `roleplays/marciaCustoms.ts`. Voice, ears, inactivity, pre-fire, wav2lip lip-sync and face are copied from Jeremy.
+
+**Why**
+Requested a second 3D-avatar scenario on Jeremy's setup.
+
+**State now**
+Builds. Not tried in a live call. The end-of-call `feedback`/`score` are not shown on the page (same gap as Jeremy's debrief), and there is no scene panel for this demo.
+
+## 2026-10-01 — New face for Jeremy
+
+**What changed**
+Jeremy Lim's avatar on /avatar now uses face `41f2c30a-9e92-4026-a3aa-7954ba10517f` in place of `7f1c5a24-…`, and lip-syncs with `wav2lip` instead of `musetalk` (`src/server/voice/roleplays/jeremyCustoms.ts`).
+
+**Why**
+Requested swap to a new face render.
+
+**State now**
+Code updated; not yet tested in a live call.
+
 ---
 
 ## 2026-09-29 — Lab Equipment Support agent, on /calling and in the browser demos
@@ -1186,3 +1777,82 @@ What the backend needs is written up for the backend work in
 - Log out is its own rail item (icon when collapsed).
 - Flow menu folds to an icon strip with hover labels instead of disappearing.
 - `border-beam` around AI inputs (workflow prompts, vision instructions, knowledge text, selected AI step); `thinking-orbs` for page loading. `liquid-gooey` and `voice-glow` installed, not used yet.
+
+## Apple font + date/time picker polish
+- Sans font everywhere is now the Apple system stack (-apple-system / SF Pro), falling back to Inter: site.css, styles.css, dashboard.css, auth.css, docs.css, surfaces.css, docs pages.tsx. Serif accents and monospace unchanged.
+- Calendar month/year: native <select> replaced by a pill + scrolling list popover (base-ui/calendar.tsx CalendarDropdown).
+- ClockPicker: hand is a rotated group with eased transition, turns the short way, follows the pointer freely while dragging.
+- SegmentTabs (Minutes/Sessions, 7 days/1 Month/3 Months) restyled as a Material 3 segmented button from the M3 Design Kit .fig (40px pill, 1px outline, tonal selected + animated check, 8%/10% state layers); date-range button matched. Calendar dropdown list no longer scrolls the page (clicks missed).
+- Dashboard-wide Material 3 buttons: new src/styles/dashboard-m3.css (imported last in dashboard.tsx). db-btn = outlined 40px pill, db-primary = filled, is-on = tonal, db-danger = error outline, db-iconbtn = 40px round icon button, db-pills/db-seg = M3 segmented button with check, shadcn [data-slot=button] pill-shaped; 8%/10% state layers throughout.
+- M3 toolbars: TableFilter is now an M3 filter chip with a menu (outlined when "All", tonal + check + × when filtered, sort variant); TableSearch is a filled 40px search pill with clear. All flows gets Connection / Activity / Sort chips. Flow header Created chip, row icon buttons, replay, Test chips, states, switch (44×24 M3 shape), slider (M3 bar handle + gap), dropdown fields and menus restyled in dashboard-m3.css. PopoverContent takes `container` so chip menus portal inside .db.
+- Overview greets by first name ("Good evening, Ayush"); Settings drops "Your account.".
+- Calendar restyled like Google's M3 date picker: 40px round days, today = outlined ring, month/year left + arrows right.
+- Workflow editor: line style toggle (right-angle default / curves) saved in workflow.ui.edgeStyle; right-angle lines have a grip to drag the middle segment (saved in ui.bends, double-click resets, Tidy up resets); step menu 300px with foldable groups and a fold-to-icon-rail; settings panel 460px; clearer step descriptions.
+- Field grid alignment: every field = 20px label + 40px control (switch fields no longer boxed cards), slider value fixed-width, More settings left-aligned, search caret fixed.
+- Faces: uploads are copied to Cloudflare R2 (previews/faces/<uuid>.<ext>, media.preview + preview_type), served signed/public via playableUrl; Avatars page and flow Looks show the face (FaceMedia: video or photo). 10 older faces were also copied before the backfill was stopped.
+- Canvas: right-angle lines now have a grip on every inner segment (Z = one vertical; backward/opened lines = 3 grips; Shift-drag splits a Z), stored as ui.bends {x1,y,x2}; duplicate button on each card + Ctrl+D; zoom controls follow light/dark; palette hint removed and search spaced.
+- Date picker only goes back to the first session (or a year), not 1900.
+- Step settings: footer has labelled Copy JSON (code icon) / Duplicate / Delete (red), icon-only when "Make first step" shows; CopyJson uses a code icon everywhere. Prompt and "What to say" grow with text up to 50vh then scroll, with "Open large" morphing to a full-screen editor (motion layoutId, GrowArea.tsx). Say can be left empty (no speak key). Panel opens on More when Setup is empty but More has values. AI steps: one Model picker (provider+model), "What it decides" moved to More, Emotion style only when emotion is on. Branch paths show "→ step" chips that open the target.
+- Settings footer: tight row shows icons; hovering one slides its label open (others stay shut). AI step More tab grouped into cards: What it produces / What it remembers / Timing. Line × sits above the line, clear of grips; grips stack on top.
+- Test: LivePanel rebuilt — centred connecting stage with a microphone hint, then orb/face/chat glide into place (motion LayoutGroup). Layout picker beside the controls: voice (Voice / Voice + chat / Chat), face (left/right/only/chat + small face/chat), two-way camera (split/them big/only them/only me/them + chat); choice remembered per kind. Inline agent volume slider. "Try different settings" replaced by a "Settings for this test" side panel with tabs (Speaking, Listening, Turn-taking, More) covering voices (saved or full provider editor) and every flow knob, change counts and reset.
+- Avatar tab: loads faces only (getAvatars) instead of the whole account; face previews load one frame and play on hover.
+- Workflow editor: freshly opened workflows no longer read as unsaved (baseline now includes top-level keys), so the button says Test, not Save and test.
+- Test layouts reworked into kinds the tester shapes by hand: Side by side (drag divider to resize, ⇄ swaps sides), Floating (drag the window anywhere, corner to resize), Face only, Chat only; voice-only Voice / Voice + chat / Chat. Orb shown in a soft halo instead of scaled. Settings tabs share width (no scrollbar), settings button spans the row. SmoothCaret follows fields that move without scroll/resize and hides when they leave the page.
+- Floating face can go to the bottom (stage fills the panel; limit counts the window's height); the face in the floating window no longer springs behind the frame while dragging.
+- Chat tests: dashboard flows live on the GPU environment, so chat now goes to gpu.agent.voxio.in (VX_CHAT overrides) with the flow key as a flow_api_key header; chat.voxio.in returned 500 for these flows.
+- Agent data lines (frame etc.) are saved with test transcripts (TestTurn.data) and shown in session replays as "Agent · data"; the saved transcript wins over the server's words-only one when it has them.
+- Test chat: sending flies the message from the input into its bubble (Telegram-style, WAAPI, respects reduced motion); 'Say hello to start' removed.
+- Plan written: docs/AI_ASSISTANT_AND_VAD_PLAN.md (AI Assistant with read/write tools + VAD custom dashboards, data model, phases, open decisions). No code yet.
+- Plan: decisions recorded (own keys, multi-model, no connectors, state machine later); section 6 Read model added.
+- Assistant v1 (read-only) built: src/server/assistant/{redact,tools.server,models.server,loop.server}.ts, src/routes/api.assistant.ts (SSE reply, ?models, ?mention), src/components/assistant/{Assistant,Markdown}.tsx, src/styles/assistant.css; top-bar button + Ctrl/⌘K in dashboard.tsx. 15 read tools verified against the real account (redaction narrowed so `key` fields stay; web caller turns unwrapped). Needs OPENROUTER_API_KEY / GROQ_API_KEY / ANTHROPIC_API_KEY in .env. Route tree regenerated with `npx tsr generate` (no build, to keep the running server intact).
+- Assistant: OPENROUTER_API_KEY added to .env; partial flow names resolve when unique; answers follow the language of the user's sentence. End-to-end verified on Claude Sonnet and Gemini Flash via OpenRouter.
+- Assistant: Gemini 3.1 Flash Lite (OpenRouter) added as the default model; reply language pinned to the language of the user's own message (detected server-side).
+- Assistant answers: analyst-style instructions (answer first, what matters, what to do; no step-by-step narration), vx: refs in tool results rendered as clickable chips (GET /api/assistant?open= resolves them), ```chart blocks drawn with bklit (AnswerChart: bar/stacked/area) and only used when a picture helps; Telegram-style send animation in the panel.
+- Workflow validator: counts workflow variables and history_key as available, and only flags a silent AI step when nothing uses its answers. Removes the false warnings on 山本健二 (editor and Assistant both).
+- Assistant named "Ask Voxio": sidebar item (new `spark` icon) opening a full view at /dashboard/assistant; the side panel gains an expand button to it; both share one conversation (sync via storage + event). Empty full view shows the AsciiAssembly title ("ASK VOXIO") like sign-in/contact, with suggestion cards. On the full view the top-bar button and panel are hidden.
+- Ask Voxio full view: no boxed card (open on the page, soft input), Wide view toggle in the header (remembered) to use the whole width.
+- Ask Voxio can now change flows (v2, docs §8): propose_flow_settings / propose_voice / propose_step_settings / propose_add_step / propose_remove_step / propose_connections / propose_looks (src/server/assistant/changes.server.ts). Proposals are validated (knob catalog, workflow validator) and shown as change cards (before → after) with Apply / Discard, then Undo; apply refuses if the flow changed since. Saves go through the new shared applyFlowPatch (patchFlow now uses it too). Sessions stay read-only. Pending/applied changes kept in server memory for now. Verified: propose on 山本健二 greeting (not applied), apply + undo of a knob on Sample_6 (restored). Subtitle "Reads everything on your account" removed.
+- Build fix: applyFlowPatch/readFlowDoc in api.ts wrapped in createServerOnlyFn (api.ts is imported by pages; plain exports pulled flows.server into the client build). vite build passes.
+- Ask Voxio: @ mentions trigger after any non-letter (works after Japanese text/punctuation) and show "Looking…"/"Nothing called …"; full view scrolls with the page (one scrollbar) with the input sticky at the bottom; change cards say "Proposed change", the title, and where (flow › page › part) with an Open link, using the settings pages' own field names (Model, What to say, Speed…); Apply shows the thinking orb; replies refer to "the card above".
+- Ask Voxio @ list: arrow keys keep the highlight in view; short list (steps of the open flow first, recent flows; faces/voices/knowledge only when typed); sessions only for a precise query (6+ chars of a session ID, or 4+ digits of a caller number), max 3, with a hint line.
+- Font: Figtree everywhere (Google Fonts link in __root.tsx; site.css, dashboard, auth, docs, surfaces, styles.css, docs pages), system fonts as fallback.
+- VAD plan revised: no transcript extraction; values come from the workflow (agent-decided fields), new calls only, captured by a webhook collector that forwards to the user's own URL.
+- VAD plan simplified: user asks → Ask Voxio checks the workflow → suggests changes if needed → generates the VAD JSON; data read from the agent's state, no collector.
+- VAD full plan written (docs §9): ask → check workflow → suggest changes → generate VAD JSON; spec, widgets, metrics, runWidget, tools, pages, sharing, storage, build order.
+- VAD spec v1 (docs §10): JSON, fields, widgets, queries, full bklit chart list from upstream (14 charts incl. pie, ring, funnel, gauge, live line, scatter, radar, sankey), grid sizes, drag, adaptive resize, validation, VAD-key data endpoint, example.
+- VAD v1 built (widgets only): prisma `Dashboard` model (needs db push); src/lib/vad/spec.ts (spec types, per-type sizes, normalize/validate, starter); src/server/vad/query.server.ts (runWidget on built-in fields; agent.* → "waiting"; day buckets fixed to include today); src/routes/api.vad.ts (list/get/create/save/remove/rotateKey, widget data by owner login or hashed vad_ key with rate limit and masked caller); src/components/vad/{Widget,Dashboard}.tsx (kpi with change/goal/spark, line/area/bar incl. stacked/horizontal via bklit, sessions table opening the call, text; react-grid-layout 2.2.4 pinned: 12 cols, drag by grip, resize se/e/s within min/max, add/remove, save/cancel, stacked column < 768px); pages /dashboard/dashboards and /dashboard/dashboards/$dashId; sidebar "Dashboards"; src/styles/vad.css. Verified runWidget on real sessions (22 sessions, avg 59s, 100% completed, table rows, agent field waiting, bad spec rejected).
+- Ask Voxio: knows VAD = Voxio Agents Dashboard (not voice activity detection) and builds one instead of drawing charts in chat: new tools list_dashboards, get_dashboard, check_workflow_data, propose_dashboard (full spec, validated; card with widget list; Apply creates/updates, Undo deletes/restores) in src/server/assistant/dashboards.server.ts; vx:dash links. Verified: "Create a VAD for 山本健二" → card with 3 KPIs + chart + table. Spec validation hardened (query must be an object; own-key field check). Chat: follows new messages only when at the bottom (scrolls .db-main directly; keeps position on Apply); @ chips disappear when their text is deleted.
+
+- Workflow editor: Import / Export buttons beside Templates. Export dialog copies the JSON or downloads `<flow>.json`; Import dialog takes pasted JSON or an uploaded/dropped file, checks it, and replaces the canvas (unsaved; Undo restores). New `components/workflow/Transfer.tsx`.
+- Ask Voxio: change-card errors now show the real reason (missing `dashboards` table → run `npx prisma db push`) instead of "That didn't work."
+- Flows page: Import button (table toolbar and empty state) and an "Import JSON" tile in New flow, which creates the flow from pasted/uploaded JSON (createFlow takes an optional workflow). Each table row has an Export button (copy or download).
+- Docs: new "Build your agent" group (src/lib/docs/agent-pages.tsx): Workflows (JSON format, example, import/export, from code), Steps (every step + all settings + models + decided fields), Voice (every STT/TTS provider setting, emotion), Turn-taking (engine, reply timing, interruptions, inactivity), Avatar setup (faces, transitions, lip-sync). Setting tables are generated from registry/providers/knobs so they stay in sync.
+- Flow overview header: Export button next to Duplicate.
+- Docs nav is now multi-level: DocPage.parent, BranchedMenu draws sub-branches for the chosen page's children (all levels shown while searching). Server SDK pages nest under Server SDK.
+- "Build your agent" docs rewritten from the engine source as a tree: Workflows (How a call runs, Values and state, Patterns, Import/export/code), Steps (one page per step + AI settings), Voice (Listening/Speaking with one page per provider + Emotion), Turn-taking (Interruptions, When the caller goes quiet), Avatar setup (Faces and expressions, Lip-sync).
+- Fixed Filler's `variance` label/help: it's the chance of speaking (0–1), not "variety".
+- Ask Voxio chats saved in the DB: new `assistant_chats` + `assistant_messages` (Prisma `AssistantChat`, `AssistantMessage`). Each answer is stored whole: text, every tool call (input + result), change cards (status kept in step on Apply/Discard/Undo). The server saves the question before the model runs and the answer when the turn ends (also when stopped or the tab closes). `src/server/assistant/chats.server.ts`; API: GET `?chats=1`, `?chat=id`; POST `{chatAction}`; reply takes `chat` and emits a `chat` event with the id. Browser-only thread storage removed.
+- Sidebar: saved chats listed below Developers after a divider (newest first, open in full view via `?chat=`, delete with a second click, + for a new chat). `components/assistant/ChatList.tsx`.
+- Ask Voxio token use: tool results more than 2 steps old are shrunk to a short note before each call (they were resent in full every step); Anthropic prompt caching on system, tools and conversation; the answer footer shows how many tokens were cached.
+- Ask Voxio token diet (after research on Claude Code / Anthropic context engineering):
+  - A: proposals no longer require reads first (propose tools read, validate and diff server-side); mentions are read only when needed.
+  - B: the open flow's step outline (one line per step) goes in the system prompt, so no list_flows / get_workflow for "this flow".
+  - C: tools sent by group (core reads always; edit / dashboards / library by keyword or follow-up), plus `load_tools` for the model to add a group. Tool definitions per step ~3.0K → ~1.2K (reads) / ~2.2K (edits). Fixed order keeps the prompt cache warm.
+  - D: concise results: workflow outline trimmed, get_step shortens long prompts unless detail "full", get_flow lists only changed knobs, result cap 6000 → 3000 tokens.
+  - E: get_workflow carries the flow key/ref; with the brief, a typical edit is brief → propose → answer.
+  - F: footer shows "N new + M cached in · K out" (summary sent with `done`).
+- Ask Voxio: one reply's proposals to a flow stack into one card (each builds on the last; Apply saves all; card updates in place). A proposal the flow has moved past is marked "Out of date" with a note instead of an error. Prompt: finish the whole edit in one reply.
+
+## OSCE patient scenarios for SFBC (scripts/osce)
+- 9 hand-written Japanese simulated-patient cases on the Yamamoto workflow structure: Tohoku (Sendai), Vietnamese intern (N4), Saitama elderly + daughter, angry Hiroshima carpenter, Hakata care worker (female angina), Nagoya elderly + wife (subdural haematoma), Tokyo beginner (postpartum mood), Okinawa (diabetic foot), Nepali mother + husband interpreting.
+- `node scripts/osce/build.mjs` → `out/scenarios.json` (all, with variations + ElevenLabs eleven_v3 voice) and `out/<id>.json` (importable one by one).
+- Companion cases add a `speaker` field (patient/companion); voice IDs come from a third-party list of the ElevenLabs library and need checking.
+- Flows → Import now imports several flows at once: paste a list (or `{scenarios|flows|workflows: [...]}`) or upload several .json files; rename/untick each, then "Create N flows" (one by one, failures don't stop the rest, Retry). A `tts` block in an item (`service`, `model`, `voice`/`voice_id`) sets the flow's voice; `createFlow` accepts `tts` for known providers only. The New flow dialog's Import JSON tile stays single.
+- Fix: the import/export dialog styles (components/workflow/workflow.css) were never loaded; Transfer.tsx now imports them.
+- Flow → Avatar: "Add looks" takes several photos/clips at once. Each file's name (without extension) becomes the look's name (back_pain.mp4 → back_pain), editable before upload; a "main" file goes first when the flow has no looks. Uploads run one by one with per-file status; failed ones stay for a retry.
+- Avatar looks: preview clips pause while uploading; per-row status is a small orb (no "Finding the face" text); adding looks turns on "Show your agent's face on calls"; each non-default look has "Make default" (moves it to the top — the first look is the default).
+
+- OSCE scenarios: titles now "Japanese / English" (cases/*.mjs, build.mjs); out/ rebuilt.
+- Flows list: checkboxes + select-all; bulk Export (one JSON list multi-import reads back, with voice) and bulk Delete with confirm. ExportDialog takes optional `data`.
+- Flow Avatar: "Choose from your avatars" picker (multi-select grid from Avatars, search, in-use disabled); uploads here refresh the Avatars list (they were already saved there via /api/faces).
+- Avatars: delete is one click: card dims with a spinner at once, disappears on success (was silent until reload, so people clicked repeatedly).

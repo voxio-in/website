@@ -16,6 +16,13 @@ type Item = {
 };
 
 const ICONS = {
+  docs: (
+    <>
+      <path d="M4 4.6A1.6 1.6 0 0 1 5.6 3H15v12.4H5.6A1.6 1.6 0 0 0 4 17Z" />
+      <path d="M4 17a1.6 1.6 0 0 1 1.6-1.6H15V17" />
+      <path className="i-lines" d="M7.4 6.6h4.8M7.4 9.2h3.2" />
+    </>
+  ),
   home: (
     <>
       <path className="i-roof" d="M3.5 9.6 10 4l6.5 5.6" />
@@ -115,6 +122,7 @@ const COMPANY: Item[] = [
   { href: "/work", label: "Works", icon: "work", spy: ["work", "collaborations"] },
   { href: "/testimonials", label: "Testimonials", icon: "quote", spy: ["testimonials"] },
   { href: "/about", label: "About Us", icon: "info", spy: ["about"] },
+  { href: "/docs", label: "Docs", icon: "docs" },
 ];
 
 const PRODUCTS: Item[] = [

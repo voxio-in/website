@@ -18,6 +18,7 @@ export default function SiteFooter() {
           <Link to="/avatar">3d Avatar Agents</Link>
           <Link to="/webnav">Website Navigation</Link>
           <Link to="/contact">Contact us</Link>
+          <Link to="/docs">Docs</Link>
           <Link to="/privacy">Privacy</Link>
           <Link to="/terms">Terms</Link>
         </nav>

@@ -1,8 +1,15 @@
 /* Tailwind for the bklit charts only: theme + utilities, no preflight, and
    only the chart sources are scanned — so nothing leaks into the site. */
+@layer theme, base;
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
+/* Utilities are unlayered on purpose: site.css resets every element with an
+   unlayered `* { margin: 0; padding: 0 }`, and any unlayered rule beats every
+   layered one, so layered utilities lost all their spacing. Unlayered, a
+   class (0,1,0) beats `*` (0,0,0) as it should. */
+@import "tailwindcss/utilities.css" source(none);
 @source "../components/bklit";
+@source "../components/base-ui";
+@source "../components/dashboard/kit";
 
 /* bklit's dark: variants follow the dashboard theme. */
 @custom-variant dark (&:where(.db:not([data-theme="light"]), .db:not([data-theme="light"]) *));
@@ -73,3 +80,88 @@
    they follow the dashboard theme. */
 .db .text-chart-tooltip-foreground { color: var(--chart-tooltip-foreground); }
 .db .text-chart-tooltip-muted { color: var(--chart-foreground-muted); }
+
+/* Chart hover card: room to breathe on every side. */
+.db .bk-tip { padding: 12px 16px; min-width: 168px; }
+.db .bk-tip-title { margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--chart-tooltip-foreground); }
+.db .bk-tip-rows { display: flex; flex-direction: column; gap: 6px; }
+.db .bk-tip-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.db .bk-tip-key { display: flex; align-items: center; gap: 8px; }
+.db .bk-tip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.db .bk-tip-label { font-size: 14px; color: var(--chart-foreground-muted); }
+.db .bk-tip-value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--chart-tooltip-foreground); }
+
+/* ---------- shadcn / watermelon components (src/components/base-ui) ----------
+   Their colours are Tailwind tokens (bg-popover, bg-primary…). The site already
+   uses --accent, --muted, --border on :root, so the values live under --sh-*
+   and only Tailwind's --color-* names point at them. Popovers and dialogs are
+   portalled outside .db, which is why the values sit on :root and follow the
+   dashboard's light theme through :has(). */
+@theme inline {
+  --color-background: var(--sh-background);
+  --color-foreground: var(--sh-foreground);
+  --color-card: var(--sh-card);
+  --color-card-foreground: var(--sh-foreground);
+  --color-popover: var(--sh-popover);
+  --color-popover-foreground: var(--sh-foreground);
+  --color-primary: var(--sh-primary);
+  --color-primary-foreground: var(--sh-primary-foreground);
+  --color-secondary: var(--sh-secondary);
+  --color-secondary-foreground: var(--sh-foreground);
+  --color-muted: var(--sh-muted);
+  --color-muted-foreground: var(--sh-muted-foreground);
+  --color-accent: var(--sh-accent);
+  --color-accent-foreground: var(--sh-foreground);
+  --color-destructive: var(--sh-destructive);
+  --color-border: var(--sh-border);
+  --color-input: var(--sh-input);
+  --color-ring: var(--sh-ring);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+:root {
+  --sh-background: #072830;
+  --sh-foreground: #e8f3f4;
+  --sh-card: #072830;
+  --sh-popover: #0b3640;
+  --sh-primary: #5ee6c8;
+  --sh-primary-foreground: #02201a;
+  --sh-secondary: #0a3038;
+  --sh-muted: rgba(255, 255, 255, 0.06);
+  --sh-muted-foreground: rgba(232, 243, 244, 0.58);
+  --sh-accent: rgba(94, 230, 200, 0.12);
+  --sh-destructive: #ff7a7a;
+  --sh-border: rgba(255, 255, 255, 0.1);
+  --sh-input: rgba(255, 255, 255, 0.14);
+  --sh-ring: rgba(94, 230, 200, 0.6);
+}
+:root:has(.db[data-theme="light"]) {
+  --sh-background: #ffffff;
+  --sh-foreground: #0c2a30;
+  --sh-card: #ffffff;
+  --sh-popover: #ffffff;
+  --sh-primary: #0f9e83;
+  --sh-primary-foreground: #ffffff;
+  --sh-secondary: #f3f7f7;
+  --sh-muted: rgba(3, 30, 36, 0.05);
+  --sh-muted-foreground: rgba(12, 42, 48, 0.6);
+  --sh-accent: rgba(15, 158, 131, 0.1);
+  --sh-destructive: #d64545;
+  --sh-border: rgba(3, 30, 36, 0.12);
+  --sh-input: rgba(3, 30, 36, 0.16);
+  --sh-ring: rgba(15, 158, 131, 0.5);
+}
+
+/* No preflight here, so give the components the resets they assume — in the
+   base layer, below the utilities that style them. */
+@layer base {
+  :where([data-slot], [data-slot] *) { box-sizing: border-box; border-width: 0; border-style: solid; border-color: var(--sh-border); }
+  [data-slot] button, button[data-slot] { font: inherit; color: inherit; background: none; border: 0 solid var(--sh-border); cursor: pointer; }
+  [data-slot$="-content"]:focus { outline: none; }
+  [data-slot] svg { flex-shrink: 0; }
+  [data-slot] a { color: inherit; text-decoration: none; }
+  ol[data-slot], ul[data-slot], li[data-slot] { list-style: none; }
+}

@@ -22,10 +22,14 @@ function checkPassword(pw: string): string | null {
   return null
 }
 
+const SIGNUP_OFF: boolean = true
+
 export const signUp = createServerFn({ method: 'POST' })
   .inputValidator((d: { name: string; email: string; password: string }) => d)
   .handler(async ({ data }): Promise<AuthResult> => {
-    const name = String(data.name ?? '').trim().slice(0, 80)
+    // Sign-up is off for now; set SIGNUP_OFF to false to bring it back.
+    if (SIGNUP_OFF) return { ok: false, reason: 'Sign-up is closed. Ask your admin for an account.' }
+    const name =String(data.name ?? '').trim().slice(0, 80)
     const email = normEmail(String(data.email ?? ''))
     const password = String(data.password ?? '')
     if (!name) return { ok: false, reason: 'Tell us your name.', field: 'name' }

@@ -3,6 +3,8 @@
 // for which ones the clients read today. `encoding` and `sample-rate` are set
 // by the pipeline per surface, so they're deliberately not here.
 
+import type { ProviderConfig } from './types'
+
 export type Option = { value: string; label: string; hint?: string; /** Longer note shown beside the open dropdown. */ info?: string }
 
 export type ProviderField = {
@@ -108,12 +110,24 @@ const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 
 export const TTS_PROVIDERS: Provider[] = [
   {
+    service: 'deepgram', label: 'Deepgram Aura', blurb: 'Low-latency conversational voices',
+    defaults: { model: 'aura-2-thalia-en' },
+    fields: [
+      { key: 'model', label: 'Voice', kind: 'select', basic: true, default: 'aura-2-thalia-en', options: opts(
+        ['aura-2-thalia-en', 'Thalia', 'English · female'], ['aura-2-andromeda-en', 'Andromeda', 'English · female'], ['aura-2-athena-en', 'Athena', 'English · female'],
+        ['aura-2-luna-en', 'Luna', 'English · female'], ['aura-2-apollo-en', 'Apollo', 'English · male'], ['aura-2-orion-en', 'Orion', 'English · male'],
+        ['aura-2-agustina-es', 'Agustina', 'Spanish'], ['aura-2-fabian-de', 'Fabian', 'German'], ['aura-2-agathe-fr', 'Agathe', 'French'],
+        ['aura-2-cesare-it', 'Cesare', 'Italian'], ['aura-2-ama-ja', 'Ama', 'Japanese']), help: 'The voice callers hear.' },
+      { key: 'speed', label: 'Speed', kind: 'slider', basic: true, min: 0.7, max: 1.5, step: 0.05, default: 1, unit: '×', help: 'How fast the agent talks.' },
+    ],
+  },
+  {
     service: 'sarvam', label: 'Sarvam', blurb: 'Natural Indian voices',
-    defaults: { model: 'bulbul:v3', speaker: 'simran', language: 'en-IN' },
+    defaults: { model: 'bulbul:v3', voice: 'simran', language: 'en-IN' },
     fields: [
       { key: 'model', label: 'Model', kind: 'select', basic: true, default: 'bulbul:v3', options: opts(['bulbul:v3', 'Bulbul v3', 'Latest', '37 natural voices. Best for Indian-English and Hindi conversations.'], ['bulbul:v2', 'Bulbul v2', '', 'Fewer voices, but lets you tune pitch and loudness.']), help: 'Which voice model speaks. Hover an option to compare.' },
-      { key: 'speaker', label: 'Voice', kind: 'select', basic: true, default: 'simran', when: { key: 'model', test: isBulbul3 }, options: SARVAM_V3.map((v) => ({ value: v, label: cap(v) })), help: 'The voice callers hear.' },
-      { key: 'speaker', label: 'Voice', kind: 'select', basic: true, default: 'anushka', when: { key: 'model', test: isBulbul2 }, options: SARVAM_V2.map((v) => ({ value: v, label: cap(v) })), help: 'The voice callers hear.' },
+      { key: 'voice', label: 'Voice', kind: 'select', basic: true, default: 'simran', when: { key: 'model', test: isBulbul3 }, options: SARVAM_V3.map((v) => ({ value: v, label: cap(v) })), help: 'The voice callers hear.' },
+      { key: 'voice', label: 'Voice', kind: 'select', basic: true, default: 'anushka', when: { key: 'model', test: isBulbul2 }, options: SARVAM_V2.map((v) => ({ value: v, label: cap(v) })), help: 'The voice callers hear.' },
       { key: 'language', label: 'Language', kind: 'select', basic: true, default: 'en-IN', options: INDIC, help: 'The language the agent speaks in.' },
       { key: 'pace', label: 'Speed', kind: 'slider', basic: true, min: 0.5, max: 2, step: 0.05, default: 1, unit: '×', help: 'How fast the agent talks.' },
       { key: 'temperature', label: 'Expressiveness', kind: 'slider', min: 0.01, max: 1, step: 0.01, default: 0.6, when: { key: 'model', test: isBulbul3 }, help: 'Higher sounds livelier; lower sounds steadier.' },
@@ -139,18 +153,6 @@ export const TTS_PROVIDERS: Provider[] = [
       { key: 'style', label: 'Style', kind: 'slider', min: 0, max: 1, step: 0.05, default: 0, help: 'Exaggerates the voice style. Keep low for calls.' },
       { key: 'use-speaker-boost', label: 'Speaker boost', kind: 'bool', default: true, help: 'Sharper, more present voice.' },
       { key: 'apply-text-normalization', label: 'Normalise text', kind: 'select', default: 'auto', options: opts('auto', 'on', 'off'), help: 'Read numbers and abbreviations naturally.' },
-    ],
-  },
-  {
-    service: 'deepgram', label: 'Deepgram Aura', blurb: 'Low-latency conversational voices',
-    defaults: { model: 'aura-2-thalia-en' },
-    fields: [
-      { key: 'model', label: 'Voice', kind: 'select', basic: true, default: 'aura-2-thalia-en', options: opts(
-        ['aura-2-thalia-en', 'Thalia', 'English · female'], ['aura-2-andromeda-en', 'Andromeda', 'English · female'], ['aura-2-athena-en', 'Athena', 'English · female'],
-        ['aura-2-luna-en', 'Luna', 'English · female'], ['aura-2-apollo-en', 'Apollo', 'English · male'], ['aura-2-orion-en', 'Orion', 'English · male'],
-        ['aura-2-agustina-es', 'Agustina', 'Spanish'], ['aura-2-fabian-de', 'Fabian', 'German'], ['aura-2-agathe-fr', 'Agathe', 'French'],
-        ['aura-2-cesare-it', 'Cesare', 'Italian'], ['aura-2-ama-ja', 'Ama', 'Japanese']), help: 'The voice callers hear.' },
-      { key: 'speed', label: 'Speed', kind: 'slider', basic: true, min: 0.7, max: 1.5, step: 0.05, default: 1, unit: '×', help: 'How fast the agent talks.' },
     ],
   },
   {
@@ -193,4 +195,11 @@ export function describe(config: { service: string; [k: string]: unknown } | nul
     return opt?.label ?? (Array.isArray(v) ? v.join('/') : String(v))
   }
   return [p?.label ?? config.service, ...['speaker', 'voice', 'name', 'model', 'language'].map(label).filter(Boolean)].slice(0, 3).join(' · ')
+}
+
+/** Sarvam reads the voice from `voice` now; `speaker` is ignored. Moves an old config over. */
+export function tidyTts<T extends ProviderConfig | null | undefined>(config: T): T {
+  if (!config || config.service !== 'sarvam' || !('speaker' in config)) return config
+  const { speaker, ...rest } = config as ProviderConfig & { speaker?: unknown }
+  return { ...rest, voice: rest.voice ?? speaker } as unknown as T
 }

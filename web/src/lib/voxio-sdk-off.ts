@@ -19,6 +19,7 @@ export class VoxioServerError extends Error {
 }
 
 export const Voxio: any = class { constructor() { off() } }
+export type Voxio = any
 export const ChatbotLogic: any = class { constructor() { off() } }
 export const useVoxioSession: any = off
 export const createSession: any = off

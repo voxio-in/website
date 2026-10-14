@@ -1,6 +1,7 @@
 // A live conversation with an agent, in the page.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createSession, type ParticipantsGraph, type VoxioSession } from 'voxioagent/client'
 
 import { DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { demoById, type DemoId } from '#/lib/demos'
@@ -14,19 +15,21 @@ type Layout = 'split' | 'focus' | 'agent' | 'you'
 
 const MAX_RECONNECTS = 5
 
-/** Resolves when ICE gathering finishes, or after 5s — whichever comes first. */
-function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
-  if (pc.iceGatheringState === 'complete') return Promise.resolve()
-  return new Promise((resolve) => {
-    const done = () => {
-      pc.removeEventListener('icegatheringstatechange', check)
-      clearTimeout(timer)
-      resolve()
-    }
-    const check = () => pc.iceGatheringState === 'complete' && done()
-    const timer = setTimeout(done, 5000)
-    pc.addEventListener('icegatheringstatechange', check)
-  })
+/* The SDK's two setup requests, sent to /api/rtc-proxy instead of the voice
+   server, which adds the account key there. The placeholder key and its
+   headers never leave this site. */
+function proxyFetch(sessionId: string): typeof fetch {
+  return (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    const op = url.endsWith('/rtc/ice-servers') ? 'ice' : url.endsWith('/rtc/offer/audio') ? 'offer' : null
+    if (!op) return Promise.reject(new Error(`Unexpected request: ${url}`))
+    const q = new URLSearchParams({ op, session: sessionId })
+    return fetch(`/api/rtc-proxy?${q}`, {
+      method: init?.method ?? 'GET',
+      headers: op === 'offer' ? { 'content-type': 'application/json' } : undefined,
+      body: init?.body,
+    })
+  }
 }
 
 export default function VoiceRoom({
@@ -64,25 +67,15 @@ export default function VoiceRoom({
   const [scene, setScene] = useState<Scene>(EMPTY_SCENE)
   const [formDone, setFormDone] = useState(false)
 
-  const pcRef = useRef<RTCPeerConnection | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const voxioRef = useRef<VoxioSession | null>(null)
   const agentVideoRef = useRef<HTMLVideoElement>(null)
   const ownVideoRef = useRef<HTMLVideoElement>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const rafRef = useRef<number[]>([])
   const sessionRef = useRef<{ id: string; startedAt: number } | null>(null)
 
   const hangUp = useCallback((next: Phase = 'ended') => {
-    rafRef.current.forEach(cancelAnimationFrame)
-    rafRef.current = []
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
-    pcRef.current?.close()
-    pcRef.current = null
-    void audioCtxRef.current?.close().catch(() => {})
-    audioCtxRef.current = null
-    if (audioRef.current) audioRef.current.srcObject = null
+    const voxio = voxioRef.current
+    voxioRef.current = null
+    voxio?.destroy()
     if (agentVideoRef.current) agentVideoRef.current.srcObject = null
     if (ownVideoRef.current) ownVideoRef.current.srcObject = null
     setHasAgentVideo(false)
@@ -120,139 +113,73 @@ export default function VoiceRoom({
     return () => clearTimeout(t)
   }, [phase, left, hangUp])
 
-  /* One meter per stream: the agent's, so the orb moves, and yours, so the
-     room knows the moment you have taken your turn. */
-  const watchLevel = useCallback(
-    (stream: MediaStream, onLevel: (speaking: boolean) => void, gate = 10) => {
-      const ctx = audioCtxRef.current ?? new AudioContext()
-      audioCtxRef.current = ctx
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 512
-      analyser.smoothingTimeConstant = 0.7
-      ctx.createMediaStreamSource(stream).connect(analyser)
-
-      const data = new Uint8Array(analyser.frequencyBinCount)
-      const slot = rafRef.current.length
-      const tick = () => {
-        analyser.getByteFrequencyData(data)
-        let sum = 0
-        for (const v of data) sum += v
-        onLevel(sum / data.length > gate)
-        rafRef.current[slot] = requestAnimationFrame(tick)
-      }
-      rafRef.current[slot] = requestAnimationFrame(tick)
-    },
-    [],
-  )
-
+  /* The SDK runs the connection: ICE, offer, retries, levels and the data
+     channel (where a `hangup` from the agent ends the session). */
   const connect = useCallback(
-    async (config: Extract<RoomStart, { ok: true }>, wantsVideo: boolean) => {
-      let attempts = 0
+    (config: Extract<RoomStart, { ok: true }>, camera: boolean) => {
+      const voxio = createSession({
+        flowKey: config.apiKey,
+        endpoints: { voice: `https://${config.server}` },
+        sessionId: config.sessionId,
+        customs: config.customs as Record<string, unknown>,
+        participants: config.participants as unknown as ParticipantsGraph,
+        media: { audio: true, video: demo.video, camera },
+        webActions: false,
+        maxRetries: MAX_RECONNECTS,
+        env: config.proxy ? { fetch: proxyFetch(config.sessionId) } : undefined,
+      })
+      voxioRef.current = voxio
 
-      const attempt = async (stream: MediaStream): Promise<void> => {
-        let iceServers: RTCIceServer[] = []
-        for (let i = 0; i < 2; i++) {
-          try {
-            const r = await fetch(`https://${config.server}/rtc/ice-servers`, {
-              signal: AbortSignal.timeout(5000),
-              headers: { 'ngrok-skip-browser-warning': 'true' },
-            })
-            if (r.ok) {
-              iceServers = (await r.json()).ice_servers || []
-              break
-            }
-          } catch {
-          }
-          if (i === 0) await new Promise((r) => setTimeout(r, 800))
-        }
-
-        const pc = new RTCPeerConnection({ iceServers })
-        pcRef.current = pc
-        stream.getTracks().forEach((t) => pc.addTrack(t, stream))
-
-        pc.createDataChannel('chat')
-
-        pc.ontrack = (e) => {
-          const stream = e.streams[0]
-          if (!stream) return
-          if (e.track.kind === 'audio' && audioRef.current) {
-            audioRef.current.srcObject = stream
-            void audioRef.current.play().catch(() => {})
-            watchLevel(stream, setAgentSpeaking)
-          }
-          if (e.track.kind === 'video' && agentVideoRef.current) {
-            agentVideoRef.current.srcObject = stream
-            void agentVideoRef.current.play().catch(() => {})
-            setHasAgentVideo(true)
+      voxio.on('state', (state) => {
+        if (voxioRef.current !== voxio) return
+        if (state === 'connecting') setPhase('connecting')
+        // Back from a reconnect: the session and its clock carry on.
+        else if (sessionRef.current && state !== 'ended' && state !== 'error') setPhase('live')
+        if (state === 'listening' && !sessionRef.current) {
+          sessionRef.current = { id: config.sessionId, startedAt: Date.now() }
+          setPhase('live')
+          setLeft(config.maxSeconds)
+          const own = voxio.localStream
+          if (own?.getVideoTracks().length && ownVideoRef.current) {
+            ownVideoRef.current.srcObject = own
+            void ownVideoRef.current.play().catch(() => {})
+            setHasOwnVideo(true)
           }
         }
-
-        pc.onconnectionstatechange = () => {
-          const state = pc.connectionState
-          if (state === 'connected') {
-            attempts = 0
-            sessionRef.current = { id: config.sessionId, startedAt: Date.now() }
-            setPhase('live')
-            setLeft(config.maxSeconds)
-          }
-          if (state === 'failed' || state === 'disconnected') {
-            pc.close()
-            if (attempts < MAX_RECONNECTS) {
-              attempts++
-              setPhase('connecting')
-              setTimeout(() => void attempt(stream), Math.min(1000 * attempts, 5000))
-            } else {
-              setError('The connection dropped and would not come back.')
-              hangUp('failed')
-            }
-          }
-        }
-
-        const offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        await waitForIceGathering(pc)
-
-        const res = await fetch(`https://${config.server}/rtc/offer/audio`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            api_key: config.apiKey,
-            'ngrok-skip-browser-warning': 'true',
-          },
-          body: JSON.stringify({
-            sdp: pc.localDescription?.sdp,
-            type: pc.localDescription?.type,
-            participants: config.participants,
-            customs: config.customs,
-            session_id: config.sessionId,
-          }),
-        })
-        if (!res.ok) throw new Error(`offer rejected: ${res.status}`)
-        await pc.setRemoteDescription(new RTCSessionDescription(await res.json()))
-      }
-
-      let stream: MediaStream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: wantsVideo,
-        })
-      } catch (err) {
-        if (!wantsVideo) throw err
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      }
-      streamRef.current = stream
+        setAgentSpeaking(state === 'speaking')
+      })
       /* Your own level, on a higher gate than the agent's: this only has to
          catch you actually speaking, not the room you are sitting in. */
-      watchLevel(stream, setYouSpeaking, 16)
-      if (stream.getVideoTracks().length && ownVideoRef.current) {
-        ownVideoRef.current.srcObject = stream
-        void ownVideoRef.current.play().catch(() => {})
-        setHasOwnVideo(true)
-      }
-      await attempt(stream)
+      voxio.on('level', ({ user }) => setYouSpeaking(user > 0.12))
+      voxio.on('agentVideo', (stream) => {
+        if (!agentVideoRef.current) return
+        agentVideoRef.current.srcObject = stream
+        void agentVideoRef.current.play().catch(() => {})
+        setHasAgentVideo(true)
+      })
+      voxio.on('ended', ({ reason }) => {
+        if (voxioRef.current === voxio && reason === 'remote') hangUp('ended')
+      })
+      voxio.on('error', (err) => {
+        if (voxioRef.current !== voxio) return
+        /* No camera, or it was refused: carry on with the microphone alone. */
+        if (camera && (err.code === 'mic-denied' || err.code === 'no-device')) {
+          voxio.destroy()
+          connect(config, false)
+          return
+        }
+        setError(
+          err.code === 'mic-denied' || err.code === 'no-device'
+            ? 'We need your microphone for this one. Allow it and press start again.'
+            : err.code === 'connection-lost'
+              ? 'The connection dropped and would not come back.'
+              : 'We could not start the session. Try again in a moment.',
+        )
+        hangUp('failed')
+      })
+      void voxio.start()
     },
-    [hangUp, watchLevel],
+    [demo.video, hangUp],
   )
 
   const start = useCallback(async () => {
@@ -266,7 +193,7 @@ export default function VoiceRoom({
         return
       }
       setPhase('connecting')
-      await connect(config, demo.video)
+      connect(config, demo.video)
     } catch (err) {
       const denied =
         err instanceof DOMException &&
@@ -281,10 +208,10 @@ export default function VoiceRoom({
   }, [connect, demoId, accent])
 
   const toggleMute = () => {
-    const track = streamRef.current?.getAudioTracks()[0]
-    if (!track) return
-    track.enabled = !track.enabled
-    setMuted(!track.enabled)
+    const voxio = voxioRef.current
+    if (!voxio) return
+    voxio.mute(!voxio.muted)
+    setMuted(voxio.muted)
   }
 
   const live = phase === 'live'
@@ -362,8 +289,6 @@ export default function VoiceRoom({
 
   return (
     <div className="room">
-      <audio ref={audioRef} hidden />
-
       <div className={`room-stage${demo.video ? ' room-stage--video' : ''}`}>
         {demo.video ? (
           <div className={`stage stage--${layout}`}>

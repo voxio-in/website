@@ -33,7 +33,7 @@ button { font-family: inherit; }
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -311,7 +311,9 @@ body {
 .glass-bar--brand .logo { height: var(--nav-h); }
 .glass-bar--nav   { padding: 6px; flex: none; }
 /* the CTA pane is a glass frame around the button, so it keeps a tight margin */
-.glass-bar--cta   { padding: 6px; flex: none; }
+.glass-bar--cta   { padding: 6px; flex: none; display: flex; gap: 6px; }
+/* On narrow screens both buttons stay; they just get tighter. */
+@media (max-width: 640px) { .glass-bar--cta .header-cta { padding: 0 12px; font-size: 13px; } }
 /* The button inherits .btn's 6px radius, which leaves square corners poking
    out of a pill-shaped pane. Inside the CTA pane it has to be a pill too, and
    the pane's own radius has to clear it — otherwise the two curves fight. */

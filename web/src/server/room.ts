@@ -7,10 +7,15 @@ import { accentById, DEFAULT_ACCENT, type AccentId } from '#/lib/accents'
 import { demoById, type DemoId } from '#/lib/demos'
 import { db, withDb } from '#/server/db'
 import { buildRoomCustoms } from '#/server/voice/roomCustoms'
-import { SERVERS } from '#/server/voice/servers'
+import { AVATAR_VOICEBOT, SERVERS } from '#/server/voice/servers'
 import type { SceneBeat } from '#/server/voice/webhookPayload'
 
+
 const FLOW_API_KEY = process.env.VX_FLOW_API_KEY || ''
+/* The avatar demos run on the account key. It stays on the server: the room
+   gets a placeholder, and /api/rtc-proxy signs its two setup requests. */
+const HAS_AVATAR_KEY = !!(process.env.VOXIO_USER_API_KEY && process.env.VX_FLOW_API_KEY)
+const PROXIED = 'proxied'
 
 const MAX_PER_IP_PER_DAY = Number(process.env.ROOM_LIMIT_PER_IP_DAY) || 6
 export const ROOM_MAX_SECONDS = Number(process.env.ROOM_MAX_SECONDS) || 300
@@ -23,6 +28,8 @@ export type RoomStart =
       sessionId: string
       server: string
       apiKey: string
+      /** Send the setup requests through /api/rtc-proxy (the avatar demos). */
+      proxy: boolean
       customs: Json
       participants: Json
       maxSeconds: number
@@ -56,9 +63,9 @@ export const startRoomSession = createServerFn({ method: 'POST' })
     const isPageDriver = id.startsWith('wa-')
     const demo = isPageDriver ? null : demoById(id)
     const video = demo?.video ?? false
-    const server = video ? SERVERS.voicebotGpu : SERVERS.voicebot
+    const server = video ? AVATAR_VOICEBOT : SERVERS.voicebot
 
-    if (!FLOW_API_KEY || !server) {
+    if (!(video ? HAS_AVATAR_KEY : FLOW_API_KEY) || !server) {
       return {
         ok: false,
         reason: video
@@ -99,7 +106,8 @@ export const startRoomSession = createServerFn({ method: 'POST' })
       ok: true,
       sessionId: row.id,
       server,
-      apiKey: FLOW_API_KEY,
+      apiKey: video ? PROXIED : FLOW_API_KEY,
+      proxy: video,
       customs: buildRoomCustoms(
         (isPageDriver ? id : demo!.id) as DemoId,
         webhookUrl,

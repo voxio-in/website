@@ -1,4 +1,4 @@
-import { Link, createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
+import { /* Link, */ createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { AuthField, AuthLayout, safeNext } from '#/components/auth/AuthPage'
@@ -41,7 +41,10 @@ function Login() {
 
   return (
     <AuthLayout title="Welcome back" sub="Log in to manage your voice agents."
-      foot={<>New to Voxio? <Link to="/signup" search={next ? { next } : {}}>Create an account</Link></>}>
+      // Sign-up is off for now; restore this to bring it back.
+      foot={null}
+      // foot={<>New to Voxio? <Link to="/signup" search={next ? { next } : {}}>Create an account</Link></>}
+    >
       <form className="au-form" onSubmit={submit} noValidate>
         {err && <div className="au-alert" role="alert">{err}</div>}
         <AuthField label="Email or username" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} />

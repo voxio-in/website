@@ -40,6 +40,10 @@ export type Field = {
   options?: { value: string; label: string; hint?: string; info?: string }[]
   advanced?: boolean
   placeholder?: string
+  /** Only shown while this other (yes/no) setting is on. */
+  requires?: string
+  /** Groups fields under a heading in the settings panel. */
+  section?: 'output' | 'memory' | 'timing'
 }
 
 export type OutMode = 'single' | 'mappings' | 'none'
@@ -77,10 +81,8 @@ export const PROVIDERS = [
 
 export const MODELS: Record<string, { value: string; label: string; hint?: string; info?: string }[]> = {
   groq: [
-    { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', hint: 'Balanced', info: 'Good all-rounder for conversations. Fast and capable.' },
     { value: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', hint: 'Smartest', info: 'Best at following long instructions. A little slower.' },
     { value: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', hint: 'Quick', info: 'Very fast. Great for short acknowledgements like “Got it”.' },
-    { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B', hint: 'Fastest', info: 'Tiny and instant. Only for very simple replies.' },
   ],
   openrouter: [
     { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', hint: 'Fast', info: 'Quick and good at many languages.' },
@@ -118,24 +120,23 @@ const EMOTION_STYLES = [{ value: 'eleven_v3', label: 'ElevenLabs v3', info: 'Add
 
 const brain: Field[] = [
   { key: 'system_prompt', label: 'Instructions', kind: 'prompt', help: 'Tell the agent who it is, what to do and how to talk.', placeholder: 'You are a friendly receptionist for…' },
-  { key: 'service', label: 'AI provider', kind: 'select', options: PROVIDERS, help: 'Which company runs the model.' },
-  { key: 'model', label: 'Model', kind: 'model', help: 'Hover an option to compare.' },
-  { key: 'llm_return_type', label: 'What it decides', kind: 'schema', help: 'Things the AI fills in every turn. The spoken reply is what the caller hears; the rest goes to your webhook.' },
+  { key: 'model', label: 'Model', kind: 'model', help: 'Which AI writes the reply. The provider comes with it.' },
+  { key: 'llm_return_type', label: 'What it decides', kind: 'schema', advanced: true, section: 'output', help: 'Things the AI fills in every turn. The spoken reply is what the caller hears; the rest goes to your webhook.' },
 ]
 const memory: Field[] = [
-  { key: 'input_variables', label: 'What it reads', kind: 'schema', advanced: true, help: 'Information from earlier steps the AI can use.' },
-  { key: 'history_key', label: 'Shared memory', kind: 'text', advanced: true, help: 'Steps with the same name here remember the same conversation.' },
-  { key: 'summariser', label: 'Summarise long calls', kind: 'bool', advanced: true, help: 'Keeps long conversations quick by summarising older turns.' },
+  { key: 'input_variables', label: 'What it reads', kind: 'schema', advanced: true, section: 'memory', help: 'Information from earlier steps the AI can use.' },
+  { key: 'history_key', label: 'Shared memory', kind: 'text', advanced: true, section: 'memory', help: 'Steps with the same name here remember the same conversation.' },
+  { key: 'summariser', label: 'Summarise long calls', kind: 'bool', advanced: true, section: 'memory', help: 'Keeps long conversations quick by summarising older turns.' },
 ]
 const emotion: Field[] = [
   { key: 'emotion', label: 'Add emotion', kind: 'bool', help: 'Lets the voice sound happy, calm or excited where it fits.' },
-  { key: 'emotion_tts', label: 'Emotion style', kind: 'select', options: EMOTION_STYLES, help: 'Which voice understands the emotion cues.' },
+  { key: 'emotion_tts', label: 'Emotion style', kind: 'select', options: EMOTION_STYLES, requires: 'emotion', help: 'Which voice understands the emotion cues.' },
 ]
 
 const aiDefaults = {
   system_prompt: '',
   service: 'groq',
-  model: 'llama-3.3-70b-versatile',
+  model: 'openai/gpt-oss-120b',
   prompt_template: 'base_llm',
   input_variables: { user_input: { type: 'str', description: 'What the caller said.' } },
   llm_return_type: {
@@ -167,7 +168,7 @@ const modelName = (p: Record<string, unknown>) => MODELS[String(p.service)]?.fin
 export const NODE_SPECS: NodeSpec[] = [
   {
     type: 'out', label: 'Say', group: 'Conversation', icon: 'voice', color: '#5ee6c8', hue: 165, glyph: '❝',
-    blurb: 'Say a fixed line, like a greeting or goodbye.',
+    blurb: 'Speaks a line you write: greetings, confirmations, goodbyes. Can also speak what an AI decision wrote.',
     out: 'single',
     fields: [
       { key: 'out_dict', label: 'What to say', kind: 'speak', placeholder: 'Hi! Thanks for calling…' },
@@ -185,7 +186,7 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'input', label: 'Listen', group: 'Conversation', icon: 'phone', color: '#7aa9ff', hue: 215, glyph: '◉',
-    blurb: 'Wait for the caller to speak, and keep what they said.',
+    blurb: 'Waits until the caller finishes talking, then saves their words for the next step.',
     out: 'single',
     fields: [{ key: 'input_variables', label: 'Save what they say as', kind: 'listen', help: 'The name later steps use to read the caller’s answer. Almost always “What the caller said”.' }],
     defaults: { input_variables: { user_input: 'str' } },
@@ -196,11 +197,11 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'random-speak-out', label: 'Filler', group: 'Conversation', icon: 'list', color: '#8fd3ff', hue: 200, glyph: '≈',
-    blurb: 'Say a quick “one moment…” while something happens.',
+    blurb: 'Plays a short “one moment…” so the caller isn’t left in silence while a slow step works.',
     out: 'single',
     fields: [
       { key: 'phrases', label: 'Phrases', kind: 'list', help: 'One is picked at random each time.' },
-      { key: 'variance', label: 'Variety', kind: 'number', advanced: true, help: 'Higher mixes the phrases up more.' },
+      { key: 'variance', label: 'Chance to speak', kind: 'number', advanced: true, help: 'How often it says anything, from 0 (never) to 1 (every time). 0.5 speaks about half the time.' },
     ],
     defaults: { phrases: ['One moment…', 'Let me check that.'], variance: 1.0 },
     summary: (p) => {
@@ -210,16 +211,16 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'llm-streaming', label: 'AI reply', group: 'AI', icon: 'bolt', color: '#c79bff', hue: 270, glyph: '✦',
-    blurb: 'Let the AI answer, speaking as it thinks.',
+    blurb: 'The AI answers out loud, word by word, so the caller hears it sooner. Best for normal chat.',
     out: 'single',
     fields: [...brain, interrupt, ...memory,
-      { key: 'stream_timeout', label: 'Give up after', kind: 'seconds', advanced: true, help: 'When two AI replies race, drop this one if it takes longer than this.' }],
+      { key: 'stream_timeout', label: 'Give up after', kind: 'seconds', advanced: true, section: 'timing', help: 'When two AI replies race, drop this one if it takes longer than this.' }],
     defaults: aiDefaults,
     summary: (p) => (String(p.system_prompt ?? '').trim() ? `${modelName(p)} · ${clip(p.system_prompt, 52)}` : `${modelName(p)} · no instructions yet`),
   },
   {
     type: 'llm', label: 'AI decision', group: 'AI', icon: 'check', color: '#e0a3ff', hue: 285, glyph: '✧',
-    blurb: 'Let the AI think it through before answering.',
+    blurb: 'The AI thinks first and fills in fields (a reply, “end the call”…). Silent: follow it with Say or Branch.',
     out: 'single',
     fields: [...brain, ...emotion, ...memory],
     defaults: aiDefaults,
@@ -227,7 +228,7 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'llm_webnavigation', label: 'Guide on website', group: 'AI', icon: 'cursor', color: '#ff9ecb', hue: 320, glyph: '⌖',
-    blurb: 'Talk while clicking and scrolling the caller’s web page.',
+    blurb: 'Talks the caller through your website while scrolling and clicking it for them.',
     out: 'single',
     fields: [...brain.filter((f) => f.key !== 'llm_return_type'), ...emotion, ...memory],
     defaults: { ...aiDefaults, prompt_template: 'web_navigation', llm_return_type: undefined },
@@ -236,7 +237,7 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'conditional', label: 'Branch', group: 'Logic', icon: 'flows', color: '#ffc670', hue: 38, glyph: '⑂',
-    blurb: 'Go different ways depending on an answer.',
+    blurb: 'Sends the call down a different path based on a value, like an AI decision’s yes or no.',
     out: 'mappings',
     fields: [
       { key: 'input_variables', label: 'Decide on', kind: 'decideon', help: 'Something an earlier step decided, like End the call.' },
@@ -250,7 +251,9 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'rag', label: 'Look up knowledge', group: 'Knowledge', icon: 'book', color: '#6fe3a1', hue: 145, glyph: '▤',
-    blurb: 'Find the answer in your documents or website.',
+    blurb: 'Searches your documents or website and hands what it finds to the next AI step.',
+    // Knowledge is hidden for now: not offered for new steps, existing ones still open.
+    hidden: true,
     out: 'single',
     fields: lookup,
     defaults: { input_variables: { user_input: 'str' }, output_variables: ['context'], top_k: 5, entities: ['text'] },
@@ -258,7 +261,7 @@ export const NODE_SPECS: NodeSpec[] = [
   },
   {
     type: 'rag_shopify', label: 'Search catalog', group: 'Shopify', icon: 'search', color: '#9be15d', hue: 95, glyph: '⛁',
-    blurb: 'Answer from your Shopify products.',
+    blurb: 'Searches your Shopify products so the next AI step can answer about them.',
     out: 'single',
     fields: [
       ...lookup,

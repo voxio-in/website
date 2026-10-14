@@ -76,7 +76,7 @@
 .db-chartcard-title { font-size: 16.5px; color: var(--db-muted); font-weight: 500; }
 .db-chartcard-total { font-size: 30px; font-weight: 650; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .db-chartcard-total small { font-size: 16.5px; font-weight: 500; color: var(--db-muted); letter-spacing: 0; }
-.db-chartcard-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.db-chartcard-controls { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .db-chartcard-empty { color: var(--db-muted); padding: 60px 0; text-align: center; }
 
 .db-pills { display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px; background: rgb(var(--sunk) / 0.25); border: 1px solid var(--hair); }
@@ -409,3 +409,9 @@ button.db-row:hover { background: rgb(var(--ink) / 0.03); }
 /* Light theme: pills and the active tab read as white cards on a pale track. */
 .db[data-theme="light"] .db-pills, .db[data-theme="light"] .db-seg { background: #eaf1f2; }
 .db[data-theme="light"] .db-pills button.is-on { background: #ffffff; color: var(--db-text); box-shadow: 0 1px 3px rgba(3, 30, 36, 0.12); }
+
+/* Dialogs that morph from their button (Dialog with layoutId): Motion animates
+   them, so the CSS pop is off, and the inner wrapper keeps the dialog's layout. */
+.db-dialog.is-morph { animation: none; }
+.db-dialog-morph { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+.db-dialog-backdrop:has(.db-dialog.is-morph) { animation: none; }

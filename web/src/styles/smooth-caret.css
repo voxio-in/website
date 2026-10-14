@@ -1,0 +1,9 @@
+/* SmoothCaret: the drawn caret that glides between positions, like Word. */
+.smooth-caret {
+  display: none; position: fixed; top: 0; left: 0; z-index: 2147483000;
+  width: 2px; border-radius: 1px; pointer-events: none;
+  will-change: transform;
+}
+.smooth-caret.is-gliding { transition: transform 0.09s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.09s ease; }
+.smooth-caret.is-blinking { animation: smooth-caret-blink 1.06s steps(1, end) infinite; }
+@keyframes smooth-caret-blink { 50% { opacity: 0; } }

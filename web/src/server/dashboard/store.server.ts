@@ -16,7 +16,9 @@ import type { Prisma } from '@prisma/client'
 
 import type { Account, Avatar, Delivery, FlowDoc, KnowledgeBase, ProviderConfig, Session, VoicePreset, WebActionEvent } from '#/lib/dashboard/types'
 import { TEMPLATES } from '#/lib/workflow/templates'
+import { withStart } from '#/lib/workflow/convert'
 import { db, withDb } from '#/server/db'
+import { playableUrl } from '#/server/r2.server'
 import type { AuthUser } from '#/server/session.server'
 
 /** Extras for flows served from the voice backend. Not persisted: our tables are the source of truth now. */
@@ -26,6 +28,13 @@ export type Store = {
   account: Account
   flows: Record<string, FlowDoc>
   overlays: Record<string, Overlay>
+  /**
+   * Flows the user deleted. Deleting keeps the row (its sessions and logs
+   * cascade with it otherwise), kills its key and stamps `deleted_at` in its
+   * runtime; it leaves the flows list but its sessions still count.
+   * Read-only: `save` never writes it.
+   */
+  deleted?: Record<string, { name: string; deletedAt: string; sessions: Session[] }>
 }
 
 export const newKey = (prefix = 'vx') => `${prefix}_${randomBytes(18).toString('base64url')}`
@@ -92,12 +101,18 @@ function toStore(u: UserRow): Store {
     })),
     avatars: u.faces.map((f) => {
       const clip = f.clip as { frames?: number; fps?: number }
-      return { uuid: f.uuid, label: f.label, detector: f.detector as Avatar['detector'], frames: clip.frames ?? 0, fps: clip.fps ?? 25, created_at: f.createdAt.toISOString(), preview: (f.media as { preview?: string }).preview }
+      return { uuid: f.uuid, label: f.label, detector: f.detector as Avatar['detector'], frames: clip.frames ?? 0, fps: clip.fps ?? 25, created_at: f.createdAt.toISOString(), preview: playableUrl((f.media as { preview?: string }).preview), previewType: (f.media as { preview_type?: 'image' | 'video' }).preview_type }
     }),
     integrations: (u.integrations ?? []) as Account['integrations'],
   }
   const flows: Record<string, FlowDoc> = {}
+  const deleted: NonNullable<Store['deleted']> = {}
   for (const f of u.flows) {
+    const deletedAt = (f.runtime as { deleted_at?: string } | null)?.deleted_at
+    if (deletedAt) {
+      deleted[f.apiKey] = { name: f.flowName, deletedAt, sessions: f.sessions.map(toSession) }
+      continue
+    }
     flows[f.apiKey] = {
       integrations: [], 'web-actions': [],
       ...(f.runtime as Record<string, unknown>),
@@ -118,7 +133,7 @@ function toStore(u: UserRow): Store {
       deliveries: f.deliveries.map((d) => ({ id: d.id, at: d.at.toISOString(), event: d.event, url: d.url, status: d.status, ms: d.ms, attempt: d.attempt, request: d.request, response: d.response ?? undefined })),
     } as FlowDoc
   }
-  return { account, flows, overlays: {} }
+  return { account, flows, overlays: {}, deleted }
 }
 
 // Neon is ~0.5s per round trip, and every dashboard tab reads the whole
@@ -260,7 +275,7 @@ async function save(userId: string, before: Store, after: Store) {
       ops.push(db.flow.create({
         data: {
           apiKey: key, user: connectUser, createdAt: f.created_at ? date(f.created_at) : undefined, ...flowColumns(f),
-          agent: { create: { user: connectUser, workflow: json(f.workflow), webhookUrl: f['webhook-url'] ?? '' } },
+          agent: { create: { user: connectUser, workflow: json(withStart(f.workflow)), webhookUrl: f['webhook-url'] ?? '' } },
           stt: voice(f.stt), tts: voice(f.tts),
           sessions: { create: f.sessions.map(sessionData) },
           deliveries: { create: (f.deliveries ?? []).map(deliveryData) },
@@ -271,7 +286,7 @@ async function save(userId: string, before: Store, after: Store) {
     const data: Prisma.FlowUpdateInput = {}
     if (!same(flowColumns(f), flowColumns(prev))) Object.assign(data, flowColumns(f))
     if (!same(f.workflow, prev.workflow) || f['webhook-url'] !== prev['webhook-url']) {
-      data.agent = { update: { workflow: json(f.workflow), webhookUrl: f['webhook-url'] ?? '' } }
+      data.agent = { update: { workflow: json(withStart(f.workflow)), webhookUrl: f['webhook-url'] ?? '' } }
     }
     for (const k of ['stt', 'tts'] as const) {
       if (same(f[k], prev[k])) continue
@@ -329,6 +344,24 @@ export async function mutate<T>(user: AuthUser, fn: (s: Store) => T): Promise<T>
   // most of the time a save took.
   cache.set(user.id, { at: Date.now(), store: structuredClone(after) })
   return out
+}
+
+/**
+ * Mark a flow deleted without removing it: its sessions and webhook logs
+ * cascade on a real delete, and the user wants to keep them. Its numbers are
+ * detached so they can go on another flow. The caller kills the key first.
+ */
+export async function markFlowDeleted(user: AuthUser, key: string) {
+  forget(user.id)
+  await withDb(async () => {
+    const f = await db.flow.findFirst({ where: { apiKey: key, userId: user.id }, select: { id: true, runtime: true } })
+    if (!f) throw new Error('Flow not found.')
+    const runtime = { ...((f.runtime as Record<string, unknown> | null) ?? {}), deleted_at: new Date().toISOString() }
+    await db.$transaction([
+      db.flow.update({ where: { id: f.id }, data: { runtime: json(runtime) } }),
+      db.phoneNumber.updateMany({ where: { flowApiKey: key }, data: { flowApiKey: null, attachedAt: null } }),
+    ])
+  })
 }
 
 /** Move a flow to a new key; its numbers follow via ON UPDATE CASCADE. */
@@ -456,7 +489,7 @@ export function blankFlow(key: string, name: string, workflow = structuredClone(
     workflow,
     'webhook-url': '',
     stt: { service: 'deepgram-streaming', model: 'nova-3', language: 'en-IN' },
-    tts: { service: 'sarvam', speaker: 'simran', language: 'en-IN' },
+    tts: { service: 'deepgram', model: 'aura-2-thalia-en' },
     kbs: [],
     faces: { version: null, expressions: [], transitions: [] },
     vision_id: null,

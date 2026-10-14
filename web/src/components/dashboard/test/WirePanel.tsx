@@ -10,7 +10,8 @@ import type { WireEntry } from './wire'
 const PEEK_MS = 5000
 const secs = (ms: number) => (ms < 1000 ? `${Math.max(0, Math.round(ms))}ms` : `${(ms / 1000).toFixed(1)}s`)
 
-export default function WirePanel({ entries, onClear }: { entries: WireEntry[]; onClear: () => void }) {
+/** `onClear` is left out for a saved log, which can only be read. */
+export default function WirePanel({ entries, onClear }: { entries: WireEntry[]; onClear?: () => void }) {
   const [filter, setFilter] = useState<'all' | 'out' | 'in'>('all')
   const [pinned, setPinned] = useState<Set<number>>(() => new Set())
   const [peek, setPeek] = useState<Set<number>>(() => new Set())
@@ -75,7 +76,7 @@ export default function WirePanel({ entries, onClear }: { entries: WireEntry[]; 
         </div>
         <span className="db-wire-tools">
           <button className="db-iconbtn" onClick={copy} title="Copy" aria-label="Copy the log"><Icon name={copied ? 'check' : 'copy'} size={16} /></button>
-          <button className="db-iconbtn" onClick={onClear} title="Clear" aria-label="Clear the log"><Icon name="trash" size={16} /></button>
+          {onClear && <button className="db-iconbtn" onClick={onClear} title="Clear" aria-label="Clear the log"><Icon name="trash" size={16} /></button>}
         </span>
       </div>
       <p className="db-wire-hint">Click any row to see its JSON. The time on a received row is how long after its request it arrived.</p>

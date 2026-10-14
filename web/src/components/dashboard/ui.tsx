@@ -1,11 +1,13 @@
 // Shared dashboard building blocks.
 
 import { BorderBeam } from 'border-beam'
+import { motion, useReducedMotion } from 'motion/react'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
 import { billedMinutes } from '#/lib/dashboard/client'
 import type { FlowDoc, Session } from '#/lib/dashboard/types'
+import { toast } from '#/components/ui/halo-toast'
 import Icon, { type IconName } from './Icon'
 
 // ------------------------------------------------------------ theme · AI glow · loading
@@ -81,13 +83,23 @@ export function SaveBar({ dirty, status, onSave, onReset }: {
   onSave: () => void
   onReset: () => void
 }) {
+  // The result of a save is announced as a toast; the bar itself only says
+  // "Saving…" or "Unsaved changes".
+  useEffect(() => {
+    if (status.kind === 'ok') toast.success(status.text && status.text !== 'Saved' ? 'Saved' : 'Changes saved', status.text && status.text !== 'Saved' ? status.text : undefined)
+    if (status.kind === 'err') toast.error('Couldn’t save', status.text)
+  }, [status])
+  const saving = status.kind === 'saving'
   return (
     <div className={`db-savebar${dirty ? ' is-dirty' : ''}`}>
-      <span className={`db-savemsg is-${status.kind}`}>
-        {status.kind === 'saving' ? <Loading inline label="Saving…" /> : status.text ?? (dirty ? 'Unsaved changes' : '')}
+      <span className={`db-savemsg is-${status.kind}`}>{dirty && status.kind !== 'saving' ? 'Unsaved changes' : ''}</span>
+      {/* Discard + Save as one group; while saving, the orb sits inside Save. */}
+      <span className="db-btngroup db-savegroup" role="group" aria-label="Save changes">
+        <button className="db-gbtn" onClick={onReset} disabled={!dirty || saving}>Discard</button>
+        <button className="db-gbtn is-lead" onClick={onSave} disabled={!dirty || saving} aria-busy={saving}>
+          {saving && <ThinkingOrb state="working" size={20} />}{saving ? 'Saving' : 'Save'}
+        </button>
       </span>
-      <button className="db-btn" onClick={onReset} disabled={!dirty}>Discard</button>
-      <button className="db-btn db-primary" onClick={onSave} disabled={!dirty || status.kind === 'saving'}>Save</button>
     </div>
   )
 }
@@ -180,7 +192,7 @@ export function rowLink(go: () => void) {
 }
 
 /** A centred modal. Esc or a click on the backdrop closes it. */
-export function Dialog({ title, sub, onClose, children, wide, big, actions }: {
+export function Dialog({ title, sub, onClose, children, wide, big, actions, layoutId }: {
   title: string
   sub?: React.ReactNode
   onClose: () => void
@@ -190,29 +202,57 @@ export function Dialog({ title, sub, onClose, children, wide, big, actions }: {
   big?: boolean
   /** Buttons beside the close button. */
   actions?: React.ReactNode
+  /**
+   * Morph from the button that opened it (after Cult UI's Expandable Screen):
+   * give that button the same layoutId, and render this inside AnimatePresence.
+   */
+  layoutId?: string
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+  const reduce = useReducedMotion()
+  const cls = `db-dialog${wide ? ' is-wide' : ''}${big ? ' is-big' : ''}`
+  if (layoutId) {
+    return (
+      <motion.div className="db-dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.25 }}>
+        <motion.div className={`${cls} is-morph`} role="dialog" aria-modal="true" aria-label={title}
+          layoutId={reduce ? undefined : layoutId} style={{ borderRadius: 24 }} transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}>
+          <motion.div className="db-dialog-morph" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ delay: reduce ? 0 : 0.12, duration: reduce ? 0 : 0.25 }}>
+            <DialogHead title={title} sub={sub} actions={actions} onClose={onClose} />
+            {children}
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    )
+  }
   return (
     <div className="db-dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`db-dialog${wide ? ' is-wide' : ''}${big ? ' is-big' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
-        <div className="db-dialog-head">
-          <div>
-            <h2 className="db-h2">{title}</h2>
-            {sub && <p className="db-dialog-sub">{sub}</p>}
-          </div>
-          <span className="db-dialog-actions">
-            {actions}
-            <button className="db-iconbtn" onClick={onClose} aria-label="Close">
-              <Icon name="close" size={20} />
-            </button>
-          </span>
-        </div>
+      <div className={cls} role="dialog" aria-modal="true" aria-label={title}>
+        <DialogHead title={title} sub={sub} actions={actions} onClose={onClose} />
         {children}
       </div>
+    </div>
+  )
+}
+
+function DialogHead({ title, sub, actions, onClose }: { title: string; sub?: React.ReactNode; actions?: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="db-dialog-head">
+      <div>
+        <h2 className="db-h2">{title}</h2>
+        {sub && <p className="db-dialog-sub">{sub}</p>}
+      </div>
+      <span className="db-dialog-actions">
+        {actions}
+        <button className="db-iconbtn" onClick={onClose} aria-label="Close">
+          <Icon name="close" size={20} />
+        </button>
+      </span>
     </div>
   )
 }
@@ -250,6 +290,62 @@ export function Notice({ kind = 'info', children }: { kind?: 'info' | 'ok' | 'er
 // ------------------------------------------------------------ usage + charts
 
 export type DayBucket = { day: string; sessions: number; minutes: number; ai: number }
+
+/**
+ * A date range: one of the presets (last 7, 30 or 90 days) or a custom start and
+ * end, each `YYYY-MM-DD` (the whole day) or `YYYY-MM-DDTHH:mm` (from/until that time).
+ */
+export type Range = { preset: 7 | 30 | 90 } | { from: string; to: string }
+
+const dayStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** The first and last day of a range, local time, as midnight dates. */
+export function rangeDays(r: Range): { from: Date; to: Date } {
+  if ('preset' in r) {
+    const to = new Date(); to.setHours(0, 0, 0, 0)
+    return { from: new Date(to.getTime() - (r.preset - 1) * 864e5), to }
+  }
+  const a = new Date(`${r.from.slice(0, 10)}T00:00:00`), b = new Date(`${r.to.slice(0, 10)}T00:00:00`)
+  return a <= b ? { from: a, to: b } : { from: b, to: a }
+}
+
+/** The exact window a range covers, in ms: [start, end). A day without a time is the whole day. */
+export function rangeSpan(r: Range): { start: number; end: number } {
+  if ('preset' in r) {
+    const { from, to } = rangeDays(r)
+    return { start: from.getTime(), end: to.getTime() + 864e5 }
+  }
+  const start = (s: string) => new Date(s.length > 10 ? `${s}:00` : `${s}T00:00:00`).getTime()
+  const end = (s: string) => (s.length > 10 ? new Date(`${s}:00`).getTime() + 6e4 : new Date(`${s}T00:00:00`).getTime() + 864e5)
+  const [a, b] = r.from <= r.to ? [r.from, r.to] : [r.to, r.from]
+  return { start: start(a), end: end(b) }
+}
+
+/** Whether a session started inside the range. */
+export function inRange(r: Range, iso: string): boolean {
+  const { start, end } = rangeSpan(r)
+  const t = Date.parse(iso)
+  return t >= start && t < end
+}
+
+/** One bucket per day of the range, oldest first. */
+export function byRange(sessions: Session[], r: Range): DayBucket[] {
+  const { from, to } = rangeDays(r)
+  const out: DayBucket[] = []
+  const idx = new Map<string, DayBucket>()
+  for (let d = new Date(from); d <= to; d = new Date(d.getTime() + 864e5)) {
+    const b = { day: dayStr(d), sessions: 0, minutes: 0, ai: 0 }
+    out.push(b); idx.set(b.day, b)
+  }
+  for (const s of sessions) {
+    const b = idx.get(dayStr(new Date(s.startTime)))
+    if (!b || !inRange(r, s.startTime)) continue
+    b.sessions++
+    b.minutes += billedMinutes(s.totalConnectedTime)
+    b.ai += (s.totalAiTime || 0) / 60
+  }
+  return out
+}
 
 export function byDay(sessions: Session[], days = 30): DayBucket[] {
   const out: DayBucket[] = []

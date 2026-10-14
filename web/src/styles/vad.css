@@ -1,0 +1,93 @@
+/* VAD: dashboards of widgets (docs §10). */
+
+/* ---------- list page ---------- */
+.vad-new { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.vad-new > div:first-child { display: flex; flex-direction: column; gap: 4px; max-width: 560px; }
+.vad-new b { font-size: 16px; }
+.vad-new-row { display: flex; gap: 10px; align-items: center; }
+.vad-new-flow { width: 300px; }
+.vad-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.vad-card {
+  display: flex; gap: 14px; align-items: center; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--hair);
+  background: rgb(var(--ink) / 0.03); color: var(--db-text); text-decoration: none; transition: background 0.15s, border-color 0.15s;
+}
+.vad-card:hover { background: rgb(var(--ink) / 0.06); border-color: rgb(var(--ink) / 0.14); }
+.vad-card-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--db-accent-text, var(--db-accent)); background: var(--m3-tonal, rgb(var(--ink) / 0.06)); flex-shrink: 0; }
+.vad-card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.vad-card-text b { font-size: 15px; }
+.vad-card-text small { font-size: 12.5px; color: var(--db-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- dashboard page ---------- */
+.vad-page { max-width: none; }
+.vad-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.vad-hint { margin: -4px 0 12px; font-size: 13px; color: var(--db-muted); }
+.vad-err { margin: 0 0 12px; font-size: 13.5px; color: var(--db-err-text, var(--db-err)); }
+.vad-empty { padding: 40px 0; text-align: center; color: var(--db-muted); }
+.vad-add { position: relative; }
+.vad-add-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 220px; padding: 6px; border-radius: 12px;
+  background: var(--db-card2, var(--db-card)); border: 1px solid rgb(var(--ink) / 0.12); box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  display: flex; flex-direction: column;
+}
+.db[data-theme="light"] .vad-add-menu { background: #fff; }
+.vad-add-menu button { text-align: left; min-height: 38px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--db-text); font: inherit; font-size: 14px; cursor: pointer; }
+.vad-add-menu button:hover { background: rgb(var(--ink) / 0.07); }
+
+.vad-stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------- a widget ---------- */
+.vad-w {
+  height: 100%; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  border-radius: 18px; border: 1px solid var(--hair); background: var(--surface, rgb(var(--ink) / 0.03));
+}
+.db[data-theme="light"] .vad-w { background: #fff; }
+.vad-w.is-text { background: transparent; border-style: dashed; }
+.vad-w-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 4px; min-height: 40px; }
+.vad-w-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.vad-w-titles b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vad-w-titles small { font-size: 12px; color: var(--db-muted); }
+.vad-grip { cursor: grab; user-select: none; color: var(--db-muted); font-size: 14px; letter-spacing: -2px; padding: 2px 4px; border-radius: 6px; }
+.vad-grip:hover { background: rgb(var(--ink) / 0.08); color: var(--db-text); }
+.vad-grip:active { cursor: grabbing; }
+.vad-w-x { width: 26px; height: 26px; border: 0; border-radius: 13px; background: none; color: var(--db-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.vad-w-x:hover { background: color-mix(in srgb, var(--db-err) 14%, transparent); color: var(--db-err); }
+.vad-w-body { flex: 1; min-height: 0; padding: 4px 14px 12px; display: flex; flex-direction: column; }
+.vad-w.is-text .vad-w-body { overflow-y: auto; font-size: 14px; }
+.vad-w-note { margin: auto 0; font-size: 13px; color: var(--db-muted); line-height: 1.5; }
+.vad-w-skel { flex: 1; border-radius: 10px; background: linear-gradient(90deg, rgb(var(--ink) / 0.04), rgb(var(--ink) / 0.08), rgb(var(--ink) / 0.04)); background-size: 200% 100%; animation: vad-skel 1.4s linear infinite; }
+@keyframes vad-skel { from { background-position: 100% 0 } to { background-position: -100% 0 } }
+
+/* KPI */
+.vad-kpi { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 0; }
+.vad-kpi-value { font-weight: 650; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.vad-kpi-change { font-size: 12.5px; font-weight: 600; }
+.vad-kpi-change em { font-style: normal; font-weight: 400; color: var(--db-muted); margin-left: 4px; }
+.vad-kpi-change.is-good { color: var(--db-accent-text, #5ee6c8); }
+.vad-kpi-change.is-bad { color: var(--db-err-text, #ff7a7a); }
+.vad-kpi-goal { position: relative; display: block; height: 6px; border-radius: 3px; background: rgb(var(--ink) / 0.08); margin-top: 4px; }
+.vad-kpi-goal i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--db-accent); }
+.vad-kpi-goal em { position: absolute; right: 0; top: 8px; font-style: normal; font-size: 11.5px; color: var(--db-muted); }
+.vad-spark { width: 100%; height: 30px; margin-top: auto; }
+
+/* Chart */
+.vad-chart { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.vad-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--db-muted); margin-bottom: 6px; }
+.vad-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.vad-legend i { width: 8px; height: 8px; border-radius: 2px; }
+
+/* Table */
+.vad-table { overflow: auto; flex: 1; }
+.vad-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vad-table th { position: sticky; top: 0; text-align: left; font-weight: 600; font-size: 12px; color: var(--db-muted); padding: 6px 8px; background: inherit; border-bottom: 1px solid var(--hair); }
+.vad-table td { padding: 8px; border-bottom: 1px solid var(--hair); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vad-table tr.is-link { cursor: pointer; }
+.vad-table tr.is-link:hover td { background: rgb(var(--ink) / 0.04); }
+
+/* ---------- the grid in edit mode ---------- */
+.vad-grid.is-editing .vad-w { box-shadow: 0 0 0 1px rgb(var(--ink) / 0.12); }
+.vad-grid .react-grid-item.react-grid-placeholder { background: var(--db-accent); opacity: 0.16; border-radius: 18px; }
+.vad-grid .react-grid-item.react-draggable-dragging .vad-w,
+.vad-grid .react-grid-item.resizing .vad-w { box-shadow: 0 18px 50px rgb(0 0 0 / 0.4); }
+.vad-grid .react-grid-item > .react-resizable-handle::after { border-color: var(--db-muted); }
+.vad-grid .react-grid-item { transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), width 0.2s, height 0.2s; }
+.vad-grid .react-grid-item.react-draggable-dragging, .vad-grid .react-grid-item.resizing { transition: none; z-index: 5; }

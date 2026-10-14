@@ -1,8 +1,7 @@
 // The n8n-style workflow editor: palette · canvas · settings. Holds React Flow
 // state; everything it saves goes through convert.toWorkflow, so the engine
 // JSON is the single format on disk.
-
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -29,6 +28,8 @@ import {
   mapValue,
   toGraph,
   toWorkflow,
+  type Bend,
+  type EdgeStyle,
   type Graph,
   type NodeData,
   type Workflow,
@@ -37,12 +38,17 @@ import { layout } from '#/lib/workflow/layout'
 import { GROUPS, NODE_SPECS, prettyName, setKnowledgeNames, specFor } from '#/lib/workflow/registry'
 import { issuesByNode, validate } from '#/lib/workflow/validate'
 import { TEMPLATES } from '#/lib/workflow/templates'
+import { ChevronDownIcon, ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
 import Icon from '#/components/dashboard/Icon'
-import { Loading } from '#/components/dashboard/ui'
+import { FloatingPanel, FloatingPanelItem } from '#/components/ui/floating-panel'
+import { toast } from '#/components/ui/halo-toast'
+import { Loading, ThemeCtx } from '#/components/dashboard/ui'
 import { FieldOptions } from './Fields'
-import VxEdge from './Edge'
+import VxEdge, { EdgeLook } from './Edge'
 import NodeCard, { CardActions, type CardNode } from './NodeCard'
 import SettingsPanel from './SettingsPanel'
+import { ExportDialog, ImportDialog } from './Transfer'
+import { DownloadIcon, UploadIcon } from 'lucide-react'
 
 type Props = {
   title: string
@@ -65,7 +71,7 @@ function fromWorkflow(wf: Workflow): Snap {
   const g = layout(toGraph(wf))
   return {
     nodes: g.nodes.map((n) => ({ id: n.id, type: 'vx', position: n.position!, data: { ...n.data, issues: [], start: false } })),
-    edges: g.edges.map((e) => ({ ...e, ...EDGE })),
+    edges: g.edges.map(({ bend, ...e }) => ({ ...e, ...EDGE, data: bend === undefined ? {} : { bend } })),
   }
 }
 
@@ -75,7 +81,7 @@ function toGraphOf(nodes: CardNode[], edges: Edge[]): Graph {
       const { issues: _i, start: _s, ...data } = n.data
       return { id: n.id, position: n.position, data: data as NodeData }
     }),
-    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? 'next' })),
+    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? 'next', bend: e.data?.bend && typeof e.data.bend === 'object' ? (e.data.bend as Bend) : undefined })),
     extra: {},
   }
 }
@@ -95,12 +101,18 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(first.edges)
   const [selected, setSelected] = useState<string | null>(null)
   const [mode, setMode] = useState<'canvas' | 'json'>('canvas')
+  const [xfer, setXfer] = useState<'export' | 'import' | null>(null)
   const [grid, setGrid] = useState(false)
+  // Right-angle lines unless this workflow was saved with curves.
+  const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>(() => toGraph(initial).edgeStyle ?? 'step')
   const canvasRef = useRef<HTMLDivElement>(null)
   const [showIssues, setShowIssues] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' | 'saving' | 'ok' | 'err'; text?: string }>({ kind: 'idle' })
-  const [savedJson, setSavedJson] = useState(() => JSON.stringify(toWorkflow(toGraphOf(first.nodes, first.edges), { withUi: false })))
+  // The baseline must include the workflow's top-level keys (variables, start_node…),
+  // or a freshly opened workflow that has them reads as unsaved.
+  const [savedJson, setSavedJson] = useState(() => JSON.stringify(toWorkflow({ ...toGraphOf(first.nodes, first.edges), extra }, { withUi: false })))
   const rf = useReactFlow()
+  const theme = useContext(ThemeCtx)
 
   // Undo / redo over whole snapshots.
   const past = useRef<Snap[]>([])
@@ -121,12 +133,16 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
   const undo = () => restore(past, future)
   const redo = () => restore(future, past)
 
-  const graph = useMemo(() => ({ ...toGraphOf(nodes, edges), extra }), [nodes, edges, extra])
+  const graph = useMemo(() => ({ ...toGraphOf(nodes, edges), extra, edgeStyle }), [nodes, edges, extra, edgeStyle])
+  const edgeLook = useMemo(() => ({ style: edgeStyle, onBendStart: () => commit() }), [edgeStyle, commit])
   const issues = useMemo(() => validate(graph), [graph])
   const byNode = useMemo(() => issuesByNode(issues), [issues])
   const errors = issues.filter((i) => i.level === 'error').length
   const workflow = useMemo(() => toWorkflow(graph), [graph])
-  const dirty = JSON.stringify(toWorkflow(graph, { withUi: false })) !== savedJson
+  // Line style and moved lines count as changes too; node positions do not.
+  const lineKey = JSON.stringify([edgeStyle, (workflow.ui as Workflow['ui'])?.bends ?? {}])
+  const [savedLines, setSavedLines] = useState(lineKey)
+  const dirty = JSON.stringify(toWorkflow(graph, { withUi: false })) !== savedJson || lineKey !== savedLines
 
   // Where each connector leads, so a card can say "goes to …".
   const routes = useMemo(() => {
@@ -134,6 +150,17 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
     for (const e of edges) {
       const r = m.get(e.source) ?? {}
       ;(r[e.sourceHandle ?? 'next'] ??= []).push(prettyName(e.target))
+      m.set(e.source, r)
+    }
+    return m
+  }, [edges])
+
+  // The same, by step id, for the settings panel (Branch shows and opens where each path goes).
+  const idRoutes = useMemo(() => {
+    const m = new Map<string, Record<string, string[]>>()
+    for (const e of edges) {
+      const r = m.get(e.source) ?? {}
+      ;(r[e.sourceHandle ?? 'next'] ??= []).push(e.target)
       m.set(e.source, r)
     }
     return m
@@ -276,7 +303,8 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
     setEdges((es) => [...es, { ...EDGE, id: `${from}|${handle}|${id}`, source: from, sourceHandle: handle, target: id }])
     setSelected(id)
   }, [nodes, edges, commit])
-  const cardActions = useMemo(() => ({ addAfter }), [addAfter])
+  const dupRef = useRef<(id: string) => void>(() => {})
+  const cardActions = useMemo(() => ({ addAfter, duplicate: (id: string) => dupRef.current(id) }), [addAfter])
 
   const onDrop = (e: React.DragEvent) => {
     const type = e.dataTransfer.getData('application/x-vx-node')
@@ -344,10 +372,26 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
     setSelected(copy)
   }
 
+  dupRef.current = duplicate
+  // Ctrl/Cmd+D duplicates the selected step.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'd' || !selected) return
+      const t = e.target as HTMLElement
+      if (t.closest('input, textarea, [contenteditable]')) return
+      e.preventDefault()
+      dupRef.current(selected)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selected])
+
   const relayout = () => {
     commit()
     const g = layout(toGraphOf(nodes, edges), true)
     setNodes((ns) => ns.map((n) => ({ ...n, position: g.nodes.find((x) => x.id === n.id)!.position! })))
+    // Tidying moves the steps, so hand-moved lines go back to the middle.
+    setEdges((es) => es.map((e) => (e.data?.bend === undefined ? e : { ...e, data: {} })))
     setTimeout(() => rf.fitView({ duration: 300, padding: 0.15 }), 0)
   }
 
@@ -362,13 +406,15 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
 
   /** Resolves true when the workflow is saved. */
   async function save(): Promise<boolean> {
-    if (errors) { setShowIssues(true); setStatus({ kind: 'err', text: `Fix ${errors} error${errors > 1 ? 's' : ''} first.` }); return false }
+    if (errors) { setShowIssues(true); setStatus({ kind: 'err' }); toast.error(`Fix ${errors} error${errors > 1 ? 's' : ''} first.`, 'The highlighted steps need attention before saving.'); return false }
     setStatus({ kind: 'saving' })
     const res = await onSave(workflow)
     if (res.ok) {
       setSavedJson(JSON.stringify(toWorkflow(graph, { withUi: false })))
-      setStatus({ kind: 'ok', text: res.reason ?? 'Saved' })
-    } else setStatus({ kind: 'err', text: res.reason ?? 'Save failed' })
+      setSavedLines(lineKey)
+      setStatus({ kind: 'ok' })
+      toast.success('Workflow saved', res.reason ?? undefined)
+    } else { setStatus({ kind: 'err' }); toast.error('Couldn’t save the workflow', res.reason ?? undefined) }
     return res.ok
   }
 
@@ -392,9 +438,20 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
             <button className="db-iconbtn" onClick={redo} disabled={!future.current.length} title="Redo (Ctrl+Y)" aria-label="Redo"><Icon name="back" size={17} className="wf-redo" /></button>
             <button className="db-iconbtn" onClick={relayout} title="Tidy up" aria-label="Tidy up"><Icon name="sliders" size={17} /></button>
             <button className="db-iconbtn" onClick={() => rf.fitView({ duration: 250, padding: 0.15 })} title="Fit to screen" aria-label="Fit to screen"><Icon name="eye" size={17} /></button>
+            <button className={`db-iconbtn${edgeStyle === 'step' ? ' is-on' : ''}`} onClick={() => setEdgeStyle(edgeStyle === 'step' ? 'curve' : 'step')}
+              title={edgeStyle === 'step' ? 'Lines: right angles (drag a line’s middle to move it). Click for curves.' : 'Lines: curves. Click for right angles you can move.'}
+              aria-label="Line style" aria-pressed={edgeStyle === 'step'}>
+              {edgeStyle === 'step'
+                ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h8v12h10" /></svg>
+                : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6c9 0 9 12 18 12" /></svg>}
+            </button>
             <button className={`db-iconbtn${grid ? ' is-on' : ''}`} onClick={() => setGrid(!grid)} title={grid ? 'Hide grid' : 'Show grid and snap to it'} aria-label="Toggle grid" aria-pressed={grid}><Icon name="grid" size={17} /></button>
           </div>
           <TemplateMenu onPick={load} />
+          <div className="wf-iconset">
+            <button className="db-iconbtn" onClick={() => setXfer('import')} title="Import workflow (paste or upload JSON)" aria-label="Import workflow"><UploadIcon size={17} /></button>
+            <button className="db-iconbtn" onClick={() => setXfer('export')} title="Export workflow (copy or download JSON)" aria-label="Export workflow"><DownloadIcon size={17} /></button>
+          </div>
           <button className={`wf-health${errors ? ' is-err' : issues.length ? ' is-warn' : ''}`} onClick={() => setShowIssues(!showIssues)}>
             <Icon name={errors ? 'close' : 'check'} size={14} />
             {errors ? `${errors} to fix` : issues.length ? `${issues.length} tip${issues.length > 1 ? 's' : ''}` : 'All good'}
@@ -412,9 +469,10 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
           </button>
         </div>
       </header>
-      {status.text && status.kind !== 'saving' && <div className={`wf-toast is-${status.kind}`} onAnimationEnd={() => setStatus({ kind: 'idle' })}>{status.text}</div>}
 
-      <FieldOptions.Provider value={{ knowledge, variables }}>
+      <EdgeLook.Provider value={edgeLook}>
+      <FieldOptions.Provider value={{ knowledge, variables, routes: selected ? idRoutes.get(selected) : undefined,
+        goTo: (t) => { setSelected(t); rf.fitView({ nodes: [{ id: t }], duration: 300, maxZoom: 1.2 }) } }}>
       <CardActions.Provider value={cardActions}>
       <div className="wf-body">
         <Palette onAdd={addNode} />
@@ -443,7 +501,7 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
               onPaneClick={() => setSelected(null)}
               deleteKeyCode={['Delete', 'Backspace']}
               defaultEdgeOptions={EDGE}
-              colorMode="dark"
+              colorMode={theme}
               fitView
               fitViewOptions={{ padding: 0.15 }}
               minZoom={0.2}
@@ -492,6 +550,9 @@ function Editor({ title, initial, onSave, knowledge = [], onTest }: Props) {
       </div>
       </CardActions.Provider>
       </FieldOptions.Provider>
+      </EdgeLook.Provider>
+      {xfer === 'export' && <ExportDialog workflow={workflow} title={title} onClose={() => setXfer(null)} />}
+      {xfer === 'import' && <ImportDialog onImport={load} onClose={() => setXfer(null)} />}
     </div>
   )
 }
@@ -502,27 +563,51 @@ const GROUP_TITLE: Record<string, string> = { Conversation: 'Talk & listen', AI:
 
 function Palette({ onAdd }: { onAdd: (type: string) => void }) {
   const [q, setQ] = useState('')
+  const [open, setOpen] = useState(true)
+  const [shut, setShut] = useState<Set<string>>(() => new Set())
   const match = (s: (typeof NODE_SPECS)[number]) => !s.hidden && (!q || `${s.label} ${s.blurb}`.toLowerCase().includes(q.toLowerCase()))
+  const drag = (s: (typeof NODE_SPECS)[number]) => (e: React.DragEvent) => { e.dataTransfer.setData('application/x-vx-node', s.type); e.dataTransfer.effectAllowed = 'move' }
+  const toggle = (g: string) => setShut((x) => { const n = new Set(x); n.has(g) ? n.delete(g) : n.add(g); return n })
+
+  // Folded: a thin rail of step icons, still draggable and clickable.
+  if (!open) return (
+    <aside className="wf-palette is-rail">
+      <button className="db-iconbtn" onClick={() => setOpen(true)} title="Show steps" aria-label="Show steps"><ChevronsRightIcon size={18} /></button>
+      {NODE_SPECS.filter((s) => !s.hidden && !s.unsupported).map((s) => (
+        <button key={s.type} className="wf-rail-item" draggable style={{ '--c': s.color } as React.CSSProperties} title={`${s.label}: ${s.blurb}`} aria-label={s.label}
+          onDragStart={drag(s)} onClick={() => onAdd(s.type)}>
+          <span className="wf-tile"><Icon name={s.icon} size={16} /></span>
+        </button>
+      ))}
+    </aside>
+  )
+
   return (
     <aside className="wf-palette">
       <div className="wf-palette-head">
-        <b>Add a step</b>
-        <span>Drag onto the canvas, or click.</span>
+        <div>
+          <b>Add a step</b>
+        </div>
+        <button className="db-iconbtn" onClick={() => setOpen(false)} title="Hide steps" aria-label="Hide steps"><ChevronsLeftIcon size={18} /></button>
       </div>
-      <label className="db-search wf-psearch">
-        <Icon name="search" size={16} />
+      <label className="db-tsearch wf-psearch">
+        <Icon name="search" size={18} />
         <input placeholder="Search steps" value={q} onChange={(e) => setQ(e.target.value)} />
       </label>
       {GROUPS.map((g) => {
         const specs = NODE_SPECS.filter((s) => s.group === g && match(s))
         if (!specs.length) return null
+        const closed = shut.has(g) && !q
         return (
-          <div key={g} className="wf-pgroup">
-            <div className="wf-plabel">{GROUP_TITLE[g] ?? g}</div>
-            {specs.map((s) => (
+          <div key={g} className={`wf-pgroup${closed ? ' is-shut' : ''}`}>
+            <button className="wf-plabel" onClick={() => toggle(g)} aria-expanded={!closed}>
+              <span>{GROUP_TITLE[g] ?? g}</span>
+              <small>{specs.length}</small>
+              <ChevronDownIcon size={16} className="wf-plabel-chev" />
+            </button>
+            {!closed && specs.map((s) => (
               <button key={s.type} className="wf-pitem" draggable={!s.unsupported} disabled={!!s.unsupported} style={{ '--c': s.color } as React.CSSProperties}
-                onDragStart={(e) => { e.dataTransfer.setData('application/x-vx-node', s.type); e.dataTransfer.effectAllowed = 'move' }}
-                onClick={() => onAdd(s.type)}>
+                onDragStart={drag(s)} onClick={() => onAdd(s.type)}>
                 <span className="wf-tile"><Icon name={s.icon} size={16} /></span>
                 <span className="wf-ptext">
                   <span className="wf-pname">{s.label}{s.unsupported && <em>Soon</em>}</span>
@@ -538,20 +623,13 @@ function Palette({ onAdd }: { onAdd: (type: string) => void }) {
 }
 
 function TemplateMenu({ onPick }: { onPick: (wf: Workflow) => void }) {
-  const [open, setOpen] = useState(false)
   return (
-    <div className="wf-menu">
-      <button className="db-btn db-btn-icon" onClick={() => setOpen(!open)}><Icon name="list" size={16} />Templates</button>
-      {open && (
-        <div className="wf-menu-list" onMouseLeave={() => setOpen(false)}>
-          {TEMPLATES.map((t) => (
-            <button key={t.id} onClick={() => { setOpen(false); if (confirmReplace()) onPick(structuredClone(t.workflow)) }}>
-              <b>{t.name}</b><span>{t.blurb}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <FloatingPanel title="Start from a template" trigger={<><Icon name="list" size={16} />Templates</>} width={340}>
+      {(close) => TEMPLATES.map((t) => (
+        <FloatingPanelItem key={t.id} title={t.name} text={t.blurb}
+          onClick={() => { close(); if (confirmReplace()) onPick(structuredClone(t.workflow)) }} />
+      ))}
+    </FloatingPanel>
   )
 }
 

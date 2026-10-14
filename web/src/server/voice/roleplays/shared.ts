@@ -22,10 +22,9 @@ export function buildVoiceCustoms(settings: VoiceSettings = {}) {
   const preFire = settings.preFire ?? true
   const accent = settings.accent ? accentById(settings.accent) : null
   return {
-    tts_id: {
-      service: 'deepgram',
-      model: accent ? accent.ttsModel : (settings.ttsModel ?? 'aura-2-thalia-en'),
-    },
+    tts_id: accent
+      ? { ...accent.tts }
+      : { service: 'deepgram', model: settings.ttsModel ?? 'aura-2-thalia-en' },
     stt_id: accent
       ? sttSoniox(accent.sttHints)
       : {

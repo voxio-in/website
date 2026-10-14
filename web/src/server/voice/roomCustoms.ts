@@ -5,6 +5,7 @@ import type { DemoId } from '#/lib/demos'
 import { demoById } from '#/lib/demos'
 import { buildCherylCustoms } from './roleplays/cherylCustoms'
 import { buildJeremyCustoms } from './roleplays/jeremyCustoms'
+import { buildMarciaCustoms } from './roleplays/marciaCustoms'
 import { buildMuthuCustoms } from './roleplays/muthuCustoms'
 import { buildVoiceCustoms, setRoleplayWebhook } from './roleplays/shared'
 import { buildTanCustoms } from './roleplays/tanCustoms'
@@ -22,6 +23,7 @@ const ROLEPLAYS: Partial<
   pr: buildCherylCustoms,
   vps: buildVpsCustoms,
   jl: buildJeremyCustoms,
+  mc: buildMarciaCustoms,
 }
 
 /** Browser demos that are a /calling desk heard through the page. */

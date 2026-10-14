@@ -131,7 +131,7 @@ export default function PhoneTest({ flow, setup, customs, blocked, log, onLive, 
       {off === 'soon' && <p className="db-muted">Phone testing is coming soon. Until then, test in the browser.</p>}
       {off === 'nonumber' && (
         <p className="db-muted">
-          Attach a number to this flow to test by phone — on <Link to="/dashboard/flows/$flowId/numbers" params={{ flowId: flow.key }} className="db-textlink">Numbers & calls</Link>.
+          Attach a number to this flow to test by phone, on <Link to="/dashboard/flows/$flowId/numbers" params={{ flowId: flow.key }} className="db-textlink">Numbers & calls</Link>.
         </p>
       )}
 
@@ -163,6 +163,7 @@ export default function PhoneTest({ flow, setup, customs, blocked, log, onLive, 
 
       {call && (
         <LivePanel
+          voice
           state={liveState(call.status)}
           startedAt={startedAt}
           lines={(call.transcript ?? []).map((t) => ({ role: t.role === 'assistant' ? 'agent' : 'user', text: t.content, final: true }))}

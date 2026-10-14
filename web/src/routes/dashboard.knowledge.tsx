@@ -51,9 +51,9 @@ function Knowledge() {
       <header className="db-pagehead">
         <div>
           <h1 className="db-h1">Knowledge</h1>
-          <p className="db-sub">What your agent can look things up in — documents, websites and notes. Turn a knowledge base on for a flow from its Knowledge tab.</p>
+          <p className="db-sub">Documents, websites and notes your agent can look things up in. Turn a knowledge base on for a flow from its Knowledge tab.</p>
         </div>
-        <button className="db-btn db-primary db-btn-icon" onClick={() => setCreating(true)}><Icon name="plus" size={17} />New knowledge base</button>
+        {kbs.length > 0 && <button className="db-btn db-primary db-btn-icon" onClick={() => setCreating(true)}><Icon name="plus" size={17} />New knowledge base</button>}
       </header>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
 

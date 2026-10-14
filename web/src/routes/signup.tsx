@@ -2,12 +2,14 @@ import { Link, createFileRoute, redirect, useNavigate, useRouter } from '@tansta
 import { useState } from 'react'
 
 import { AuthField, AuthLayout, safeNext } from '#/components/auth/AuthPage'
-import { getMe, signUp } from '#/server/auth'
+import { /* getMe, */ signUp } from '#/server/auth'
 
 export const Route = createFileRoute('/signup')({
   validateSearch: (s: Record<string, unknown>): { next?: string } => (typeof s.next === 'string' ? { next: s.next } : {}),
   beforeLoad: async ({ search }) => {
-    if (await getMe()) throw redirect({ href: safeNext(search.next) })
+    // Sign-up is off for now: send everyone to /login. Remove this line to bring it back.
+    throw redirect({ to: '/login', search: search.next ? { next: search.next } : {} })
+    // if (await getMe()) throw redirect({ href: safeNext(search.next) })
   },
   head: () => ({ meta: [{ title: 'Create your account — Voxio' }, { name: 'robots', content: 'noindex' }] }),
   component: Signup,

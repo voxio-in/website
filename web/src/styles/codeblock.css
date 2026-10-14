@@ -1,0 +1,207 @@
+/* codeblock.css — the code block (src/components/CodeBlock.tsx), after Cult
+   UI's Code Block, in Voxio's colours: a rounded frame with a 2px inner gap,
+   tabs with a sliding underline, a floating copy button, and syntax colours
+   from the brand palette (teal #5ee6c8, blue #7aa9ff, violet #c79bff).
+   Every colour is a variable; the dashboard's light theme swaps the set. */
+
+.cb {
+  --cb-frame: rgba(255, 255, 255, 0.045);
+  --cb-bg: rgba(6, 12, 22, 0.72);
+  --cb-edge: rgba(255, 255, 255, 0.1);
+  --cb-hair: rgba(255, 255, 255, 0.08);
+  --cb-accent: #5ee6c8;
+  --cb-tab: rgba(255, 255, 255, 0.5);
+  --cb-tab-on: #ffffff;
+  --cb-tab-hover: rgba(255, 255, 255, 0.07);
+  --cb-btn: rgba(10, 18, 30, 0.82);
+  --cb-ln: rgba(255, 255, 255, 0.22);
+  --cb-text: #e6edf0;
+  --cb-comment: rgba(230, 237, 240, 0.42);
+  --cb-keyword: #c79bff;
+  --cb-string: #5ee6c8;
+  --cb-function: #7aa9ff;
+  --cb-name: #9ad8ff;
+  --cb-number: #f5c56b;
+  --cb-punct: rgba(230, 237, 240, 0.6);
+
+  position: relative;
+  margin: 0 0 22px;
+  padding: 2px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--cb-frame);
+  border: 1px solid var(--cb-edge);
+  text-align: left;
+}
+
+/* Dashboard, light theme: same palette, deepened to read on white. */
+.db[data-theme="light"] .cb {
+  --cb-frame: #eef4f5;
+  --cb-bg: #ffffff;
+  --cb-edge: rgba(3, 30, 36, 0.1);
+  --cb-hair: rgba(3, 30, 36, 0.08);
+  --cb-accent: #0f9e86;
+  --cb-tab: rgba(3, 30, 36, 0.5);
+  --cb-tab-on: #031e24;
+  --cb-tab-hover: rgba(3, 30, 36, 0.06);
+  --cb-btn: rgba(255, 255, 255, 0.85);
+  --cb-ln: rgba(3, 30, 36, 0.28);
+  --cb-text: #10292e;
+  --cb-comment: rgba(16, 41, 46, 0.48);
+  --cb-keyword: #7a3fd1;
+  --cb-string: #0b8a74;
+  --cb-function: #2f62d6;
+  --cb-name: #0e6d9c;
+  --cb-number: #a35f00;
+  --cb-punct: rgba(16, 41, 46, 0.6);
+}
+
+/* ---- tabs ---- */
+
+.cb-bar {
+  display: flex;
+  align-items: center;
+  padding-right: 10px;
+}
+
+.cb-tabs {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.cb-tabs::-webkit-scrollbar { display: none; }
+
+.cb-tablist {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 4px 0 6px 10px;
+}
+
+.cb-tab {
+  padding: 2px 7px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+  color: var(--cb-tab);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.cb-tab:hover { background: var(--cb-tab-hover); color: var(--cb-tab-on); }
+.cb-tab.is-on { color: var(--cb-tab-on); }
+.cb-tab:focus-visible { outline: 2px solid var(--cb-accent); outline-offset: 1px; }
+
+.cb-bar-line {
+  position: absolute;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--cb-accent);
+  pointer-events: none;
+}
+
+/* ---- code ---- */
+
+.cb-body {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--cb-bg);
+}
+
+.cb-pre {
+  margin: 0;
+  padding: 16px 0;
+  overflow-x: auto;
+  background: transparent !important;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.cb-pre code {
+  display: block;
+  min-width: max-content;
+  font: inherit;
+  white-space: pre;
+}
+
+.cb-line { display: flex; }
+
+.cb-ln {
+  flex: none;
+  width: 40px;
+  padding-right: 14px;
+  text-align: right;
+  color: var(--cb-ln);
+  user-select: none;
+}
+
+.cb-src { padding-right: 90px; }
+
+/* ---- copy button ---- */
+
+.cb-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--cb-hair);
+  border-radius: 9px;
+  background: var(--cb-btn);
+  backdrop-filter: blur(6px);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cb-tab);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.cb-copy:hover { color: var(--cb-tab-on); }
+.cb-copy.is-done { color: var(--cb-accent); }
+.cb-copy:focus-visible { outline: 2px solid var(--cb-accent); outline-offset: 1px; }
+
+.cb-copy-float {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  opacity: 0.75;
+}
+
+.cb:hover .cb-copy-float,
+.cb-copy-float:focus-visible { opacity: 1; }
+
+.cb-copy-icon {
+  position: relative;
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+
+.cb-copy-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cb .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

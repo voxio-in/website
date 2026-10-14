@@ -34,3 +34,13 @@ export function channelOf(type: string | undefined): Channel {
 }
 
 export const fmtMin = (m: number) => `${m.toLocaleString()} min`
+
+// A flow name shows on one row: past NAME_MAX characters it is cut at the last whole word.
+// CSS still ellipsizes, for narrow screens.
+export const NAME_MAX = 48
+export function clipName(name: string) {
+  if (name.length <= NAME_MAX) return name
+  const cut = name.slice(0, NAME_MAX + 1)
+  const space = cut.lastIndexOf(' ')
+  return `${(space > NAME_MAX * 0.6 ? cut.slice(0, space) : cut.slice(0, NAME_MAX)).replace(/[\s,.;:·-]+$/, '')}…`
+}

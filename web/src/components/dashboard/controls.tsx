@@ -4,6 +4,7 @@
 // Popovers (the dropdown list, its info card, tooltips) are portalled into the
 // dashboard root with fixed positioning, so no scrolling card or dialog can clip them.
 
+import { Code2Icon } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -231,15 +232,16 @@ export function Tags({ value, placeholder, onChange }: { value: string[]; placeh
 
 // ------------------------------------------------------------ copy json
 
-export function CopyJson({ value, label = 'Copy JSON' }: { value: unknown; label?: string }) {
+/** Copies a value as JSON; shows a code icon, and just the icon when label is ''. */
+export function CopyJson({ value, label = 'Copy JSON', icon }: { value: unknown; label?: string; icon?: React.ReactNode }) {
   const [done, setDone] = useState(false)
   return (
-    <button type="button" className="db-copyjson" onClick={() => {
+    <button type="button" className={`db-copyjson${label ? '' : ' is-icon'}`} title="Copy JSON" aria-label="Copy JSON" onClick={() => {
       navigator.clipboard?.writeText(JSON.stringify(value, null, 2))
       setDone(true)
       setTimeout(() => setDone(false), 1400)
     }}>
-      <Icon name={done ? 'check' : 'copy'} size={15} />{done ? 'Copied' : label}
+      {done ? <Icon name="check" size={15} /> : icon ?? <Code2Icon size={15} />}{(done ? 'Copied' : label) && <span className="wf-foot-label">{done ? 'Copied' : label}</span>}
     </button>
   )
 }
@@ -274,5 +276,20 @@ export function DropZone({ accept, multiple, title, hint, onFiles }: {
       <span className="db-drop-browse">Browse files</span>
       <input ref={input} type="file" accept={accept} multiple={multiple} hidden onChange={(e) => { take(e.target.files); e.target.value = '' }} />
     </div>
+  )
+}
+
+/** Copies a config as JSON; `cell` draws it as a connected-group button. */
+export function CopyButton({ value, label, cell }: { value: unknown; label: string; cell?: boolean }) {
+  const [done, setDone] = useState(false)
+  const copy = () => {
+    void navigator.clipboard?.writeText(JSON.stringify(value ?? null, null, 2))
+    setDone(true)
+    setTimeout(() => setDone(false), 1200)
+  }
+  return (
+    <button type="button" className={cell ? 'db-gbtn' : 'db-btn db-btn-icon'} onClick={copy}>
+      <Icon name={done ? 'check' : 'code'} size={18} />{done ? 'Copied' : label}
+    </button>
   )
 }

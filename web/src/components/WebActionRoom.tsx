@@ -2,6 +2,7 @@
 // you while it talks.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createSession, type VoxioSession, type WebActionStatus } from 'voxioagent/client'
 
 import { CareSurface } from '#/components/surfaces'
 import { ClinicSite } from '#/components/sites/ClinicSite'
@@ -33,19 +34,8 @@ const SILENCE_MS = 320
    while the runtime waits the full fifteen seconds for our ack. */
 const NO_SPEECH_MS = 1200
 
-function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
-  if (pc.iceGatheringState === 'complete') return Promise.resolve()
-  return new Promise((resolve) => {
-    const done = () => {
-      pc.removeEventListener('icegatheringstatechange', check)
-      clearTimeout(timer)
-      resolve()
-    }
-    const check = () => pc.iceGatheringState === 'complete' && done()
-    const timer = setTimeout(done, 5000)
-    pc.addEventListener('icegatheringstatechange', check)
-  })
-}
+/** Agent level above which its voice counts as heard (the SDK's own speaking gate). */
+const LOUD = 0.06
 
 function PageSize({ stats }: { stats: { elements: number; clickable: number; ids: number } }) {
   return (
@@ -67,16 +57,13 @@ export default function WebActionRoom() {
   const [log, setLog] = useState<LogEntry[]>([])
   const [pinned, setPinned] = useState<string | null>(null)
 
-  const pcRef = useRef<RTCPeerConnection | null>(null)
-  const dcRef = useRef<RTCDataChannel | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const rafRef = useRef<number | null>(null)
+  const voxioRef = useRef<VoxioSession | null>(null)
   const sessionRef = useRef<{ id: string; startedAt: number } | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
 
-  const queueRef = useRef<{ id: string; turn: number; action: WebAction; at: number }[]>([])
+  const queueRef = useRef<
+    { id: string; turn: number; action: WebAction; at: number; ack: (status: WebActionStatus) => void }[]
+  >([])
   const heardSpeechRef = useRef(false)
   const lastLoudRef = useRef(0)
   const turnRef = useRef<number | null>(null)
@@ -84,18 +71,11 @@ export default function WebActionRoom() {
   const [stats, setStats] = useState<{ elements: number; clickable: number; ids: number } | null>(null)
 
   const hangUp = useCallback((next: Phase = 'ended') => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    rafRef.current = null
     queueRef.current = []
     turnRef.current = null
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
-    dcRef.current = null
-    pcRef.current?.close()
-    pcRef.current = null
-    void audioCtxRef.current?.close().catch(() => {})
-    audioCtxRef.current = null
-    if (audioRef.current) audioRef.current.srcObject = null
+    const voxio = voxioRef.current
+    voxioRef.current = null
+    voxio?.destroy()
 
     const session = sessionRef.current
     sessionRef.current = null
@@ -174,153 +154,97 @@ export default function WebActionRoom() {
     const stage = stageRef.current
     const status = stage ? await perform(stage, next.action) : 'error'
     setLog((prev) => prev.map((e) => (e.id === next.id ? { ...e, status } : e)))
-    if (dcRef.current?.readyState === 'open') {
-      dcRef.current.send(JSON.stringify({ type: 'web_action_ack', id: next.id, status }))
-    }
+    next.ack(status === 'ok' ? 'ok' : 'error')
     runningRef.current = false
   }, [])
 
-  const watchLevel = useCallback(
-    (stream: MediaStream) => {
-      const ctx = audioCtxRef.current ?? new AudioContext()
-      audioCtxRef.current = ctx
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 512
-      analyser.smoothingTimeConstant = 0.7
-      ctx.createMediaStreamSource(stream).connect(analyser)
-
-      const data = new Uint8Array(analyser.frequencyBinCount)
-
-      /* An action runs in the pause after the clause in front of it. The
-         runtime sends it at the marker, usually while that clause is still
-         playing here and sometimes just after — "heard speech" is set by the
-         clause and cleared by the action that consumes it, so either order
-         works. With no clause at all (two markers back to back) it runs once
-         the line has been quiet for long enough. */
-      const tick = (now: number) => {
-        analyser.getByteFrequencyData(data)
-        let sum = 0
-        for (const v of data) sum += v
-        const loud = sum / data.length > 10
-
-        if (loud) {
-          heardSpeechRef.current = true
-          lastLoudRef.current = now
-        }
-
-        const head = queueRef.current[0]
-        if (head && !loud && !runningRef.current) {
-          const quiet = now - lastLoudRef.current
-          if (heardSpeechRef.current ? quiet > SILENCE_MS : now - head.at > NO_SPEECH_MS && quiet > SILENCE_MS) {
-            void drain()
-          }
-        }
-
-        setSpeaking(loud)
-        rafRef.current = requestAnimationFrame(tick)
+  /* An action runs in the pause after the clause in front of it. The
+     runtime sends it at the marker, usually while that clause is still
+     playing here and sometimes just after — "heard speech" is set by the
+     clause and cleared by the action that consumes it, so either order
+     works. With no clause at all (two markers back to back) it runs once
+     the line has been quiet for long enough. */
+  const onLevel = useCallback(
+    (agent: number) => {
+      const now = performance.now()
+      const loud = agent > LOUD
+      if (loud) {
+        heardSpeechRef.current = true
+        lastLoudRef.current = now
       }
-      rafRef.current = requestAnimationFrame(tick)
+
+      const head = queueRef.current[0]
+      if (head && !loud && !runningRef.current) {
+        const quiet = now - lastLoudRef.current
+        if (heardSpeechRef.current ? quiet > SILENCE_MS : now - head.at > NO_SPEECH_MS && quiet > SILENCE_MS) {
+          void drain()
+        }
+      }
+
+      setSpeaking(loud)
     },
     [drain],
   )
 
+  /* The SDK runs the connection, the levels and the data channel. Its own
+     action runner is off: the page driver below knows these demo sites. */
   const connect = useCallback(
-    async (config: Extract<RoomStart, { ok: true }>) => {
-      let iceServers: RTCIceServer[] = []
-      for (let i = 0; i < 2; i++) {
-        try {
-          const r = await fetch(`https://${config.server}/rtc/ice-servers`, {
-            signal: AbortSignal.timeout(5000),
-            headers: { 'ngrok-skip-browser-warning': 'true' },
-          })
-          if (r.ok) {
-            iceServers = (await r.json()).ice_servers || []
-            break
-          }
-        } catch {
-        }
-        if (i === 0) await new Promise((r) => setTimeout(r, 800))
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-
-      const pc = new RTCPeerConnection({ iceServers })
-      pcRef.current = pc
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream))
-
-      const dc = pc.createDataChannel('web_actions', { ordered: true })
-      dcRef.current = dc
-      dc.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg?.type !== 'web_action') return
-          const action = msg.action as WebAction
-          const turn = typeof msg.turn_id === 'number' ? msg.turn_id : 0
-
-          /* A new reply means the old one was talked over. The runtime has
-             already abandoned its actions, so running them now would move the
-             page under a reply that no longer mentions them. */
-          if (turnRef.current !== null && turn !== turnRef.current) {
-            const stale = new Set(queueRef.current.map((q) => q.id))
-            queueRef.current = []
-            if (stale.size) setLog((prev) => prev.filter((e) => !stale.has(e.id)))
-          }
-          turnRef.current = turn
-
-          // Speech heard long before this action is from an earlier clause,
-          // not the one in front of it — do not let it trigger the action.
-          if (performance.now() - lastLoudRef.current > 1000) heardSpeechRef.current = false
-
-          setLog((prev) => [...prev, { id: msg.id, label: describe(action), status: 'pending' }])
-          queueRef.current.push({ id: msg.id, turn, action, at: performance.now() })
-        } catch {
-        }
-      }
-
-      pc.ontrack = (e) => {
-        const remote = e.streams[0]
-        if (e.track.kind !== 'audio' || !remote || !audioRef.current) return
-        audioRef.current.srcObject = remote
-        void audioRef.current.play().catch(() => {})
-        watchLevel(remote)
-      }
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') {
-          sessionRef.current = { id: config.sessionId, startedAt: Date.now() }
-          setPhase('live')
-          setLeft(config.maxSeconds)
-        }
-        if (pc.connectionState === 'failed') {
-          setError('The connection dropped.')
-          hangUp('failed')
-        }
-      }
-
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-      await waitForIceGathering(pc)
-
-      const res = await fetch(`https://${config.server}/rtc/offer/audio`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          api_key: config.apiKey,
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify({
-          sdp: pc.localDescription?.sdp,
-          type: pc.localDescription?.type,
-          participants: config.participants,
-          customs: config.customs,
-          session_id: config.sessionId,
-        }),
+    (config: Extract<RoomStart, { ok: true }>) => {
+      const voxio = createSession({
+        flowKey: config.apiKey,
+        endpoints: { voice: `https://${config.server}` },
+        sessionId: config.sessionId,
+        customs: config.customs as Record<string, unknown>,
+        webActions: false,
+        maxRetries: 0,
       })
-      if (!res.ok) throw new Error(`offer rejected: ${res.status}`)
-      await pc.setRemoteDescription(new RTCSessionDescription(await res.json()))
+      voxioRef.current = voxio
+
+      voxio.on('webAction', (msg, ack) => {
+        const action = msg.action as unknown as WebAction
+        const turn = typeof msg.turn_id === 'number' ? msg.turn_id : 0
+
+        /* A new reply means the old one was talked over. The runtime has
+           already abandoned its actions, so running them now would move the
+           page under a reply that no longer mentions them. */
+        if (turnRef.current !== null && turn !== turnRef.current) {
+          const stale = new Set(queueRef.current.map((q) => q.id))
+          queueRef.current = []
+          if (stale.size) setLog((prev) => prev.filter((e) => !stale.has(e.id)))
+        }
+        turnRef.current = turn
+
+        // Speech heard long before this action is from an earlier clause,
+        // not the one in front of it — do not let it trigger the action.
+        if (performance.now() - lastLoudRef.current > 1000) heardSpeechRef.current = false
+
+        setLog((prev) => [...prev, { id: msg.id, label: describe(action), status: 'pending' }])
+        queueRef.current.push({ id: msg.id, turn, action, at: performance.now(), ack })
+      })
+      voxio.on('level', ({ agent }) => onLevel(agent))
+      voxio.on('state', (state) => {
+        if (voxioRef.current !== voxio || state !== 'listening' || sessionRef.current) return
+        sessionRef.current = { id: config.sessionId, startedAt: Date.now() }
+        setPhase('live')
+        setLeft(config.maxSeconds)
+      })
+      voxio.on('ended', ({ reason }) => {
+        if (voxioRef.current === voxio && reason === 'remote') hangUp('ended')
+      })
+      voxio.on('error', (err) => {
+        if (voxioRef.current !== voxio) return
+        setError(
+          err.code === 'mic-denied' || err.code === 'no-device'
+            ? 'We need your microphone for this one. Allow it and press start again.'
+            : err.code === 'connection-lost'
+              ? 'The connection dropped.'
+              : 'We could not start the session. Try again in a moment.',
+        )
+        hangUp('failed')
+      })
+      void voxio.start()
     },
-    [hangUp, watchLevel],
+    [hangUp, onLevel],
   )
 
   const start = useCallback(async () => {
@@ -335,7 +259,7 @@ export default function WebActionRoom() {
         return
       }
       setPhase('connecting')
-      await connect(config)
+      connect(config)
     } catch (err) {
       const denied =
         err instanceof DOMException &&
@@ -353,8 +277,6 @@ export default function WebActionRoom() {
 
   return (
     <div className="wa">
-      <audio ref={audioRef} hidden />
-
       {!open ? (
         <>
           {/* ---------- 1 · which mess ---------- */}

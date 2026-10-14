@@ -3,7 +3,7 @@
 // Loaded with React.lazy: @voxio/widget defines custom elements on import,
 // which only works in a browser.
 
-import { ChatbotLogic } from '@voxio/widget'
+import { ChatbotLogic } from 'voxioagent/widget'
 import { useEffect, useRef, useState } from 'react'
 
 import Icon from '../Icon'
@@ -42,7 +42,10 @@ export default function ChatTest({ flowKey, chatUrl, log, onLive, onDone }: {
     setLines([])
     setPhase('connecting')
     // Every request (start_session, process_input and its streamed reply) is logged.
-    const l = new ChatbotLogic({ baseUrl: chatUrl, fetch: loggingFetch(log) })
+    // The GPU agent server reads the flow key from a flow_api_key header (the SDK puts it in the body).
+    const logged = loggingFetch(log)
+    const withKey: typeof fetch = (input, init) => logged(input, { ...init, headers: { ...(init?.headers as Record<string, string> | undefined), flow_api_key: flowKey } })
+    const l = new ChatbotLogic({ baseUrl: chatUrl, fetch: withKey })
     // A fresh conversation every time, not the one this tab used last.
     l.clearStorage()
     l.initSession()

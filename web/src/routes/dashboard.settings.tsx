@@ -30,7 +30,6 @@ function Settings() {
       <header className="db-pagehead">
         <div>
           <h1 className="db-h1">Settings</h1>
-          <p className="db-sub">Your account.</p>
         </div>
       </header>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}

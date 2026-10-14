@@ -30,6 +30,9 @@ export type Session = {
   webActions?: WebActionEvent[]
   /** Started from the dashboard's Test tab. */
   test?: boolean
+  /** Test sessions: what the agent did on the page, and every request and message (keys masked). */
+  actions?: { id: string; label: string }[]
+  wire?: { id: number; dir: 'out' | 'in'; label: string; data: unknown; at: number; ref?: number }[]
 }
 
 /** What the Test tab may do for a flow. */
@@ -46,11 +49,16 @@ export type TestSetup = {
   chatUrl: string
   /** The flow's API key: tests authenticate with it. Only for a flow this account may test. */
   flowKey?: string
+  /** The tester's own account key, sent alongside the flow key as user_api_key. */
+  userKey?: string
+  /** Voice server for avatar (face) tests. */
+  avatarUrl: string
   /** Copied from the old backend: the voice servers run their own copy of it. */
   imported?: boolean
 }
 
-export type TestTurn = { role: 'user' | 'assistant'; content: string }
+/** `data`: extra keys an agent step sent besides its words (frame, score…), as JSON text. */
+export type TestTurn = { role: 'user' | 'assistant'; content: string; data?: boolean }
 
 export type TestCall = {
   id: string
@@ -123,11 +131,11 @@ export type FlowDoc = {
 }
 
 export type Connection = { kind: 'number' | 'integration' | 'webhook' | 'web'; label: string }
-export type FlowSummary = { key: string; name: string; source: Source; sessions: number; minutes: number; connections: Connection[]; error?: string }
+export type FlowSummary = { key: string; name: string; createdAt?: string; source: Source; sessions: number; minutes: number; connections: Connection[]; error?: string }
 
 export type VoicePreset = { id: string; name: string; kind: 'stt' | 'tts'; config: ProviderConfig; used_by: string[] }
 export type KnowledgeBase = { id: string; name: string; sources: { kind: string; label: string; status: 'ready' | 'indexing' | 'failed'; chunks: number; added_at: string }[] }
-export type Avatar = { uuid: string; label: string; detector: 's3fd' | 'dwpose'; frames: number; fps: number; created_at: string; /** A short looping preview of the face. */ preview?: string }
+export type Avatar = { uuid: string; label: string; detector: 's3fd' | 'dwpose'; frames: number; fps: number; created_at: string; /** A short looping preview of the face, or a photo (see previewType). */ preview?: string; previewType?: 'image' | 'video' }
 export type Integration = { id: string; kind: 'shopify'; name: string; status: 'connected' | 'error'; connected_at: string }
 
 export type OwnedNumber = { phone_number: string; label?: string; added_at: string }

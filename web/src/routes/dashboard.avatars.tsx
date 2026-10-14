@@ -1,12 +1,15 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { ThinkingOrb } from 'thinking-orbs'
 
 import { DropZone, Dropdown, Label } from '#/components/dashboard/controls'
 import Icon, { type IconName } from '#/components/dashboard/Icon'
 import { Notice } from '#/components/dashboard/ui'
+import { undoToast } from '#/components/ui/halo-toast'
 import { fmtDate, unwire } from '#/lib/dashboard/client'
 import type { Account } from '#/lib/dashboard/types'
-import { accountOp, getAccount } from '#/server/dashboard/api'
+import { FaceMedia } from '#/components/dashboard/kit/FaceMedia'
+import { getAccount } from '#/server/dashboard/api'
 
 export const Route = createFileRoute('/dashboard/avatars')({
   staleTime: 30_000,
@@ -24,7 +27,7 @@ const TIPS: { icon: IconName; title: string; text: string }[] = [
 
 const TRACKING = [
   { value: 's3fd', label: 'Standard', hint: 'Recommended', info: 'Works with the default lip-sync. Choose this unless you’ve been told otherwise.' },
-  { value: 'dwpose', label: 'Full pose', info: 'Only for flows set to the MuseTalk lip-sync.' },
+  { value: 'dwpose', label: 'Full pose', info: 'Only for flows set to Detailed lip-sync.' },
 ]
 
 function Avatars() {
@@ -45,29 +48,62 @@ function Avatars() {
     return () => URL.revokeObjectURL(url)
   }, [file])
 
-  const run = async (op: object, ok?: string) => {
-    const r = unwire(await accountOp({ data: { op: JSON.stringify(op) } }))
-    if (!r.ok) return setMsg({ kind: 'err', text: r.reason }), false
-    setMsg(ok ? { kind: 'ok', text: ok } : null)
-    await router.invalidate()
-    return true
-  }
-
+  // Uploads to the database's /faces, which detects the face in every frame; this can take a few minutes.
   const save = async () => {
+    if (!file) return
     setBusy(true)
-    if (await run({ op: 'avatar.add', label: label.trim(), detector }, `“${label.trim()}” added. Use it on any flow’s Avatar tab.`)) {
-      setFile(null)
-      setLabel('')
+    setMsg(null)
+    try {
+      const body = new FormData()
+      body.set('file', file)
+      body.set('label', label.trim())
+      body.set('detector', detector)
+      const r = (await (await fetch('/api/faces', { method: 'POST', body })).json()) as { ok: boolean; reason?: string }
+      if (!r.ok) setMsg({ kind: 'err', text: r.reason ?? 'Upload failed.' })
+      else {
+        setMsg({ kind: 'ok', text: `“${label.trim() || 'main'}” added. Use it on any flow’s Avatar tab.` })
+        setFile(null)
+        setLabel('')
+        await router.invalidate()
+      }
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message })
     }
     setBusy(false)
   }
+
+  // Delete with Undo: the face disappears at once and the backend delete runs when the toast closes.
+  const [deleting, setDeleting] = useState<Set<string>>(new Set())
+  const [gone, setGone] = useState<Set<string>>(new Set())
+  const unhide = (uuid: string) => setGone((g) => { const n = new Set(g); n.delete(uuid); return n })
+  const remove = (uuid: string) => {
+    if (deleting.has(uuid) || gone.has(uuid)) return
+    const label = avatars.find((a) => a.uuid === uuid)?.label || 'Face'
+    setMsg(null)
+    setGone((g) => new Set(g).add(uuid))
+    undoToast(`Deleted “${label}”`, {
+      undo: () => unhide(uuid),
+      commit: async () => {
+        setDeleting((d) => new Set(d).add(uuid))
+        try {
+          const r = (await (await fetch(`/api/faces?uuid=${encodeURIComponent(uuid)}`, { method: 'DELETE' })).json()) as { ok: boolean; reason?: string }
+          if (!r.ok) { unhide(uuid); setMsg({ kind: 'err', text: r.reason ?? 'Delete failed.' }) }
+          else void router.invalidate()
+        } catch (e) {
+          unhide(uuid)
+          setMsg({ kind: 'err', text: (e as Error).message })
+        }
+        setDeleting((d) => { const n = new Set(d); n.delete(uuid); return n })
+      },
+    })
+  }
+  const faces = avatars.filter((a) => !gone.has(a.uuid))
 
   return (
     <div className="db-page">
       <header className="db-pagehead">
         <div>
           <h1 className="db-h1">Avatars</h1>
-          <p className="db-sub">A face for your agent on video calls. Upload a short video of a face and we’ll move its lips to match what your agent says.</p>
         </div>
       </header>
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
@@ -78,21 +114,28 @@ function Avatars() {
             <DropZone accept="video/*,image/*" title="Drop a video of a face" hint="MP4, MOV or WebM · a photo also works" onFiles={(f) => setFile(f[0])} />
           ) : (
             <div className="db-upload-picked">
-              <div className="db-upload-preview">
+              <div className={`db-upload-preview${busy ? ' is-busy' : ''}`}>
                 {file.type.startsWith('image/') ? <img src={preview ?? ''} alt="" /> : <video src={preview ?? ''} autoPlay muted loop playsInline />}
-                <button className="db-iconbtn db-upload-clear" onClick={() => setFile(null)} aria-label="Choose a different file"><Icon name="close" size={18} /></button>
+                {busy && (
+                  <div className="db-upload-working" role="status">
+                    <ThinkingOrb state="working" size={64} />
+                    <b>Finding the face</b>
+                    <span>Checking every frame. This can take a few minutes.</span>
+                  </div>
+                )}
+                <button className="db-iconbtn db-upload-clear" disabled={busy} onClick={() => setFile(null)} aria-label="Choose a different file"><Icon name="close" size={18} /></button>
               </div>
               <div className="db-upload-form">
                 <span className="db-upload-file"><Icon name="avatar" size={16} />{file.name}</span>
                 <label className="db-field">
-                  <Label info="Use it to pick this face on a flow, e.g. “Priya – friendly”.">Name</Label>
+                  <Label info="Use it to pick this face on a flow, e.g. “Priya · friendly”.">Name</Label>
                   <input className="db-in" autoFocus placeholder="e.g. Priya" value={label} onChange={(e) => setLabel(e.target.value)} />
                 </label>
                 <div className="db-field">
                   <Label info="How we follow the face in your video. Standard suits almost everyone.">Face tracking</Label>
                   <Dropdown value={detector} options={TRACKING} onChange={(v) => setDetector(v as 's3fd' | 'dwpose')} aria-label="Face tracking" />
                 </div>
-                <button className="db-btn db-primary db-btn-icon" disabled={!label.trim() || busy} onClick={save}>
+                <button className="db-btn db-primary db-btn-icon" disabled={busy} onClick={save}>
                   <Icon name="plus" size={17} />{busy ? 'Adding…' : 'Add face'}
                 </button>
               </div>
@@ -102,8 +145,8 @@ function Avatars() {
         <aside className="db-tips">
           <b className="db-tips-title">For the best result</b>
           {TIPS.map((t) => (
-            <div key={t.title} className="db-tip">
-              <span className="db-tip-icon"><Icon name={t.icon} size={17} /></span>
+            <div key={t.title} className="db-advice">
+              <span className="db-advice-icon"><Icon name={t.icon} size={17} /></span>
               <span><b>{t.title}</b><span>{t.text}</span></span>
             </div>
           ))}
@@ -112,12 +155,12 @@ function Avatars() {
 
       <section>
         <h2 className="db-h2 db-section-title">Your faces</h2>
-        {!avatars.length ? <p className="db-muted">No faces yet.</p> : (
+        {!faces.length ? <p className="db-muted">No faces yet.</p> : (
           <div className="db-facegrid">
-            {avatars.map((a) => (
-              <div key={a.uuid} className="db-facecard">
+            {faces.map((a) => (
+              <div key={a.uuid} className={`db-facecard${deleting.has(a.uuid) ? ' is-deleting' : ''}`} aria-busy={deleting.has(a.uuid)}>
                 <div className="db-facecard-media">
-                  {a.preview ? <video src={a.preview} autoPlay muted loop playsInline /> : <span>{a.label.slice(0, 1).toUpperCase()}</span>}
+                  {a.preview ? <FaceMedia src={a.preview} type={a.previewType} /> : <span>{a.label.slice(0, 1).toUpperCase()}</span>}
                 </div>
                 <div className="db-facecard-body">
                   <b>{a.label}</b>
@@ -125,7 +168,9 @@ function Avatars() {
                 </div>
                 <div className="db-facecard-actions">
                   <button className="db-iconbtn" title="Copy face ID" aria-label="Copy face ID" onClick={() => navigator.clipboard?.writeText(a.uuid)}><Icon name="copy" size={17} /></button>
-                  <button className="db-iconbtn is-danger" title="Delete" aria-label="Delete face" onClick={() => run({ op: 'avatar.delete', uuid: a.uuid })}><Icon name="trash" size={17} /></button>
+                  <button className="db-iconbtn is-danger" title="Delete" aria-label="Delete face" disabled={deleting.has(a.uuid)} onClick={() => remove(a.uuid)}>
+                    {deleting.has(a.uuid) ? <ThinkingOrb state="working" size={20} /> : <Icon name="trash" size={17} />}
+                  </button>
                 </div>
               </div>
             ))}

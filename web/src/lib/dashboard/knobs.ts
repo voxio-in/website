@@ -70,8 +70,8 @@ export const KNOBS: Knob[] = [
   { key: 'grain-voice', label: 'Natural texture', kind: 'bool', default: true, group: 'Speaking', help: 'Adds a faint grain so the voice sounds less synthetic.' },
   { key: 'grain-level', label: 'Texture strength', help: 'How strong the texture is.', kind: 'slider', min: 0, max: 0.15, step: 0.005, default: 0.025, group: 'Speaking', requires: 'grain-voice' },
 
-  { key: 'lipsync-model', label: 'Lip-sync model', kind: 'select', default: 'wav2lip', surface: 'web', group: 'Avatar',
-    options: [{ value: 'wav2lip', label: 'Wav2Lip' }, { value: 'musetalk', label: 'MuseTalk' }], help: 'Must match how the faces were prepared.' },
+  { key: 'lipsync-model', label: 'Lip-sync', kind: 'select', default: 'wav2lip', surface: 'web', group: 'Avatar',
+    options: [{ value: 'wav2lip', label: 'Standard' }, { value: 'musetalk', label: 'Detailed' }], help: 'Must match how the faces were prepared.' },
   { key: 'lipsync-quality', label: 'Lip-sync quality', help: 'Higher looks sharper.', kind: 'select', default: 'medium', surface: 'web', group: 'Avatar',
     options: [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }] },
 ]
@@ -80,4 +80,4 @@ export const BEHAVIOUR_GROUPS = ['Pipeline', 'Turn-taking', 'Inactivity'] as con
 export const knobsIn = (g: Knob['group']) => KNOBS.filter((k) => k.group === g)
 
 /** Flow keys PUT /flow accepts today. Everything else is held by the dashboard until the backend adds it. */
-export const LIVE_WRITABLE = new Set(['flow_name', 'kbs', 'stt', 'tts', 'faces', 'transitions', 'vision_id', 'running_vision_id', 'agent'])
+export const LIVE_WRITABLE = new Set(['flow_name', 'kbs', 'stt', 'tts', 'faces', 'transitions', 'vision_id', 'running_vision_id', 'agent', 'participants'])

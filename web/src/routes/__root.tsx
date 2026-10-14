@@ -16,6 +16,7 @@ import AuroraBackdrop from '#/components/AuroraBackdrop'
 import BootVeil from '#/components/BootVeil'
 import PerfTier from '#/components/PerfTier'
 import RouteProgress from '#/components/RouteProgress'
+import { SmoothCaret } from '#/components/SmoothCaret'
 import Navbar from '#/components/Navbar'
 import PullToHome from '#/components/PullToHome'
 
@@ -25,7 +26,7 @@ import PullToHome from '#/components/PullToHome'
 const SITE = 'https://voxio.in'
 
 const FONTS =
-  'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900&family=Instrument+Serif:ital@1&display=swap'
+  'https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Instrument+Serif:ital@1&display=swap'
 
 const LD = {
   '@context': 'https://schema.org',
@@ -142,10 +143,12 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
-/** The marketing site's backdrop and nav, for every route but the dashboard. */
+/** The marketing site's backdrop and nav: every route but the dashboard; the docs get the nav alone. */
 function SiteChrome() {
   const pathname = useRouterState({ select: (st) => st.location.pathname })
   if (pathname.startsWith('/dashboard') || pathname === '/login' || pathname === '/signup') return null
+  // The docs keep the nav but not the backdrop: they are read, not browsed.
+  if (pathname.startsWith('/docs')) return <Navbar />
   return (
     <>
       {/* The site background, for every route. Here rather than per page:
@@ -196,6 +199,7 @@ function RootDocument() {
         <PerfTier />
         <BootVeil />
         <RouteProgress />
+        <SmoothCaret />
         <SiteChrome />
         {/* TEMPORARY — applies the hero tuner's saved value on every route. */}
         <Outlet />

@@ -1,0 +1,160 @@
+/* halo-toast.css — PolishedToastSurface (src/components/ui/halo-toast.tsx).
+   A frosted card in a 1px gradient "halo", Voxio colours. Light-theme
+   values apply inside the dashboard's light mode. */
+
+.ht {
+  --ht-card-a: rgba(14, 22, 36, 0.86);
+  --ht-card-b: rgba(10, 16, 28, 0.74);
+  --ht-edge: rgba(255, 255, 255, 0.12);
+  --ht-edge-lit: rgba(94, 230, 200, 0.45);
+  --ht-title: #f2f6f8;
+  --ht-desc: rgba(230, 237, 240, 0.68);
+
+  width: 100%;
+  max-width: 400px;
+  font-family: inherit;
+  text-align: left;
+}
+
+[data-sonner-theme="light"] .ht,
+.db[data-theme="light"] .ht {
+  --ht-card-a: rgba(255, 255, 255, 0.92);
+  --ht-card-b: rgba(248, 251, 251, 0.82);
+  --ht-edge: rgba(3, 30, 36, 0.12);
+  --ht-edge-lit: rgba(15, 158, 134, 0.5);
+  --ht-title: #0d2328;
+  --ht-desc: rgba(13, 35, 40, 0.66);
+}
+
+.ht-frame {
+  position: relative;
+  padding: 1px;
+  border-radius: 16px;
+}
+
+.ht-blobs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  pointer-events: none;
+}
+
+.ht-blobs-in {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 58%;
+}
+
+.ht-blob { position: absolute; }
+.ht-blob-a { bottom: -40px; width: 352px; height: 128px; filter: blur(24px); }
+.ht-blob-b { bottom: -28px; width: 208px; height: 96px; filter: blur(24px); }
+.ht-blob-c { bottom: -20px; width: 176px; height: 80px; filter: blur(16px); }
+
+.ht-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 14px 14px 16px;
+  border: 1px solid var(--ht-edge);
+  border-radius: 15px;
+  background: linear-gradient(to bottom, var(--ht-card-a), var(--ht-card-b));
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 1px 2px rgba(0, 0, 0, 0.35), 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ht-card.is-lit {
+  border-color: var(--ht-edge-lit);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 1px 2px rgba(0, 0, 0, 0.42), 0 4px 20px rgba(0, 0, 0, 0.48);
+}
+
+.ht-text { flex: 1; min-width: 0; }
+
+.ht-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ht-title);
+  text-wrap: balance;
+}
+
+.ht-desc {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ht-desc);
+  text-wrap: pretty;
+}
+
+.ht-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  border: 1px solid var(--ht-edge);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ht-desc);
+  cursor: pointer;
+}
+
+.ht-action {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  margin: -4px 0 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ht-title);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+}
+.ht-action:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.ht-action:focus-visible { outline: 2px solid var(--ht-edge-lit); outline-offset: 1px; }
+
+.ht-close:hover { color: var(--ht-title); }
+.ht-close:focus-visible { outline: 2px solid var(--ht-edge-lit); outline-offset: 1px; }
+
+/* The trail runs in the 1px border only. */
+.ht-trail {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  pointer-events: none;
+  opacity: 0;
+  mask-image: linear-gradient(transparent, transparent), linear-gradient(#000, #000);
+  mask-clip: padding-box, border-box;
+  mask-composite: intersect;
+  transition: opacity 0.2s;
+}
+
+.ht-trail.is-on { opacity: 1; }
+.ht-trail-dot { position: absolute; }
+
+/* Sonner host: let the card draw its own chrome. */
+[data-sonner-toaster].polished-sonner [data-sonner-toast].ht-host {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-sonner-toaster].polished-sonner [data-sonner-toast] {
+  transition: transform 400ms, height 400ms, box-shadow 200ms;
+}
+
+[data-sonner-toaster].polished-sonner [data-sonner-toast][data-mounted="true"]:not([data-removed="true"]) {
+  opacity: 1 !important;
+}

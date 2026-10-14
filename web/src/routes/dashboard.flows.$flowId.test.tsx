@@ -4,17 +4,20 @@
 // sent and received. See docs/FLOW_TEST_PLAN.md.
 
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Dropdown, Label, Slider } from '#/components/dashboard/controls'
 import Icon, { type IconName } from '#/components/dashboard/Icon'
 import type { BrowserResult } from '#/components/dashboard/test/BrowserTest'
+import type { ParticipantsGraph } from 'voxioagent/client'
+import { facesOn } from '#/lib/dashboard/participants'
 import type { ChatResult } from '#/components/dashboard/test/ChatTest'
 import PhoneTest, { type PhoneResult } from '#/components/dashboard/test/PhoneTest'
 import WirePanel from '#/components/dashboard/test/WirePanel'
+import TestSettings, { changedCount, type TestOverrides } from '#/components/dashboard/test/TestSettings'
 import { useWire } from '#/components/dashboard/test/wire'
 import { Dialog, Loading, Notice, Toggle, useFlow } from '#/components/dashboard/ui'
-import { fmtDur, unwire } from '#/lib/dashboard/client'
+import { NAME_MAX, clipName, fmtDur, unwire } from '#/lib/dashboard/client'
 import { KNOBS } from '#/lib/dashboard/knobs'
 import { rememberTestSession } from '#/lib/dashboard/testSessions'
 import type { Account, TestSetup } from '#/lib/dashboard/types'
@@ -56,26 +59,25 @@ function TestTab() {
   const voices = acct.ok ? acct.data.voices : []
   const avatars = acct.ok ? acct.data.avatars : []
 
-  const hasFaces = flow.faces.expressions.length > 0
   const hasVision = !!(flow.running_vision_id || flow.vision_id)
-  const [avatar, setAvatar] = useState(false)
+  // The avatar follows the flow's own setting on the Avatar tab.
+  const avatar = facesOn(flow.participants as ParticipantsGraph | null | undefined)
   const [camera, setCamera] = useState(false)
   const [open, setOpen] = useState<Kind | null>(null)
   const [live, setLive] = useState(false)
   // The dialog opens small and grows once a test starts (or the code view opens), then stays big.
   const [started, setStarted] = useState(false)
   useEffect(() => { if (live) setStarted(true) }, [live])
-  const [showCode, setShowCode] = useState(false)
+  const [showCode] = useState(false)
   const wire = useWire()
+  const wireNow = useRef(wire.entries)
+  wireNow.current = wire.entries
   const [result, setResult] = useState<Result | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // Advanced: this test only, never saved to the flow, and only while it is open.
-  const [advOpen, setAdvOpen] = useState(false)
-  const [tts, setTts] = useState('')
-  const [stt, setStt] = useState('')
-  const flowVad = typeof flow['vad-threshold'] === 'number' ? (flow['vad-threshold'] as number) : 0.5
-  const [vad, setVad] = useState(flowVad)
+  // "Settings for this test": never saved to the flow; kept while the page is open.
+  const [tsetOpen, setTsetOpen] = useState(false)
+  const [over, setOver] = useState<TestOverrides>({ knobs: {} })
   const face = avatars.find((a) => a.uuid === flow.faces.expressions[0]?.uuid)
   const lipsync = LIPSYNC[face?.detector ?? 's3fd']
 
@@ -94,16 +96,13 @@ function TestTab() {
       }
       for (const k of KNOBS) if (flow[k.key] !== undefined && flow[k.key] !== null) c[k.key] = flow[k.key]
     }
-    if (!advOpen) return Object.keys(c).length ? c : undefined
-    // "Try different settings" goes on top, for this test only.
-    const t = voices.find((v) => v.id === tts)
-    const s = voices.find((v) => v.id === stt)
-    if (t) c.tts_id = t.config
-    if (s) c.stt_id = s.config
-    if (vad !== flowVad) c['vad-threshold'] = vad
-    if (avatar) c['lipsync-model'] = lipsync.value
+    // "Settings for this test" go on top, for this test only.
+    if (over.tts) c.tts_id = over.tts
+    if (over.stt) c.stt_id = over.stt
+    Object.assign(c, over.knobs)
+    if (avatar && changedCount(over)) c['lipsync-model'] = lipsync.value
     return Object.keys(c).length ? c : undefined
-  }, [setup?.imported, flow, advOpen, voices, tts, stt, vad, flowVad, avatar, lipsync.value])
+  }, [setup?.imported, flow, over, avatar, lipsync.value])
 
   // What the flow is missing. A voice picked under "Try different settings" fills that gap.
   const gaps: Gap[] = []
@@ -116,12 +115,15 @@ function TestTab() {
   const voiceFixable = chatReady
 
   // The browser session is built once per set of options; they only change while idle.
-  const sessionKey = `${flow.key}|${avatar}|${camera}|${JSON.stringify(customs ?? {})}`
+  // Who sees and hears whom, from the Participants tab; the SDK's default when none are saved.
+  const participants = (flow.participants as ParticipantsGraph | null | undefined) ?? undefined
+  const sessionKey = `${flow.key}|${avatar}|${camera}|${JSON.stringify(customs ?? {})}|${JSON.stringify(participants ?? null)}`
 
   const onDone = useCallback(async (r: BrowserResult | PhoneResult | ChatResult) => {
     rememberTestSession(r.sessionId)
     setResult(r)
-    const saved = unwire(await saveTestSession({ data: { key: flow.key, session: JSON.stringify(r) } }))
+    // The message log goes with it, so the session can be read back like the live test.
+    const saved = unwire(await saveTestSession({ data: { key: flow.key, session: JSON.stringify({ ...r, wire: wireNow.current }) } }))
     if (!saved.ok) setResult({ ...r, note: `Couldn’t keep it in Sessions: ${saved.reason}` })
     await reload()
   }, [flow.key, reload])
@@ -167,6 +169,8 @@ function TestTab() {
       blocked: off(!setup.testable ? 'Not on the voice servers yet' : !setup.phone ? 'Coming soon' : !flow.numbers.length ? 'Attach a number first' : !voiceFixable ? 'Build the workflow first' : false),
     },
   ]
+  // One filled button: the first test that can run.
+  const lead = tiles.find((t) => !t.blocked)?.kind
 
   const gapList = (compact = false) => (
     <ul className={`db-testgaps-list${compact ? ' is-compact' : ''}`}>
@@ -182,51 +186,22 @@ function TestTab() {
     </ul>
   )
 
-  const settings = (
-    <details className="db-testadv" open={advOpen} onToggle={(e) => setAdvOpen(e.currentTarget.open)}>
-      <summary><Icon name="sliders" size={17} />Try different settings for this test <span className="db-muted">— used while this is open, never saved</span></summary>
-      <div className="db-knobs">
-        <div className="db-knob-row">
-          <Label info="One of your saved voices, for this test only.">Speaking voice</Label>
-          <div className="db-knob-ctl">
-            <Dropdown value={tts} onChange={(v) => !live && setTts(v)} aria-label="Speaking voice"
-              options={[{ value: '', label: 'The flow’s own voice' }, ...voices.filter((v) => v.kind === 'tts').map((v) => ({ value: v.id, label: v.name }))]} />
-          </div>
-        </div>
-        <div className="db-knob-row">
-          <Label info="One of your saved listening setups, for this test only.">Listening</Label>
-          <div className="db-knob-ctl">
-            <Dropdown value={stt} onChange={(v) => !live && setStt(v)} aria-label="Listening"
-              options={[{ value: '', label: 'The flow’s own setup' }, ...voices.filter((v) => v.kind === 'stt').map((v) => ({ value: v.id, label: v.name }))]} />
-          </div>
-        </div>
-        {open === 'browser' && (
-          <div className="db-knob-row">
-            <Label info="Higher ignores more background noise.">Background noise sensitivity</Label>
-            <div className="db-knob-ctl"><Slider value={vad} min={0.3} max={0.9} step={0.05} onChange={(v) => !live && setVad(v)} /></div>
-          </div>
-        )}
-        {open === 'browser' && avatar && (
-          <div className="db-knob-row">
-            <Label info="Matches how this flow’s face was prepared.">Avatar model</Label>
-            <div className="db-knob-ctl"><span className="db-chip">{lipsync.label}</span></div>
-          </div>
-        )}
-      </div>
-    </details>
+  const settingsButton = (
+    <button type="button" className={`db-btn db-btn-icon db-tset-open${changedCount(over) ? ' is-on' : ''}`} onClick={() => setTsetOpen(!tsetOpen)} aria-expanded={tsetOpen}>
+      <Icon name="sliders" size={18} />Settings for this test{changedCount(over) > 0 && <span className="db-tset-n">{changedCount(over)} changed</span>}
+    </button>
   )
-
   const resultCard = result && !live && (
     <section className="db-testresult">
       <Icon name="check" size={18} />
       <span><b>{fmtDur(result.seconds)}</b> · {turns} turn{turns === 1 ? '' : 's'}</span>
       {result.note && <span className="db-muted">{result.note}</span>}
-      <span className="db-testresult-actions">
-        <Link to="/dashboard/flows/$flowId" params={{ flowId: flow.key }} search={{ session: result.sessionId }} className="db-btn db-btn-icon">
-          <Icon name="list" size={16} />View in sessions
+      <span className="db-testresult-actions db-btngroup" role="group">
+        <Link to="/dashboard/flows/$flowId" params={{ flowId: flow.key }} search={{ session: result.sessionId }} className="db-gbtn">
+          <Icon name="list" size={18} />View in sessions
         </Link>
         {result.transcript.length > 0 && (
-          <button className="db-btn db-btn-icon" onClick={copyTranscript}><Icon name={copied ? 'check' : 'copy'} size={16} />{copied ? 'Copied' : 'Copy transcript'}</button>
+          <button className="db-gbtn" onClick={copyTranscript}><Icon name={copied ? 'check' : 'copy'} size={18} />{copied ? 'Copied' : 'Copy transcript'}</button>
         )}
       </span>
     </section>
@@ -239,15 +214,11 @@ function TestTab() {
     <div className="db-page db-test">
       <header className="db-pagehead">
         <div>
-          <h1 className="db-h1">Test “{flow.flow_name}”</h1>
-          <p className="db-sub">Try your agent the way your callers will. Tests use the saved version of the flow.</p>
+          <h1 className="db-h1 db-flowname" title={flow.flow_name.length > NAME_MAX ? flow.flow_name : undefined}>Test “{clipName(flow.flow_name)}”</h1>
         </div>
       </header>
 
       {!setup.testable && <Notice>{setup.reason}</Notice>}
-      {setup.testable && setup.imported && (
-        <Notice>This flow came from the old system. Voice and phone tests send your saved voice, workflow and settings with the call, so they run what you saved here. Chat still uses the voice servers’ own copy.</Notice>
-      )}
 
       {setup.testable && gaps.length > 0 && (
         <section className="db-setcard db-testgaps">
@@ -260,15 +231,24 @@ function TestTab() {
         </section>
       )}
 
-      <div className="db-testtiles">
+      {/* The three ways to test, as one connected group: each stays its own card. */}
+      <div className="db-testtiles" role="group" aria-label="Ways to test">
         {tiles.map((t) => (
           <div key={t.kind} className={`db-testtile${t.blocked ? ' is-off' : ''}`}>
             <span className="db-testtile-icon"><Icon name={t.icon} size={26} /></span>
             <h2 className="db-h2">{t.title}</h2>
             <p className="db-muted">{t.text}</p>
-            <button className="db-btn db-primary db-btn-icon db-btn-lg" disabled={!!t.blocked} onClick={() => openTest(t.kind)}>
-              <Icon name={t.icon} size={18} />{t.button}
-            </button>
+            {/* The button grows into the test's dialog and shrinks back on close
+                (Dialog's layoutId). While the dialog is open, a hidden copy keeps the tile's size. */}
+            {open === t.kind ? (
+              <span className="db-btn db-btn-lg db-morph-ghost" aria-hidden="true"><Icon name={t.icon} size={18} />{t.button}</span>
+            ) : (
+              <motion.span layoutId={`test-${t.kind}`} className="db-morph-from" style={{ borderRadius: 12 }}>
+                <button className={`db-btn db-btn-icon db-btn-lg${t.kind === lead ? ' db-primary' : ''}`} disabled={!!t.blocked} onClick={() => openTest(t.kind)}>
+                  <Icon name={t.icon} size={18} />{t.button}
+                </button>
+              </motion.span>
+            )}
             {t.blocked && <span className="db-testtile-why">{t.blocked}</span>}
           </div>
         ))}
@@ -276,24 +256,15 @@ function TestTab() {
 
       {result && !open && resultCard}
 
+      <AnimatePresence>
       {open && setup.flowKey && (
-        <Dialog big={started || showCode} title={`${TITLES[open]} “${flow.flow_name}”`} onClose={close}
-          sub={open === 'chat' ? 'Type to your agent. Uses the flow’s own settings.' : open === 'phone' ? 'It rings the number you enter, from this flow’s number.' : 'Uses your microphone. Leaving this window ends the call.'}
-          actions={
-            <button className={`db-btn db-btn-icon${showCode ? ' is-on' : ''}`} onClick={() => setShowCode(!showCode)} aria-pressed={showCode}>
-              <Icon name="code" size={16} />{showCode ? 'Hide code' : 'Show code'}
-            </button>
-          }>
-          <div className={`db-testdlg${showCode ? ' has-code' : ''}${started || showCode ? '' : ' is-small'}`}>
+        <Dialog key={open} layoutId={`test-${open}`} big={started || showCode || tsetOpen} title={`${TITLES[open]} “${clipName(flow.flow_name)}”`} onClose={close}
+          sub={open === 'chat' ? 'Type to your agent. Uses the flow’s own settings.' : open === 'phone' ? 'It rings the number you enter, from this flow’s number.' : undefined}
+>
+          <div className={`db-testdlg${showCode || (tsetOpen && open !== 'chat') ? ' has-code' : ''}${started || showCode || tsetOpen ? '' : ' is-small'}`}>
             <div className="db-testdlg-main">
-              {open === 'browser' && (hasFaces || hasVision) && (
+              {open === 'browser' && hasVision && (
                 <div className="db-testopts">
-                  {hasFaces && (
-                    <label className="db-testopt">
-                      <Toggle on={avatar} onChange={(v) => !live && setAvatar(v)} />
-                      <span>Show the avatar</span>
-                    </label>
-                  )}
                   {hasVision && (
                     <label className="db-testopt">
                       <Toggle on={camera} onChange={(v) => !live && setCamera(v)} />
@@ -303,14 +274,14 @@ function TestTab() {
                 </div>
               )}
 
-              {open !== 'chat' && settings}
+              {open !== 'chat' && <div className="db-tset-bar">{settingsButton}</div>}
               {voiceBlocked && !live && gapList(true)}
 
               <Suspense fallback={<Loading inline label="Getting ready" />}>
                 {open === 'browser' && (voiceBlocked && !live ? (
                   <div className="db-test-go"><button className="db-btn db-primary db-btn-icon db-btn-lg" disabled><Icon name="voice" size={18} />Start talking</button></div>
                 ) : (
-                  <BrowserTest key={sessionKey} flowKey={setup.flowKey} setup={setup} video={avatar} camera={camera} customs={customs} log={wire.log} onLive={setLive} onDone={onDone} />
+                  <BrowserTest key={sessionKey} flowKey={setup.flowKey} setup={setup} video={avatar} camera={camera} customs={customs} participants={participants} log={wire.log} onLive={setLive} onDone={onDone} />
                 ))}
                 {open === 'chat' && <ChatTest flowKey={setup.flowKey} chatUrl={setup.chatUrl} log={wire.log} onLive={setLive} onDone={onDone} />}
                 {open === 'phone' && <PhoneTest flow={flow} setup={setup} customs={customs} blocked={voiceBlocked} log={wire.log} onLive={setLive} onDone={onDone} />}
@@ -319,9 +290,14 @@ function TestTab() {
               {resultCard}
             </div>
             {showCode && <WirePanel entries={wire.entries} onClear={wire.clear} />}
+            {tsetOpen && open !== 'chat' && !showCode && (
+              <TestSettings flow={flow} voices={voices} value={over} onChange={setOver} locked={live} onClose={() => setTsetOpen(false)} />
+            )}
           </div>
         </Dialog>
       )}
+      </AnimatePresence>
     </div>
   )
 }
+

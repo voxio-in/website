@@ -19,28 +19,28 @@ export interface TooltipContentProps {
 export function TooltipContent({ title, rows, children }: TooltipContentProps) {
   return (
     <div className="overflow-hidden">
-      <div className="px-3 py-2.5">
+      <div className="bk-tip">
         {title && (
-          <div className="mb-2 text-left font-medium text-chart-tooltip-foreground text-xs">
+          <div className="bk-tip-title">
             {title}
           </div>
         )}
-        <div className="space-y-1.5">
+        <div className="bk-tip-rows">
           {rows.map((row) => (
             <div
-              className="flex items-center justify-between gap-4"
+              className="bk-tip-row"
               key={`${row.label}-${row.color}`}
             >
-              <div className="flex items-center gap-2">
+              <div className="bk-tip-key">
                 <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  className="bk-tip-dot"
                   style={{ backgroundColor: row.color }}
                 />
-                <span className="text-chart-tooltip-muted text-sm">
+                <span className="bk-tip-label">
                   {row.label}
                 </span>
               </div>
-              <span className="font-medium text-chart-tooltip-foreground text-sm tabular-nums">
+              <span className="bk-tip-value">
                 {typeof row.value === "number" ? intFmt(row.value) : row.value}
               </span>
             </div>

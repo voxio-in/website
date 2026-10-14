@@ -223,7 +223,7 @@
 .db-transcriptbox .db-transcript { margin-top: 0; max-height: 340px; }
 .db-turn { display: flex; flex-direction: column; }
 .db-turn-time { margin-top: 4px; font-size: 13px; color: var(--db-muted); font-variant-numeric: tabular-nums; align-self: flex-start; }
-.db-turn.is-ai .db-turn-time { align-self: flex-end; }
+.db-turn.is-user .db-turn-time { align-self: flex-end; }
 
 @media (max-width: 760px) {
   .db-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -248,3 +248,27 @@
   margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; font-size: 15.5px;
   color: var(--db-warn-text); background: rgba(255, 198, 112, 0.08); border: 1px solid rgba(255, 198, 112, 0.25);
 }
+
+/* Material 3 segmented button (Material 3 Design Kit): 40px pill, 1px outline,
+   segments share borders, selected = tonal container + check, 8%/10% state layers. */
+.m3-seg {
+  --m3-outline: #938f99; --m3-sel: color-mix(in srgb, var(--db-accent) 24%, transparent); --m3-on-sel: var(--db-text); --m3-on: var(--db-text);
+  display: inline-flex; height: 40px;
+}
+.db[data-theme="light"] .m3-seg { --m3-outline: #79747e; --m3-sel: color-mix(in srgb, var(--db-accent) 18%, white); }
+.m3-seg-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0;
+  min-width: 48px; padding: 0 12px; margin-left: -1px; border: 1px solid var(--m3-outline); background: transparent;
+  color: var(--m3-on); font: inherit; font-size: 14px; font-weight: 500; letter-spacing: 0.1px; line-height: 20px;
+  cursor: pointer; overflow: hidden; white-space: nowrap; -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), color 0.2s;
+}
+.m3-seg-btn:first-child { margin-left: 0; border-radius: 20px 0 0 20px; padding-left: 16px; }
+.m3-seg-btn:last-child { border-radius: 0 20px 20px 0; padding-right: 16px; }
+.m3-seg-btn::after { content: ""; position: absolute; inset: 0; background: currentColor; opacity: 0; transition: opacity 0.15s linear; pointer-events: none; }
+.m3-seg-btn:hover::after { opacity: 0.08; }
+.m3-seg-btn:active::after { opacity: 0.1; }
+.m3-seg-btn:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; z-index: 1; }
+.m3-seg-btn.is-on { background: var(--m3-sel); color: var(--m3-on-sel); }
+.m3-seg-check { display: inline-flex; width: 0; opacity: 0; transform: scale(0.4); transition: width 0.25s cubic-bezier(0.2, 0, 0, 1), margin 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0, 0, 1); }
+.m3-seg-btn.is-on .m3-seg-check { width: 18px; margin-right: 8px; opacity: 1; transform: none; }

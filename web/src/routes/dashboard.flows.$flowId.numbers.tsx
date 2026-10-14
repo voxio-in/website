@@ -92,7 +92,7 @@ function Numbers() {
             <div className="db-attach-row">
               <Dropdown value={pick} placeholder="Choose one of your numbers" onChange={setPick} aria-label="Your numbers"
                 options={others.map((n) => ({ value: n.phone_number, label: n.phone_number, hint: n.flow ? `on ${n.flow.name}` : 'Free' }))} />
-              <button className="db-btn db-primary" disabled={!pick} onClick={() => change(pick, true)}>Attach</button>
+              <button className="db-btn" disabled={!pick} onClick={() => change(pick, true)}>Attach</button>
             </div>
           </div>
         )}

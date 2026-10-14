@@ -19,7 +19,7 @@ import {
 
 export const JEREMY_FACES: { uuid: string; label: JeremyFrame; usage: string }[] = [
   {
-    uuid: '7f1c5a24-3dd0-4106-b713-237bd70db38b',
+    uuid: 'e3ec3023-7b7c-4559-8c21-ff4db0264bab',
     label: 'main',
     usage:
       'the only face — a worried son on the phone at work. Held for the whole call; there is nothing to cut to.',
@@ -39,7 +39,7 @@ ${accentSpeech(accent)}`
   return {
     'warmup-agent': true,
     'process-type': 'stt-native',
-    'lipsync-model': 'musetalk',
+    'lipsync-model': 'wav2lip',
     'lipsync-quality': 'low',
     faces: JEREMY_FACES,
     agent_id: {
@@ -210,10 +210,10 @@ ${accentSpeech(accent)}`
     },
     ...buildVoiceCustoms({
       accent,
+      ttsModel: 'flux-naveen-en',
       preFire: false,
       inactivityMessage: 'Hello? Are you still there?',
     }),
-    tts_id: { service: 'deepgram', model: 'flux-naveen-en' },
     stt_id: sttForAccent(accent),
   }
 }

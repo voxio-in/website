@@ -30,10 +30,12 @@
 
   display: grid;
   grid-template-columns: var(--rail) 1fr;
+  /* One row, always the full height: nothing may wrap into a second row and squeeze the page. */
+  grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
   background: var(--db-bg);
   color: var(--db-text);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.5;
 }
@@ -104,6 +106,9 @@
 .db-burger { display: none; }
 
 /* ---------- page ---------- */
+/* The toast region (Sonner's <section aria-live>) is a child of .db; keep it out of
+   the grid so it never takes a row. Its toasts are fixed-positioned on their own. */
+.db > section[aria-live] { position: fixed; inset: auto 0 0 auto; width: 0; height: 0; }
 .db-main { min-width: 0; overflow: auto; display: flex; flex-direction: column; }
 .db-page { padding: 32px 40px 48px; width: 100%; }
 .db-page > * + * { margin-top: 20px; }

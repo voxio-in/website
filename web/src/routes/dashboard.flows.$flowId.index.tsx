@@ -5,9 +5,11 @@ import { UsageChart } from '#/components/dashboard/Charts'
 import Icon from '#/components/dashboard/Icon'
 import KeyChip from '#/components/dashboard/KeyChip'
 import SessionsTable from '#/components/dashboard/SessionsTable'
-import { Kpi, Notice, byDay, totals, useFlow } from '#/components/dashboard/ui'
-import { channelOf, fmtDur, unwire } from '#/lib/dashboard/client'
+import { Kpi, Notice, byRange, totals, useFlow, type Range } from '#/components/dashboard/ui'
+import { NAME_MAX, channelOf, clipName, fmtDur, unwire } from '#/lib/dashboard/client'
 import { duplicateFlow, rotateFlowKey } from '#/server/dashboard/api'
+import { ExportDialog } from '#/components/workflow/Transfer'
+import { DownloadIcon } from 'lucide-react'
 
 
 export const Route = createFileRoute('/dashboard/flows/$flowId/')({
@@ -21,12 +23,13 @@ function FlowOverview() {
   const { session: highlight } = Route.useSearch()
   const navigate = useNavigate()
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
-  const [days, setDays] = useState(30)
+  const [range, setRange] = useState<Range>({ preset: 30 })
   const t = totals(flow.sessions)
-  const buckets = useMemo(() => byDay(flow.sessions, 90), [flow.sessions])
+  const buckets = useMemo(() => byRange(flow.sessions, range), [flow.sessions, range])
   const nodes = Object.keys(flow.workflow.nodes).length
 
   const [copying, setCopying] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const duplicate = async () => {
     setCopying(true)
     const r = unwire<string>(await duplicateFlow({ data: { key: flow.key } }))
@@ -54,12 +57,16 @@ function FlowOverview() {
           <KeyChip value={flow.key} onRotate={rotate} />
         </div>
         <div className="db-flowtitle-side">
+          <span className="db-btngroup" role="group" aria-label="Flow actions">
+            <Link to="/dashboard/flows/$flowId/test" params={{ flowId: flow.key }} className="db-gbtn is-lead"><Icon name="play" size={16} />Test</Link>
+            <button className="db-gbtn" onClick={duplicate} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Duplicate'}</button>
+            <button className="db-gbtn" onClick={() => setExporting(true)}><DownloadIcon size={16} />Export</button>
+          </span>
           {created && <span className="db-createdchip"><Icon name="calendar" size={15} />Created {created}</span>}
-          <Link to="/dashboard/flows/$flowId/test" params={{ flowId: flow.key }} className="db-btn db-primary db-btn-icon"><Icon name="play" size={16} />Test</Link>
-          <button className="db-btn db-btn-icon" onClick={duplicate} disabled={copying}><Icon name="copy" size={16} />{copying ? 'Copying…' : 'Duplicate'}</button>
         </div>
       </header>
 
+      {exporting && <ExportDialog workflow={flow.workflow} title={flow.flow_name} onClose={() => setExporting(false)} />}
       {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
 
       <div className="db-kpis">
@@ -69,23 +76,19 @@ function FlowOverview() {
         <ChannelKpi sessions={flow.sessions} />
       </div>
 
-      <Link to="/dashboard/flows/$flowId/workflow" params={{ flowId: flow.key }} className="db-softcard db-wfcard">
+      {/* The workflow card with its action as a D on the right edge, as Echobotics' Next step. */}
+      <Link to="/dashboard/flows/$flowId/workflow" params={{ flowId: flow.key }} className="db-softcard db-wfcard is-d">
         <span className="db-wfcard-icon"><Icon name="flows" size={24} /></span>
         <span className="db-wfcard-text">
           <b>Workflow</b>
-          <span>{nodes} step{nodes === 1 ? '' : 's'} — what your agent says and does on each turn</span>
+          <span>{nodes} step{nodes === 1 ? '' : 's'} · what your agent says and does on each turn</span>
         </span>
-        <span className="db-btn db-primary db-btn-icon"><Icon name="edit" size={17} /> Edit workflow</span>
+        <span className="db-dbtn"><Icon name="edit" size={20} />Edit workflow</span>
       </Link>
 
-      <UsageChart data={buckets} days={days} onDays={setDays} />
+      <UsageChart data={buckets} range={range} onRange={setRange} earliest={flow.sessions.reduce<string | undefined>((m, s) => (!m || s.startTime < m ? s.startTime : m), undefined)} />
 
-      <section className="db-softcard db-sesscard">
-        <div className="db-softcard-head">
-          <h2 className="db-h2">Sessions</h2>
-        </div>
-        <SessionsTable sessions={flow.sessions} highlight={highlight} empty="No sessions yet — place a call from Numbers & calls." />
-      </section>
+      <SessionsTable sessions={flow.sessions} flowKey={flow.key} highlight={highlight} empty="No sessions yet. Place a call from Numbers & calls." />
     </div>
   )
 }
@@ -103,7 +106,7 @@ function EditableName({ value, onSave }: { value: string; onSave: (v: string) =>
   if (!editing) {
     return (
       <div className="db-nameline">
-        <h1 className="db-h1">{value}</h1>
+        <h1 className="db-h1 db-flowname" title={value.length > NAME_MAX ? value : undefined}>{clipName(value)}</h1>
         <button className="db-iconbtn" onClick={() => { setText(value); setEditing(true) }} title="Rename" aria-label="Rename flow">
           <Icon name="edit" size={22} />
         </button>

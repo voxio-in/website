@@ -185,3 +185,13 @@ button.db-row { cursor: pointer; }
 .db-loading.is-inline { display: inline-flex; min-height: 0; gap: 8px; font-size: inherit; }
 .db-aiglow { display: block; border-radius: 14px; }
 .db-aiglow > .db-in, .db-aiglow > textarea { width: 100%; }
+
+/* Developers: numbered steps above the SDK snippets. */
+.db-dev-step { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; }
+.db-dev-step:not(:first-child) { margin-top: 26px; }
+.db-dev-num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--db-bg); background: var(--db-accent); }
+.db-dev-h { margin: 0; font-size: 16px; font-weight: 600; }
+.db-dev-options { margin-bottom: 10px; }
+/* Agent on the left, the person on the right, like any chat. */
+.db-turn.is-ai { align-self: flex-start; }
+.db-turn.is-user { align-self: flex-end; }

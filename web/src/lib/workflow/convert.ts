@@ -3,7 +3,8 @@
 //
 // The engine reads only `workflow.nodes` (agent/.../workflow.py):
 //   { nodes: { <name>: { type, parameters, next: name | name[] } } }
-// The start node is the first key. A conditional's `parameters.mappings`
+// The start node is named by `start_node` (the engine requires it); the canvas
+// keeps it as the first node. A conditional's `parameters.mappings`
 // ({value: route | route[]}) overrides `next` when a value matches, so each
 // mapping becomes its own output handle. Layout lives in `workflow.ui`, which
 // the engine ignores.
@@ -17,7 +18,13 @@ export type EngineNode = {
 
 export type Workflow = {
   nodes: Record<string, EngineNode>
-  ui?: { positions?: Record<string, { x: number; y: number }> }
+  ui?: {
+    positions?: Record<string, { x: number; y: number }>
+    /** How connection lines are drawn on the canvas. */
+    edgeStyle?: EdgeStyle
+    /** Hand-moved right-angle lines: segment positions, px from the line's start. */
+    bends?: Record<string, Bend>
+  }
   [extra: string]: unknown
 }
 
@@ -33,12 +40,16 @@ export type NodeData = {
 }
 
 export type GraphNode = { id: string; position: { x: number; y: number } | null; data: NodeData }
-export type GraphEdge = { id: string; source: string; target: string; sourceHandle: string }
+export type EdgeStyle = 'step' | 'curve'
+/** A right-angle line: start → (x1,·) → (x1,y) → (x2,y) → (x2,·) → end, relative to its start. */
+export type Bend = { x1: number; y: number; x2: number }
+export type GraphEdge = { id: string; source: string; target: string; sourceHandle: string; bend?: Bend }
 export type Graph = {
   nodes: GraphNode[]
   edges: GraphEdge[]
   /** Top-level workflow keys other than nodes / ui. */
   extra: Record<string, unknown>
+  edgeStyle?: EdgeStyle
 }
 
 export const NEXT_HANDLE = 'next'
@@ -58,7 +69,10 @@ export function toGraph(wf: Workflow): Graph {
   const gNodes: GraphNode[] = []
   const edges: GraphEdge[] = []
 
-  for (const [name, node] of Object.entries(nodes)) {
+  const start = startNodeOf(wf)
+  if (start) extra.start_node = start
+  const entries = Object.entries(nodes).sort(([a], [b]) => (a === start ? -1 : b === start ? 1 : 0))
+  for (const [name, node] of entries) {
     const { type, parameters, next, ...rest } = node
     const missing: string[] = []
 
@@ -92,7 +106,9 @@ export function toGraph(wf: Workflow): Graph {
     })
   }
 
-  return { nodes: gNodes, edges, extra }
+  const bends = ui?.bends ?? {}
+  for (const e of edges) { const b = bends[e.id]; if (b && typeof b === 'object') e.bend = b }
+  return { nodes: gNodes, edges, extra, edgeStyle: ui?.edgeStyle }
 }
 
 export function toWorkflow(graph: Graph, opts: { start?: string; withUi?: boolean } = {}): Workflow {
@@ -135,12 +151,47 @@ export function toWorkflow(graph: Graph, opts: { start?: string; withUi?: boolea
   }
 
   const wf: Workflow = { ...graph.extra, nodes }
-  if (withUi && Object.keys(positions).length) wf.ui = { positions }
+  if (ordered[0]) wf.start_node = ordered[0].id
+  wf.variables ??= {}
+  if (withUi) {
+    const bends = Object.fromEntries(graph.edges.filter((e) => e.bend).map((e) => [e.id, { x1: Math.round(e.bend!.x1), y: Math.round(e.bend!.y), x2: Math.round(e.bend!.x2) }]))
+    const ui: NonNullable<Workflow['ui']> = {}
+    if (Object.keys(positions).length) ui.positions = positions
+    if (graph.edgeStyle) ui.edgeStyle = graph.edgeStyle
+    if (Object.keys(bends).length) ui.bends = bends
+    if (Object.keys(ui).length) wf.ui = ui
+  }
   return wf
 }
 
-/** The engine's start node: the first key. */
+/** The engine's start node: the first node on the canvas. */
 export const startOf = (graph: Graph): string | undefined => graph.nodes[0]?.id
+
+/**
+ * The start step. `start_node` when it names a real step; otherwise the step no
+ * other step leads to. Never key order: Postgres jsonb sorts object keys, so a
+ * stored workflow's first key is just whichever name sorts first.
+ */
+export function startNodeOf(wf: Workflow): string | undefined {
+  const nodes = wf.nodes ?? {}
+  const names = Object.keys(nodes)
+  if (typeof wf.start_node === 'string' && names.includes(wf.start_node)) return wf.start_node
+  const pointedAt = new Set<string>()
+  for (const node of Object.values(nodes)) {
+    for (const t of asList(node.next)) pointedAt.add(t)
+    const mappings = (node.parameters as { mappings?: Record<string, unknown> } | undefined)?.mappings
+    if (mappings && typeof mappings === 'object') for (const r of Object.values(mappings)) for (const t of asList(r)) pointedAt.add(t)
+  }
+  return names.find((n) => !pointedAt.has(n)) ?? names[0]
+}
+
+/** A workflow the engine accepts: `start_node` set and a `variables` map (required; empty is fine). */
+export function withStart(wf: Workflow): Workflow {
+  const out: Workflow = { ...wf, variables: wf.variables && typeof wf.variables === 'object' ? wf.variables : {} }
+  const start = startNodeOf(wf)
+  if (start) out.start_node = start
+  return out
+}
 
 /** Pull the workflow out of whatever JSON shape was pasted or fetched. */
 export function extractWorkflow(doc: unknown): Workflow | null {

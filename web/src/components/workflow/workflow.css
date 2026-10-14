@@ -1,0 +1,20 @@
+
+/* Export / import dialogs */
+.wf-xfer { display: grid; gap: 14px; }
+.wf-xfer-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.wf-xfer-acts.is-end { justify-content: flex-end; }
+.wf-xfer-area { min-height: 280px; max-height: 50vh; resize: vertical; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+.wf-drop { display: grid; place-items: center; gap: 6px; min-height: 220px; padding: 24px; border: 1.5px dashed var(--db-line, rgba(127,127,127,.4)); border-radius: 16px; background: transparent; color: inherit; cursor: pointer; transition: background .15s, border-color .15s; }
+.wf-drop:hover, .wf-drop.is-over { border-color: var(--db-accent, currentColor); background: color-mix(in srgb, var(--db-accent, #888) 8%, transparent); }
+.wf-drop small { opacity: .65; }
+.wf-drop.has-file b { color: var(--db-accent, inherit); }
+.wf-xfer-area.is-short { min-height: 140px; }
+.wf-multi { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 40vh; overflow: auto; }
+.wf-multi-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding: 8px 10px; border: 1px solid var(--db-line, rgba(127,127,127,.25)); border-radius: 12px; }
+.wf-multi-name { min-width: 0; }
+.wf-multi-meta { font-size: 13px; opacity: .65; white-space: nowrap; }
+.wf-multi-state { grid-column: 2 / -1; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; }
+.wf-multi-state:empty { display: none; }
+.wf-multi-row.is-done { opacity: .7; }
+.wf-multi-row.is-done .wf-multi-state { color: var(--db-ok, #2e9d5b); }
+.wf-multi-row.is-error .wf-multi-state { color: var(--db-err); }

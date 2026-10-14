@@ -7,7 +7,22 @@
 // getting one half without the other is the uncanny result — an agent that
 // understands Hinglish and replies in Received Pronunciation.
 
-export type AccentId = 'indian' | 'singaporean' | 'english' | 'japanese'
+export type AccentId = 'indian' | 'singaporean' | 'american' | 'english' | 'japanese'
+
+/** The voice that answers — passed through as the session's tts_id. */
+export type AccentTts =
+  | { service: 'deepgram'; model: string }
+  | { service: 'elevenlabs'; model: string; voice: string }
+
+/* ElevenLabs renders the accents Deepgram has no voice for. eleven_v3 is the
+   model; the voice id picks the speaker. */
+function elevenlabs(voice: string): AccentTts {
+  return { service: 'elevenlabs', model: 'eleven_v3', voice }
+}
+
+function deepgram(model: string): AccentTts {
+  return { service: 'deepgram', model }
+}
 
 export type Accent = {
   id: AccentId
@@ -16,8 +31,8 @@ export type Accent = {
   note: string
   /** Soniox language hints. One entry means the hint is enforced strictly. */
   sttHints: readonly string[]
-  /** the Deepgram voice that answers */
-  ttsModel: string
+  /** the voice that answers */
+  tts: AccentTts
   /** What this accent is allowed to speak, spliced into every system prompt. */
   speech: string
 }
@@ -33,7 +48,7 @@ export const ACCENTS: readonly Accent[] = [
     label: 'Indian',
     note: 'English and Hindi',
     sttHints: ['en', 'hi'],
-    ttsModel: 'flux-naveen-en',
+    tts: deepgram('flux-naveen-en'),
     speech: `LANGUAGE. You speak English and Hindi, and you may use either.
 If they speak Hindi to you — in Devanagari, or romanised as Hinglish in Latin letters — answer in the same one they used. Devanagari back for Devanagari; Hinglish back for Hinglish, because a romanised speaker asking for formal Hindi is a wall, not a courtesy.
 If they ask, in ANY language, whether you speak Hindi, the answer is yes. Say so in Hindi and carry on in it. Never say you cannot.
@@ -54,20 +69,26 @@ The only thing that may cross over is a proper noun or a term with no equivalent
        Add 'ms' here if Malay turns up in testing; three hints dilute the
        first, so it is not on by default. */
     sttHints: ['en', 'zh'],
-    /* PLACEHOLDER — shares Japanese's voice, which is the closest thing
-       available rather than a match. Swap for a Singaporean render and
-       nothing else in this file has to change. */
-    ttsModel: 'flux-kai-en',
+    tts: elevenlabs('aFxDLa1A1dSRlzW8nziT'),
     speech: `LANGUAGE. You speak English, and only English — Singapore English, with its own rhythm.
 Singaporean speakers drop the odd Mandarin, Hokkien or Malay word into an English sentence. That is not a language change and you do not follow it: understand the word, and keep answering in English.
 Do not switch language for any reason, and do not offer to.`,
+  },
+  {
+    id: 'american',
+    label: 'American',
+    note: 'English only',
+    sttHints: ['en'],
+    tts: elevenlabs('7EzWGsX10sAS4c9m9cPf'),
+    speech: `LANGUAGE. You speak English, and only English — American English.
+Whatever language or script reaches you, your reply is in English. Do not switch language, and do not offer to.`,
   },
   {
     id: 'english',
     label: 'English',
     note: 'English only',
     sttHints: ['en'],
-    ttsModel: 'flux-cliff-en',
+    tts: deepgram('flux-cliff-en'),
     speech: `LANGUAGE. You speak English, and only English.
 Whatever language or script reaches you, your reply is in English. Do not switch language, and do not offer to.`,
   },
@@ -76,7 +97,7 @@ Whatever language or script reaches you, your reply is in English. Do not switch
     label: 'Japanese',
     note: 'English and Japanese',
     sttHints: ['en', 'ja'],
-    ttsModel: 'flux-kai-en',
+    tts: deepgram('flux-kai-en'),
     speech: `LANGUAGE. You speak English and Japanese, and you may use either.
 If they speak Japanese to you — any kana or kanji at all — answer in Japanese.
 If they ASK you something in Japanese, that is a Japanese turn: answer it in Japanese.

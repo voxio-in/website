@@ -7,13 +7,17 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { Dropdown, NumberUnit, Tags } from '#/components/dashboard/controls'
 import Icon from '#/components/dashboard/Icon'
 import { AiGlow, Toggle } from '#/components/dashboard/ui'
-import { INTERRUPT_OPTIONS, MODELS, SPECIAL_OUTPUTS, friendlyVar, type Field } from '#/lib/workflow/registry'
+import { GrowArea } from './GrowArea'
+import { INTERRUPT_OPTIONS, MODELS, PROVIDERS, SPECIAL_OUTPUTS, friendlyVar, prettyName, type Field } from '#/lib/workflow/registry'
 
 /** Things fields need from outside the workflow, e.g. the account's knowledge bases. */
 export const FieldOptions = createContext<{
   knowledge: { value: string; label: string; hint?: string }[]
   /** Values earlier steps produce, for Branch and "Pass along". */
   variables: { value: string; type: string }[]
+  /** For the open step: where each of its outputs leads (handle → step names), and a way to jump there. */
+  routes?: Record<string, string[]>
+  goTo?: (id: string) => void
 }>({ knowledge: [], variables: [] })
 
 type Props = {
@@ -44,11 +48,19 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
     case 'bool':
       return <Toggle on={!!value} onChange={onChange} />
     case 'select':
+      // Switching the AI provider also picks that provider's first model: the old model id means nothing there.
+      if (field.key === 'service' && field.options === PROVIDERS) {
+        return <Dropdown value={str(value)} options={field.options} aria-label={field.label}
+          onChange={(service) => onPatch({ service, model: MODELS[service]?.[0]?.value ?? '' })} />
+      }
       return <Dropdown value={str(value)} options={field.options ?? []} onChange={onChange} aria-label={field.label} />
     case 'model': {
-      const opts = MODELS[str(params.service)] ?? []
-      const all = value && !opts.some((o) => o.value === value) ? [{ value: str(value), label: str(value) }, ...opts] : opts
-      return <Dropdown value={str(value)} options={all} onChange={onChange} aria-label="Model" />
+      // One picker for provider and model together: "GPT-OSS 120B · Groq".
+      const all = PROVIDERS.flatMap((p) => (MODELS[p.value] ?? []).map((m) => ({ ...m, value: `${p.value}::${m.value}`, hint: `${m.hint ? `${m.hint} · ` : ''}${p.label}` })))
+      const cur = `${str(params.service)}::${str(value)}`
+      const opts = value && !all.some((o) => o.value === cur) ? [{ value: cur, label: str(value), hint: str(params.service) }, ...all] : all
+      return <Dropdown value={cur} options={opts} aria-label="Model"
+        onChange={(v) => { const [service, ...m] = v.split('::'); onPatch({ service, model: m.join('::') }) }} />
     }
     case 'knowledge': {
       const all = value && !knowledge.some((k) => k.value === value) ? [{ value: str(value), label: str(value) }, ...knowledge] : knowledge
@@ -57,12 +69,14 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
         : <input className="db-in" placeholder="Knowledge base name" value={str(value)} onChange={(e) => onChange(e.target.value)} />
     }
     case 'prompt':
-      return <Prompt value={typeof value === 'string' ? value : JSON.stringify(value ?? '', null, 2)} placeholder={field.placeholder} onChange={onChange} />
+      return <GrowArea title={field.label} minRows={4} value={typeof value === 'string' ? value : JSON.stringify(value ?? '', null, 2)} placeholder={field.placeholder}
+        onChange={onChange} className="wf-prompt" glow={(a) => <AiGlow>{a}</AiGlow>} />
     case 'speak': {
       const out = obj(value)
       return (
-        <textarea className="db-in wf-speak" rows={4} placeholder={field.placeholder} value={str(out.speak)}
-          onChange={(e) => onChange({ ...out, speak: e.target.value })} />
+        // Empty is fine: the step then says nothing and only passes its values along.
+        <GrowArea title={field.label} value={str(out.speak)} placeholder={`${field.placeholder ?? ''} (leave empty to say nothing)`}
+          onChange={(t) => { const { speak: _s, ...rest } = out; onChange(t ? { ...out, speak: t } : rest) }} />
       )
     }
     case 'list':
@@ -75,6 +89,7 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
       return <Schema value={obj(value)} onChange={onChange} />
     case 'mappings':
       return <Mappings value={obj(value)} onChange={onChange} />
+
     case 'json':
       return <JsonEdit value={value} onChange={onChange} />
     case 'seconds':
@@ -183,35 +198,6 @@ function Interrupt({ type, meta, onChange }: { type: string; meta: Record<string
 const str = (v: unknown) => (v == null ? '' : String(v))
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {})
 
-function Prompt({ value, placeholder, onChange }: { value: string; placeholder?: string; onChange: (v: unknown) => void }) {
-  const [big, setBig] = useState(false)
-  const area = (
-    <AiGlow>
-      <textarea className={`db-in wf-prompt${big ? ' is-big' : ''}`} value={value} placeholder={placeholder} spellCheck
-        onChange={(e) => onChange(e.target.value)} autoFocus={big} />
-    </AiGlow>
-  )
-  return (
-    <div className="wf-prompt-wrap">
-      {big ? (
-        <div className="db-dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setBig(false)}>
-          <div className="db-dialog is-wide wf-promptdialog">
-            <div className="db-dialog-head">
-              <h2 className="db-h2">Instructions</h2>
-              <button className="db-iconbtn" onClick={() => setBig(false)} aria-label="Close"><Icon name="close" size={20} /></button>
-            </div>
-            {area}
-          </div>
-        </div>
-      ) : area}
-      <div className="wf-prompt-foot">
-        <span>{value.trim() ? `${value.trim().split(/\s+/).length.toLocaleString()} words` : 'Empty'}</span>
-        <button type="button" className="db-copyjson" onClick={() => setBig(true)}><Icon name="eye" size={14} />Open large</button>
-      </div>
-    </div>
-  )
-}
-
 /** Renames a key without reordering the object. */
 function renameKey(o: Record<string, unknown>, from: string, to: string) {
   return Object.fromEntries(Object.entries(o).map(([k, v]) => [k === from ? to : k, v]))
@@ -308,6 +294,7 @@ function Schema({ value, onChange }: { value: Record<string, unknown>; onChange:
 
 /** Path names only; where each path goes is drawn on the canvas. */
 function Mappings({ value, onChange }: { value: Record<string, unknown>; onChange: (v: unknown) => void }) {
+  const { routes, goTo } = useContext(FieldOptions)
   return (
     <div className="wf-rows">
       {Object.keys(value).map((k, i) => (
@@ -316,6 +303,11 @@ function Mappings({ value, onChange }: { value: Record<string, unknown>; onChang
           <input className="db-in" value={k} placeholder="e.g. yes" title={k === 'true' ? 'Matches yes' : k === 'false' ? 'Matches no' : undefined}
             onChange={(e) => onChange(renameKey(value, k, e.target.value))} />
           <button type="button" className="db-iconbtn" aria-label="Remove path" onClick={() => onChange(drop(value, k))}><Icon name="close" size={15} /></button>
+          <span className="wf-pathto">
+            {(routes?.[`m:${k}`] ?? []).length
+              ? routes![`m:${k}`].map((t) => <button key={t} type="button" className="wf-pathto-chip" onClick={() => goTo?.(t)} title={`Open ${prettyName(t)}`}>→ {prettyName(t)}</button>)
+              : <span className="wf-pathto-none">Not connected yet: drag from this path’s dot on the card</span>}
+          </span>
         </div>
       ))}
       <button type="button" className="db-add" onClick={() => onChange({ ...value, [nextKey(value, 'path')]: '' })}>+ Add path</button>

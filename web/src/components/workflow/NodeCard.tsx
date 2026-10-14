@@ -11,7 +11,7 @@ export type CardData = NodeData & { issues: Issue[]; start: boolean; /** handle 
 export type CardNode = Node<CardData, 'vx'>
 
 /** Lets a card add the next step without putting callbacks in node data. */
-export const CardActions = createContext<{ addAfter: (from: string, handle: string, type: string) => void }>({ addAfter: () => {} })
+export const CardActions = createContext<{ addAfter: (from: string, handle: string, type: string) => void; duplicate: (id: string) => void }>({ addAfter: () => {}, duplicate: () => {} })
 
 const PICKABLE = NODE_SPECS.filter((s) => !s.hidden)
 
@@ -48,6 +48,7 @@ function QuickAdd({ from, handle, className }: { from: string; handle: string; c
 }
 
 function NodeCard({ id, data, selected }: NodeProps<CardNode>) {
+  const { duplicate } = useContext(CardActions)
   const spec = specFor(data.type)
   const errors = data.issues.filter((i) => i.level === 'error').length
   const warns = data.issues.length - errors
@@ -68,6 +69,10 @@ function NodeCard({ id, data, selected }: NodeProps<CardNode>) {
           <span className="wf-node-name">{prettyName(id)}</span>
           <span className="wf-node-kind">{spec.label}</span>
         </span>
+        <button className="wf-node-dup nodrag" title="Duplicate (Ctrl+D)" aria-label={`Duplicate ${prettyName(id)}`}
+          onClick={(e) => { e.stopPropagation(); duplicate(id) }}>
+          <Icon name="copy" size={14} />
+        </button>
       </div>
       <p className="wf-node-sum">{spec.summary(data.parameters)}</p>
 

@@ -12,8 +12,11 @@ const MESSAGES: Record<string, string> = {
   'connection-lost': 'The connection dropped. Try again.',
 }
 
-export function testErrorText(e: { code?: string; message?: string; status?: number } | null | undefined): string {
+export function testErrorText(e: { code?: string; message?: string; status?: number; detail?: string } | null | undefined): string {
   if (!e) return ''
+  // A refused typed message comes back on the data channel, with no HTTP
+  // status. The call itself is fine.
+  if (e.code === 'rejected' && !e.status) return `That message wasn’t sent${e.detail ? `: ${e.detail}` : '.'} The call is still on.`
   // A 5xx is the voice server failing to build the call, usually because the
   // flow is missing a piece (no listening setup, no workflow), not the network.
   if (e.status && e.status >= 500) return 'The voice server couldn’t start this flow. Check that its voice and workflow are set up, then try again.'

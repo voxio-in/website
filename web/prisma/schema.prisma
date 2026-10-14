@@ -106,6 +106,8 @@ model User {
   numbers      PhoneNumber[]
   faces        Face[]
   knowledge    KnowledgeBase[]
+  dashboards   Dashboard[]
+  chats        AssistantChat[]
 
   @@map("users")
 }
@@ -327,4 +329,55 @@ model WebhookDelivery {
 
   @@index([flowId, at])
   @@map("webhook_deliveries")
+}
+
+// A VAD (Voxio Agents Dashboard): a spec of widgets over the user's flows (dashboard).
+// keyHash: sha256 of the dashboard's own read key (vad_…) used by shared links.
+model Dashboard {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  spec      Json
+  keyHash   String?  @unique @map("key_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("dashboards")
+}
+
+// Ask Voxio conversations. A user keeps many; each message is stored whole:
+// a user message with its @ mentions, or an answer with every part in order
+// (text, each tool call with its input and result, and change cards with their
+// current status), so a chat reopens exactly as it was.
+model AssistantChat {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id")
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String             @default("New chat")
+  model     String?
+  messages  AssistantMessage[]
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  @@index([userId, updatedAt])
+  @@map("assistant_chats")
+}
+
+model AssistantMessage {
+  id        String        @id @default(cuid())
+  chatId    String        @map("chat_id")
+  chat      AssistantChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  seq       Int
+  role      String // user | assistant
+  text      String? // user messages
+  mentions  Json? // user messages: [{ kind, id, label }]
+  parts     Json? // answers: [{ kind: text | tool | change, … }]
+  error     String?
+  meta      String? // model · steps · tokens
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@unique([chatId, seq])
+  @@map("assistant_messages")
 }
