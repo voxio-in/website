@@ -18,6 +18,14 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-25 — Flow overview: Test is always in the header
+
+**What changed**
+Test is back in the overview's header group, before Duplicate and Export. The next-step card only offers Test (or Try it) when that is the next step, so a Tested flow (next step: Connect) or a Quiet one (next step: Last session) had no way to test from the overview.
+
+**Files**
+src/routes/dashboard.flows.$flowId.index.tsx
+
 ## 2026-10-25 — Back to port 3000
 
 **What changed**
