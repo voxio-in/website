@@ -9,7 +9,7 @@
 # The database is reported, never required: with no DATABASE_URL every page
 # still renders. That is why a missing .env is a warning here and not a stop.
 #
-#   ./start.sh                      dev on :3000
+#   ./start.sh                      dev on :3001
 #   ./start.sh --prod --port 8080   build, then serve the build on :8080
 #   ./start.sh --install --migrate  install, generate the client, migrate, run dev
 
@@ -20,7 +20,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 PROD=0
 BUILD=0
-PORT=3000
+PORT=3001
 INSTALL=0
 MIGRATE=0
 TYPECHECK=0
@@ -43,7 +43,7 @@ Usage: ./start.sh [options]
 
   --prod            Build, then serve the build. Without it, the dev server runs.
   --build           Build and exit. Does not serve.
-  --port <n>        Port to listen on (default 3000).
+  --port <n>        Port to listen on (default 3001).
   --install         npm install before anything else.
   --migrate         Generate the Prisma client and apply migrations.
                     Dev uses `migrate dev`; --prod uses `migrate deploy`.

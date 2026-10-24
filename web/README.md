@@ -56,7 +56,7 @@ thing to start.
 ```bash
 cd web
 npm install
-npm run dev            # http://localhost:3000 — site + server
+npm run dev            # http://localhost:3001 — site + server
 ```
 
 That is enough for every page. The database is **Neon** (serverless Postgres,
@@ -83,7 +83,7 @@ the credentials live there and nowhere else.
 Check what is up:
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3001/api/health
 # {"ok":true,"server":"up","db":"unconfigured"}   no DATABASE_URL
 # {"ok":true,"server":"up","db":"up"}             database reachable
 # {"ok":true,"server":"up","db":"down","detail":"…why"}

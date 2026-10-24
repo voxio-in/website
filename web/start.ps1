@@ -13,7 +13,7 @@
 
 .EXAMPLE
     .\start.ps1
-    Dev server on :3000.
+    Dev server on :3001.
 
 .EXAMPLE
     .\start.ps1 -Prod -Port 8080
@@ -33,7 +33,7 @@ param(
     [switch] $Build,
 
     # Port to listen on.
-    [int] $Port = 3000,
+    [int] $Port = 3001,
 
     # npm install before anything else.
     [switch] $Install,

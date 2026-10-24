@@ -18,6 +18,17 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-25 — The site runs on port 3001 by default
+
+**What changed**
+The default port is 3001 everywhere it was 3000: the npm scripts (`dev`, `start`, `serve`), `start.sh`, `start.ps1` and the README. Nothing else in the code names the port.
+
+**State now**
+`pm2 restart website` reruns the process's saved command, so it picks this up if that command is one of the npm scripts or start scripts. If the pm2 process was started with its own port, or nginx proxies to :3000, those need changing on the server.
+
+**Files**
+package.json, start.sh, start.ps1, README.md
+
 ## 2026-10-25 — Workflow canvas: connect on any side, and a magnet that lines steps up
 
 **What changed**
