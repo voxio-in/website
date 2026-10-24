@@ -21,7 +21,7 @@ What works, what's still open or half-finished.
 ## 2026-10-25 — Flow overview: Test is always in the header
 
 **What changed**
-Test is back in the overview's header group, before Duplicate and Export. The next-step card only offers Test (or Try it) when that is the next step, so a Tested flow (next step: Connect) or a Quiet one (next step: Last session) had no way to test from the overview.
+Test is back in the overview's header group, filled as it was before the redesign, before Duplicate and Export (testers come to this page to test). The next-step card only offers Test (or Try it) when that is the next step, so a Tested flow (next step: Connect) or a Quiet one (next step: Last session) had no way to test from the overview.
 
 **Files**
 src/routes/dashboard.flows.$flowId.index.tsx

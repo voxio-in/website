@@ -77,8 +77,8 @@ function FlowOverview() {
           <KeyChip value={flow.key} onRotate={rotate} />
         </div>
         <span className="db-btngroup db-ov-tools" role="group" aria-label="Flow actions">
-          {/* Always here: the next-step card only offers Test when Test is the next step. */}
-          <Link to="/dashboard/flows/$flowId/test" params={{ flowId: flow.key }} className="db-gbtn"><Icon name="play" size={18} />Test</Link>
+          {/* Filled and always here, as before: testers come to this page to test. */}
+          <Link to="/dashboard/flows/$flowId/test" params={{ flowId: flow.key }} className="db-gbtn is-lead"><Icon name="play" size={18} />Test</Link>
           <button className="db-gbtn" onClick={duplicate} disabled={copying} aria-busy={copying}><Icon name="copy" size={18} />{copying ? 'Copying…' : 'Duplicate'}</button>
           <button className="db-gbtn" onClick={() => setExporting(true)}><DownloadIcon size={18} />Export</button>
         </span>
