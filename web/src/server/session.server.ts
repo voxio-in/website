@@ -52,7 +52,8 @@ export const decoyHash = () => (decoy ??= hashPassword(randomBytes(12).toString(
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 const safe = <T,>(f: () => T): T | undefined => { try { return f() } catch { return undefined } }
 
-export async function startSession(userId: string) {
+/** Signs this browser in. With `user`, the next pages already know who it is: no lookup right after login. */
+export async function startSession(userId: string, user?: AuthUser) {
   const token = randomBytes(32).toString('base64url')
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 864e5)
   await withDb(() => db.authSession.create({
@@ -71,6 +72,7 @@ export async function startSession(userId: string) {
     path: '/',
     expires: expiresAt,
   })
+  if (user) seen.set(sha256(token), { at: Date.now(), user })
 }
 
 export async function endSession() {

@@ -18,3 +18,57 @@
 .wf-multi-row.is-done { opacity: .7; }
 .wf-multi-row.is-done .wf-multi-state { color: var(--db-ok, #2e9d5b); }
 .wf-multi-row.is-error .wf-multi-state { color: var(--db-err); }
+
+/* ---------- Import (after internal-shortlisting's resume upload) ----------
+   The box keeps one height whether it shows the drop area or the paste area,
+   and the row under it always has its place, so nothing moves while you use it. */
+.wf-dropwrap { display: grid; gap: 8px; }
+.wf-dropbox { box-sizing: border-box; height: 240px; width: 100%; border-radius: 20px; }
+.wf-drop2 {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px; text-align: center;
+  font-family: inherit; color: var(--db-text, inherit); background: transparent; cursor: pointer;
+  border: 1.5px dashed var(--db-line, rgba(127,127,127,.4)); transition: background-color .2s, border-color .2s;
+}
+.wf-drop2:hover, .wf-drop2.is-over { border-color: color-mix(in srgb, var(--db-accent, #888) 45%, transparent); background: color-mix(in srgb, var(--db-accent, #888) 6%, transparent); }
+.wf-drop2.is-over { background: color-mix(in srgb, var(--db-accent, #888) 12%, transparent); }
+.wf-drop2-icon { color: var(--db-accent, currentColor); margin-bottom: 6px; }
+.wf-drop2 b { font-size: 18px; line-height: 24px; font-weight: 600; }
+.wf-drop2 span { font-size: 16px; line-height: 22px; color: var(--db-muted, inherit); }
+.wf-droparea { resize: none; padding: 16px 18px; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+/* Line tabs: full width, equal, icon and label; the chosen one is underlined in the accent. */
+.wf-linetabs { display: flex; gap: 4px; height: 44px; border-bottom: 1px solid var(--hair, rgba(127,127,127,.2)); margin-bottom: 8px; }
+.wf-linetab {
+  position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 12px; border: 0; background: none; font: inherit; font-size: 18px; font-weight: 500;
+  color: var(--db-muted, inherit); cursor: pointer;
+}
+.wf-linetab:hover { color: var(--db-text, inherit); }
+.wf-linetab[aria-selected="true"] { color: var(--db-text, inherit); }
+.wf-linetab[aria-selected="true"]::after { content: ""; position: absolute; inset-inline: 0; bottom: -1px; height: 2px; background: var(--db-accent, currentColor); }
+.wf-linetab:focus-visible { outline: 2px solid var(--db-accent); outline-offset: -2px; border-radius: 8px; }
+
+/* One file: a row that is always there. */
+.wf-filerow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-block: 1px solid var(--hair, rgba(127,127,127,.2)); font-size: 18px; }
+.wf-filerow-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--db-muted, inherit); }
+.wf-filerow.is-ready .wf-filerow-name { color: var(--db-text, inherit); }
+.wf-filerow.is-error .wf-filerow-name { color: var(--db-err, #e55); white-space: normal; font-size: 16px; }
+.wf-filerow-state { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; color: var(--db-accent, inherit); white-space: nowrap; }
+
+/* Several files: a fixed slot that scrolls inside. */
+.wf-queue { display: grid; gap: 6px; }
+.wf-queue-head { margin: 0; font-size: 16px; font-weight: 500; }
+.wf-queue-err { margin: 0; font-size: 16px; color: var(--db-err, #e55); }
+.wf-queue-list { list-style: none; margin: 0; padding: 0; height: 168px; overflow: auto; border-block: 1px solid var(--hair, rgba(127,127,127,.2)); }
+.wf-queue-row { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 4px; border-bottom: 1px solid var(--hair, rgba(127,127,127,.2)); }
+.wf-queue-row:last-child { border-bottom: 0; }
+.wf-queue-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--db-accent); }
+.wf-queue-name { flex: 1; min-width: 0; font-size: 18px; }
+.wf-queue-meta { font-size: 16px; color: var(--db-muted, inherit); white-space: nowrap; }
+.wf-queue-state { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; color: var(--db-accent, inherit); white-space: nowrap; }
+.wf-queue-row.is-error .wf-queue-state { color: var(--db-err, #e55); white-space: normal; }
+.wf-queue-row.is-busy .wf-queue-state { color: var(--db-muted, inherit); }
+
+/* As wide as internal-shortlisting's Upload resumes dialog (672px), with its taller footer. */
+.db-dialog:has(.wf-xfer.is-import) { width: min(672px, 100%); }
+.wf-xfer.is-import { gap: 20px; }
+.db .wf-xfer.is-import .db-dialog-split .db-gbtn { height: 56px; }

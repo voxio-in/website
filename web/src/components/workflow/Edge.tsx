@@ -9,7 +9,7 @@
 // moved step keeps the shape. Double-click a grip to straighten the line.
 
 import { createContext, useContext, useRef, useState } from 'react'
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow, type EdgeProps } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, Position, getBezierPath, getSmoothStepPath, useReactFlow, type EdgeProps } from '@xyflow/react'
 
 import Icon from '#/components/dashboard/Icon'
 import type { Bend, EdgeStyle } from '#/lib/workflow/convert'
@@ -75,13 +75,16 @@ export default function VxEdge(props: EdgeProps) {
   const sx = sourceX + 0, tx = targetX
   const pts = clean([{ x: sx, y: sourceY }, { x: r.x1, y: sourceY }, { x: r.x1, y: r.y }, { x: r.x2, y: r.y }, { x: r.x2, y: targetY }, { x: tx, y: targetY }])
 
+  // Hand-movable right angles are for the usual right → left line; other sides route themselves.
+  const usual = sourcePosition === Position.Right && targetPosition === Position.Left
   let path: string, lx: number, ly: number
   if (look.style === 'curve') [path, lx, ly] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
+  else if (!usual) [path, lx, ly] = getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: R, offset: GAP })
   else { path = rounded(pts); lx = (r.x1 + r.x2) / 2; ly = r.y }
 
   // One grip per movable segment that actually exists.
   const open = Math.abs(r.x1 - r.x2) > 0.5
-  const grips: { part: Part; x: number; y: number; dir: 'ew' | 'ns' }[] = look.style === 'step' ? [
+  const grips: { part: Part; x: number; y: number; dir: 'ew' | 'ns' }[] = look.style === 'step' && usual ? [
     ...(Math.abs(r.y - sourceY) > 8 || open ? [{ part: 'x1' as const, x: r.x1, y: (sourceY + r.y) / 2, dir: 'ew' as const }] : []),
     ...(open ? [{ part: 'y' as const, x: (r.x1 + r.x2) / 2, y: r.y, dir: 'ns' as const }] : []),
     ...(open && Math.abs(targetY - r.y) > 8 ? [{ part: 'x2' as const, x: r.x2, y: (r.y + targetY) / 2, dir: 'ew' as const }] : []),

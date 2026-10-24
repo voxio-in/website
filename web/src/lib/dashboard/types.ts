@@ -102,6 +102,8 @@ export type FlowDoc = {
   /** Fields held by the mock store because the backend can't store them yet. */
   mock: string[]
   flow_name: string
+  /** The owner's name, only when an admin opens someone else's flow. */
+  owner?: string
   created_at?: string
 
   workflow: Workflow
@@ -131,11 +133,23 @@ export type FlowDoc = {
 }
 
 export type Connection = { kind: 'number' | 'integration' | 'webhook' | 'web'; label: string }
-export type FlowSummary = { key: string; name: string; createdAt?: string; source: Source; sessions: number; minutes: number; connections: Connection[]; error?: string }
+export type FlowSummary = {
+  key: string; name: string; createdAt?: string; source: Source
+  /** Real sessions; tests are counted apart. */
+  sessions: number; tests: number
+  /** When the last real session started (ISO), if any. */
+  lastAt?: string
+  minutes: number; connections: Connection[]
+  /** What the agent is: a face on the web, a phone line, or voice only. */
+  kind: 'avatar' | 'phone' | 'voice'
+  /** The owner's name, for an admin looking at someone else's flow. */
+  owner?: string
+  error?: string
+}
 
 export type VoicePreset = { id: string; name: string; kind: 'stt' | 'tts'; config: ProviderConfig; used_by: string[] }
 export type KnowledgeBase = { id: string; name: string; sources: { kind: string; label: string; status: 'ready' | 'indexing' | 'failed'; chunks: number; added_at: string }[] }
-export type Avatar = { uuid: string; label: string; detector: 's3fd' | 'dwpose'; frames: number; fps: number; created_at: string; /** A short looping preview of the face, or a photo (see previewType). */ preview?: string; previewType?: 'image' | 'video' }
+export type Avatar = { uuid: string; label: string; detector: 's3fd' | 'dwpose'; frames: number; fps: number; created_at: string; /** A short looping preview of the face, or a photo (see previewType). */ preview?: string; previewType?: 'image' | 'video'; /** Flows whose looks or smooth changes use it (Avatars page). */ usedBy?: { key: string; name: string }[]; /** Someone else's face, for an admin. */ owner?: string }
 export type Integration = { id: string; kind: 'shopify'; name: string; status: 'connected' | 'error'; connected_at: string }
 
 export type OwnedNumber = { phone_number: string; label?: string; added_at: string }

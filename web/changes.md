@@ -18,6 +18,461 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-25 — Workflow canvas: connect on any side, and a magnet that lines steps up
+
+**What changed**
+- **A connection point in the middle of every side.**
+  - Say, Listen, AI and Filler steps have one on top, right, bottom and left, and each works both ways.
+  - A Branch is entered on top, left or bottom; its paths still leave on the right.
+  - Dropping a line anywhere on a card connects at the middle of the side nearest the pointer.
+  - The dots stay faint until the card is hovered.
+  - Lines between other sides route themselves with rounded right angles. The hand-movable bends stay for the usual right → left line.
+- **Saved with the workflow:** which side each line leaves and enters is kept in the canvas layout (`ui.sides`), only when it isn't the usual right → left. The engine never reads it; a step's sides all mean its "next".
+- **The magnet:** a step being dragged snaps when its middle comes within 16px of a connected step's middle, across or down, so the line between them runs straight. With the grid on, the grid does the snapping instead.
+- **"Add next step"** under a card moved to its bottom right, clear of the bottom connection point.
+
+- **Fixed the same day:** the magnet pushed steps out of line. React Flow keeps its own unsnapped position for a dragged step and sends it once more on release ("drag finished"). The magnet only snapped the in-progress reports, so the step jumped back on release. The release is now snapped too.
+  - When a step lands in line with a connected step, any hand-moved bend on the line between them is dropped, since an old bend keeps its jog even between level steps.
+- **The editor remembers Script or Flow** in this browser (`vx.wf.view`) and opens on the one last used. An empty workflow still opens on Flow.
+
+**Why**
+Lines had a small jog whenever two steps were a few pixels out of line, and everything had to leave on the right and enter on the left, so a loop back or a step below took a long way round.
+
+**State now**
+Typechecks and builds. `scripts/workflow-roundtrip.mjs` passes on the 3 real workflows (jl, nsdc, skill-india-vidya), and a line saved bottom → top loads back bottom → top. Not tried in a browser.
+
+**Files**
+src/lib/workflow/convert.ts, src/components/workflow/WorkflowEditor.tsx, src/components/workflow/NodeCard.tsx, src/components/workflow/Edge.tsx, src/components/workflow/ScriptView.tsx, src/styles/workflow.css
+
+## 2026-10-25 — Workflow editor: every step's settings, by what decides the step
+
+**What changed**
+- **The panel:**
+  - Tabs are **Main settings** and **Developer settings** (were Setup and More).
+  - Each setting's help line is in view under it, not only behind an (i).
+  - Settings that don't apply right now aren't shown.
+  - Copy JSON moved into a ⋯ menu in the footer; Delete says "Undo (Ctrl+Z) brings it back" (tooltip and a toast).
+  - Every step opens on Main settings.
+  - Inputs, dropdowns, chips, tags and tabs inside the panel are 16px; the step name is 20px.
+- **Say:**
+  - **"These words | What the AI decided"** first. "What the AI decided" speaks the reply of the AI step before it, with **Hang up when the AI says so**. Before, that was chips under More, and the main tab looked empty.
+  - A Say added on its own now defaults to **Always finish** (not "Stop and listen"), as every template and move does for fixed lines.
+  - **Remove speaker labels** shows only when **Tidy values before sending** is on.
+- **Listen:** "Save what they say as" moved to Developer settings. The main tab says it waits for the caller, with nothing to set, and that silence is handled on Behaviour.
+- **One moment… (Filler):** the phrases' help says it only helps when it runs beside a slow step, from the same Listen.
+- **AI thinks (silent):** **It decides**, with switches "What to say next" and "Whether the call is over", on Main settings. Other fields stay in Developer settings as "Everything it decides", and the main tab says how many there are.
+- **AI answers (out loud):** **Can end the call** on Main settings.
+- **Both AI steps:**
+  - **Shares memory with** is a dropdown of the memories the workflow uses ("The main conversation", others) plus "Its own memory". It was free text, where a typo silently split the memory.
+  - **Add emotion** only shows its switch with an ElevenLabs voice; otherwise it says "Works only with an ElevenLabs voice. This flow speaks with Deepgram."
+  - **Give up after** shows only when another AI step starts from the same step.
+  - An empty **Instructions** box offers examples: Friendly assistant, Takes a message, Short survey.
+- **Branch:**
+  - **Decide on** lists yes/no answers first and leaves out lists and groups (conversation history), which can't be branched on.
+  - Choosing a yes/no sets Yes and No paths at once; they can't be renamed or removed.
+  - Text paths say they match the exact word, and to tell the AI the words in its instructions.
+  - **Otherwise** is listed with where it goes.
+  - Removing a connected path says its line went too, and that Undo brings it back.
+
+**State now**
+Typechecks and builds. Not looked at in a browser. What's saved is unchanged except the new Say default (Always finish) and the paths a yes/no Branch gets when chosen.
+
+**Files**
+src/lib/workflow/registry.ts, src/components/workflow/Fields.tsx, src/components/workflow/SettingsPanel.tsx, src/components/workflow/WorkflowEditor.tsx, src/routes/dashboard.flows.$flowId.workflow.tsx, src/lib/docs/agent-pages.tsx, src/styles/workflow.css, mindsets/voxio-users.md
+
+## 2026-10-25 — Workflow editor: add steps by conversation move
+
+**What changed**
+- **Add to the conversation** (the step list on the left) leads with **conversation moves**. Each adds its steps already named and connected, built the way the templates are:
+  - **Greeting:** Say "Hi! Thanks for calling…" → Listen (plus the step that shows the caller's words);
+  - **Ask a question:** Say → Listen;
+  - **AI conversation:** AI answers → its reply → back to the Listen before it (a Listen is added first if there is none);
+  - **AI decides when to end:** AI thinks → speaks its reply → Branch "is it over?" → yes: Goodbye and hang up, no: back to Listen;
+  - **Goodbye and hang up:** Say with hang-up on;
+  - **One moment…:** Filler.
+  Single steps sit under "Single steps", folded. Clicking a move adds it after the open step; dragging drops it where you let go.
+- **"Add next step" suggests what usually comes next**, under "Usually next": after Say, Listen (or Goodbye); after Listen, AI conversation or AI decides when to end; after an AI that answers, **Back to Listen** (a line, no new step); on a branch path, Goodbye or Back to Listen. Then all moves, then single steps. Steps that can't run on calls aren't offered.
+- **Every branch path has its own "Add next step".** Before, only steps with one way out had it.
+- **Say:** "Hang up after saying this" is on its main settings (it was under More → Also send). The card shows a **Hangs up** chip and no "Add next step" after it.
+- **AI steps named for what you hear:** "AI answers (out loud)" (was AI reply) and "AI thinks (silent)" (was AI decision). Adding an AI that thinks also adds the Say that speaks its reply, connected. The docs and the Assistant's prompt use the new names.
+- **Step ids** start from a short base ("say", "listen", "ai_answers", "branch"), and moves name their steps ("greeting", "question", "answer", "goodbye", "is_it_over?").
+- **Empty canvas:** "Start your agent" with **Start with a greeting** (a greeting, then an AI conversation) and Start from a template.
+- **Branch paths** named true/false read **Yes** and **No** in the settings panel and can't be renamed into something the AI never says.
+- **Filler:** "How often it speaks" is a percentage slider (was a 0–1 number).
+- **Cards:** the copy icon on every card is gone (Duplicate stays in the panel and on Ctrl+D).
+- **Script view:** a Say that speaks the AI's reply reads "Speaks the AI's reply, and hangs up when the AI says it's over", not "Sends Spoken reply without speaking"; a goodbye reads "Says, then hangs up".
+
+**State now**
+Typechecks and builds. Not looked at in a browser, and no move has been run on a real call.
+- Moves only add steps; they never change or remove existing ones. Undo takes a whole move back in one step.
+- Existing flows open unchanged: the ids and the saved format are the same.
+
+**Files**
+src/lib/workflow/recipes.ts (new), src/components/workflow/WorkflowEditor.tsx, src/components/workflow/NodeCard.tsx, src/components/workflow/Fields.tsx, src/components/workflow/ScriptView.tsx, src/lib/workflow/registry.ts, src/lib/docs/agent-pages.tsx, src/server/assistant/loop.server.ts, src/styles/workflow.css, mindsets/voxio-users.md
+
+## 2026-10-25 — Workflow editor: Script view first, plain checks, a quieter bar
+
+**What changed**
+- **Script, the new default view.** Every place the agent's words live, in the order a conversation goes (following the arrows from the first step):
+  - "Says": each Say step's line, in a big box;
+  - "Told": each AI step's instructions, in a big box that also opens full screen;
+  - "Fills the silence with": filler phrases;
+  - quiet lines for the rest: "Waits for the caller to speak", "Decides on end the call: if yes → Goodbye · otherwise → Listen", "Then back to Listen" where it loops;
+  - steps nothing leads to are listed last, under "Not connected yet";
+  - each item has **Show in Flow**, which opens that step on the canvas.
+  It edits the same steps as the canvas, so Undo, the checks and Save work the same. An empty workflow opens on Flow.
+- **Script | Flow** tabs in the bar. The bar keeps Undo, Redo, the checks, Test and Save. Tidy up, line style, grid, templates, import, export and View as code moved into a ⋯ menu, each in words. (Tidy and Fit used the sliders and eye icons; Fit stays in the canvas's corner controls.)
+- **Templates ask first:** "Start from a template…" opens a dialog that says it replaces the current steps and that Undo brings them back.
+- **No template that can't be saved:** "Answers from your documents" uses Look up knowledge, which is hidden for now, and failed the checks. It's left out of the New flow dialog and the editor (`OFFERED_TEMPLATES`) until knowledge comes back.
+- **Checks in plain words, with what to do**, using the editor's own names. For example, "This AI step has no instructions yet. Tell it who it is and what to do." (was "Empty system prompt."), and "Nothing leads here, so it never runs. Connect a step to it, or delete it." (was "Never reached from the start node."). The loop check names Listen (it said "Wait for caller").
+- **Add next step** no longer offers steps that can't run on calls.
+- **Type:** card names 18px; kind, summary, branch paths and chips 16px (were 12.5–16.5px). Palette names 18px, descriptions 16px. Panel labels 18px, help 16px. Cards are 300px wide and the side panel 440px. Auto-layout and "add next step" spacing grew to match.
+- **First view of the canvas** fits the first six steps (by position) at up to 100%, not all of them tiny.
+
+**Why**
+Most people open the editor to change words (Margaret's prompt, the opening line, the feedback), not the shape of the graph. Before, that meant finding the right box among 14, opening a 380px side panel, and reading 13px text. See "Workflow editor" in `mindsets/voxio-users.md`.
+
+**State now**
+Typechecks and builds. Not looked at in a browser.
+- Not built yet (Part 2): Test over the editor, a wider panel with tabs named for what's inside, and links from a session line to the step that spoke.
+- Step names are still the ids (`say_2`); cards don't ask for a name when added.
+- `components/ui/floating-panel.tsx` is no longer used by anything.
+
+**Files**
+src/components/workflow/WorkflowEditor.tsx, src/components/workflow/ScriptView.tsx (new), src/components/workflow/NodeCard.tsx, src/lib/workflow/validate.ts, src/lib/workflow/registry.ts, src/lib/workflow/templates.ts, src/lib/workflow/layout.ts, src/routes/dashboard.flows.index.tsx, src/styles/workflow.css, mindsets/voxio-users.md
+
+## 2026-10-25 — Behaviour: by what the caller notices, and only true settings
+
+**What changed**
+- **Three sections named after what you hear:** How fast it answers; When you talk over it; When the caller goes quiet. Each has one line saying what it's for. Before: Conversation, Turn-taking, Silence.
+- **One choice for pace:** Waits for you · Answers quickly · Starts before you finish, with one sentence on what you'll hear. Each sets the engine, warm-up, first words and reply early together. The exact settings are under **Fine-tune**, which opens by itself when they were set by hand.
+- **The nudge is in seconds** ("After 8 s", 2 to 120). The voice server compares `time-period` with `time.time()`, which is seconds (`tasks/inactivity_monitor/task_.py:65`), but the page asked for milliseconds. So the default "1000 ms" made it wait 1000 seconds (about 17 minutes), and the nudge never fired.
+  - New flows now start at 8 seconds.
+  - A flow saved with an old millisecond value shows "That's 17 minutes. It was likely meant as 1 second." under the field.
+  - The docs say seconds (`"time-period": 8`).
+- **Removed "Caller's pause before replying".** The voice server never reads `speaker-turn-timeout-ms`, so changing it did nothing. The docs' tuning tips that relied on it now point at the engine, warm-up, first words and reply early.
+- **Settings that need the faster engine say so.** Reply early, its window, and Hold the floor are built only into the speech-native engine. With the other engine they show "Works only when it listens to how you speak" instead of a control.
+- **Honest engine choice:** "How it knows you've finished": Waits for your words (the voice server's default) or Listens to how you speak (Faster). Before, the second was marked Recommended while every new flow used the first.
+- **Plain names:** "Ignore background noise" (was Voice detection sensitivity), with "Web calls only; phone calls filter noise on their own". The chip reads "Web calls".
+- **Header:** Try it in Test, and a ⋯ menu with Copy settings as JSON. It's the Voice tab's menu, now shared (`kit/CopySettingsMenu.tsx`).
+- **Type:** labels and the pace sentence 18px; help, chips and notes 16px (were 12–17px).
+
+- **After the owner's look (same day):**
+  - The controls inside each setting (numbers, units, slider values, dropdowns) were still 14–16.5px; now values are 18px and units 16px, and fields 48px tall.
+  - **Fine-tune** was a small grey disclosure that didn't look clickable. It's now a full-width row like the Avatar tab's add rows: a sliders icon, "Fine-tune the timing", what's inside, and a chevron that turns when it opens.
+  - The nudge still read like milliseconds: an old "1000" sat next to a small "s". The unit now reads "seconds" and the label "After this much quiet". An old millisecond value is converted on open (1000 → 1 second, at least 2), so Save shows and stores what was meant. The warning line is gone.
+
+**State now**
+Typechecks and builds. Not looked at in a browser.
+- **Not changed, your call:** the admissions call (`server/voice/admissionsCall.ts:172`, `time-period: 1000`) and the roleplays (`server/voice/roleplays/shared.ts:41` defaults to 1000, `tanCustoms.ts:217` uses 6000) still use millisecond-looking values. They are read as seconds, so today their nudge waits 17 minutes or more. Changing them to seconds would make demos start nudging, so they were left alone.
+- The pace presets are our grouping of the engine's settings, not something the voice server defines.
+
+**Files**
+src/routes/dashboard.flows.$flowId.behaviour.tsx, src/lib/dashboard/knobs.ts, src/components/dashboard/KnobInput.tsx, src/components/dashboard/kit/CopySettingsMenu.tsx (new), src/routes/dashboard.flows.$flowId.voice.tsx, src/server/dashboard/store.server.ts, src/lib/docs/agent-pages.tsx, src/styles/dashboard-m3.css, mindsets/voxio-users.md
+
+## 2026-10-25 — Avatars: faces first, grouped by flow, and safe to delete
+
+**What changed**
+- **First visit:** with no faces, the upload is the page, with one line on what a face is for and the tips beside it.
+- **After that, faces come first.** **Add a face** is the filled button in the header and opens the upload in place.
+  - Faces are grouped by the flow that uses them (its looks and smooth changes both count). Each group is titled with the flow's name and links to its Avatar tab. Faces no flow uses come last, under "Not used yet".
+  - A search ("by face or flow") appears past eight faces.
+- **Each card:** click the face to play it bigger (the Avatar tab's player). Under the name, the other flows that use it, or when it was added. A ⋯ menu holds **Copy face ID** (shows Copied) and **Delete**; it's always visible, so it works on touch.
+- **Deleting is safe.**
+  - A face no flow uses is deleted with Undo, as before.
+  - A face in use opens "Delete “Margaret”?", lists the flows that use it, and says their video calls lose the face. **Keep it** or **Delete anyway**.
+  - `/api/faces` DELETE refuses too: only the owner's own face (403 otherwise), and a face in use answers 409 with the flows' names unless `force=1`. Before, any delete went straight to the SDK and left flows pointing at a face that no longer existed.
+- **Admins:** a "Mine | Everyone's" switch, Mine by default. Everyone's adds the faces the pinned flows use, as the Flows list does, with the owner's name. Only the owner can delete; the menu says so.
+- **One upload, shared with the flow's Avatar tab** (`kit/FaceUpload.tsx`). Several files at once, each named after its file, one at a time with its own status. "When to use it" shows only on a flow. Before, this page had its own single-file upload, with its own copy of the face tracking options.
+  - **Face tracking** is under More options, Standard by default.
+  - Upload is never greyed out: with no name it says what's missing.
+  - Leaving the page during an upload asks first.
+  - A dropped connection says so in words instead of "Failed to fetch".
+  - After it's added: "“Margaret” is added. Use it on a flow's Avatar tab."
+- **Faster:** the page loads faces and the flows that use them (`getFaceLibrary`, two small queries), not the whole account with every session.
+- **Type:** names, tip titles, group titles' links and the upload's names 18px; everything else 16px. They were 14.5 to 17.5px.
+
+- **The default look is always called "main"** (workflows ask for looks by name, and main is the default):
+  - on a flow's Avatar tab the first look's name reads "main" and can't be edited;
+  - **Make default** renames the chosen look to "main", and the old main takes the name the new one had; smooth changes that pointed at either name follow;
+  - removing the default makes the next look "main", and its smooth changes follow;
+  - uploading a flow's first looks names the default "main" (the file called main, or the first).
+
+**Why**
+The page was built for uploading, but most visits come to find a face. A face could be deleted from under a flow with no warning, nothing said where a face was used, and faces from several patients sat in one flat grid, many of them called "main". See "Avatars" in `mindsets/voxio-users.md`.
+
+**State now**
+Typechecks and builds. Not looked at in a browser, and the delete guard hasn't been tried against a real face.
+- A face used on more than one flow shows in each of those groups.
+- A face used only by someone else's flow (not yours, and not pinned) still counts as "Not used yet" for you.
+
+**Files**
+src/routes/dashboard.avatars.tsx, src/components/dashboard/kit/FaceUpload.tsx (new), src/lib/dashboard/faces.ts (new), src/routes/dashboard.flows.$flowId.avatar.tsx, src/routes/api.faces.ts, src/server/dashboard/api.ts, src/lib/dashboard/types.ts, src/styles/dashboard-m3.css, mindsets/voxio-users.md
+
+## 2026-10-25 — Test redesign built, then parked
+
+**What changed**
+A redesign of the Test screen was built: a start card saying whether the run has a face, one-click start, "For this run" (voice, language, speed), a Messages log button, two layouts per call, and a "How did it go?" end card. Then it was reverted. The Test screen is exactly as it was before this session.
+
+**Why**
+Testers are using the current Test screen right now. The owner found the redesign good and logical, but not for now.
+
+**State now**
+The design, what changed and the full code (a patch, `RunOptions.tsx` and the CSS) are in `docs/TEST_SCREEN_REDESIGN.md`, with steps to bring it back. The patch was checked against the built code before reverting.
+
+**Files**
+docs/TEST_SCREEN_REDESIGN.md (new). Test files restored: src/routes/dashboard.flows.$flowId.test.tsx, src/components/dashboard/test/BrowserTest.tsx, ChatTest.tsx, LivePanel.tsx, src/styles/dashboard-pages.css, the Test parts of src/styles/dashboard-m3.css.
+
+## 2026-10-25 — Flow overview rebuilt around "is it working, and what now?"
+
+**What changed**
+- **Status by the name:** the same Live, Quiet, Tested or Not tried chip as the Flows list, with the reason on hover. The meta line also says whose flow it is (for admins) and when it was made. The Created chip is gone.
+- **One next step:** a card under the header says where the flow stands and why ("Tested, not live yet. Tested 3 times. Connect a number or website to go live."), with the step as its button: **Try it**, **Connect**, **Last session** or **Test**. It is the only filled button on the page. The Flows list and the overview now read status from one place.
+- **Build rows:** Workflow (step count, Edit workflow) and Connected to (numbers, website, webhook, Numbers & calls), as quiet rows like the Flows list's Needs you.
+- **Buttons:** Test left the top group (the next step covers it). Duplicate and Export are a quiet pair at the top right, 44px and 16px.
+- **Sessions:**
+  - real sessions by default once there is one, with a **Show** filter (Real sessions, With tests, Only tests). Before the first real session the tests are the history, so they show with no filter;
+  - a just-run test still opens with tests shown;
+  - a new **What was said** column (the caller's first words), hidden on phones;
+  - no status recorded shows "—", not "Completed", with **Not recorded** as a filter choice;
+  - the empty state says "Try it in Test", not "Place a call from Numbers & calls";
+  - cells 18px; chips, status and replay buttons 16px.
+- **Activity, above Sessions:** the chart and its numbers (sessions, minutes, average length, tests) for the chart's own range, so the page shows one count, not two. Real sessions once there is one; before that the tests are charted, titled "Tests so far". It was folded at first; the owner asked why there was no chart with sessions on the page. The channel bar and its hard-coded colours are gone.
+- **Owner name:** `getFlowDoc` adds `owner` when an admin opens someone else's flow; `owner` is a protected key in patches.
+
+**Why**
+The page showed totals that counted tests as use, numbers that disagreed with the chart, and "Completed" for sessions with no status, and it never said what to do next. See "Flow overview" in `mindsets/voxio-users.md`.
+
+**State now**
+Typechecks and builds. Checked against the owner's screenshot: the next-step text was losing to `.db-wfcard.is-d` (fixed), tests were hidden on a test-only flow (fixed), the toolbar was 13–14px (now 16px), and "Connect a number" repeated the card's Connect (now "Numbers & calls").
+- Still slow on big flows: the flow loader reads every session in full, because saving (`mutateFlow` / `flowOps`) diffs `sessions`. Fixing it means taking sessions out of `FlowDoc` and the save path, a change of its own.
+- Tests on backend-run flows are known only from `test: true` or this browser's list, so counts can differ between browsers.
+
+**Files**
+src/routes/dashboard.flows.$flowId.index.tsx, src/lib/dashboard/flowStatus.ts (new), src/routes/dashboard.flows.index.tsx, src/components/dashboard/SessionsTable.tsx, src/server/dashboard/api.ts, src/lib/dashboard/types.ts, src/styles/dashboard-m3.css, mindsets/voxio-users.md
+
+## 2026-10-24 — Flows page: what needs you, and each row's next step; lighter Home
+
+**What changed**
+- **Needs you:** quiet rows above the Flows table say what to do, not how many there are:
+  - "2 flows are tested but not connected. Connect a number or website"
+  - "1 hasn't been tried yet. Try it in Test"
+  - "1 had no real sessions in the last 7 days. See what happened last"
+  Clicking a row filters the table to those flows. Nothing shows when there's nothing to do.
+- **Next step per row:** the first row action changes with the flow's state and is labelled: **Try it**, **Connect** (to Numbers), **Last session** (to Overview) or **Test**. Duplicate and Delete stay as icons.
+- **Admins:** a "My flows | Everyone's" filter, My flows by default. It only appears for people who can see other people's flows. The empty state checks everything they can see, so an admin with no flows of their own still gets the filter.
+- **Flow column:** the initial-letter badge in front of each name is gone. It carried no information.
+- **Status hint:** a tested flow that is already connected says "Waiting for its first real session" instead of telling you to connect it.
+- **Home:** gets only the session fields it shows and searches (type, times, duration, status, numbers, the first 1,500 characters of transcript), not the wire logs, actions and recordings. On the largest account that is 0.25 MB instead of 0.61 MB, and 0.5 s instead of 0.9 s.
+- **Left out on purpose:** charts and totals (Home has them) and a "failed calls" alert. 1,291 of 1,394 sessions have no status, and all 511 phone sessions show 0 seconds from the Mongo copy.
+
+**State now**
+Builds and typechecks. Not looked at in a browser.
+
+**Files**
+src/routes/dashboard.flows.index.tsx, src/server/dashboard/api.ts, src/styles/dashboard-m3.css, mindsets/voxio-users.md
+
+## 2026-10-24 — Faster login
+
+**What changed**
+Measured from here to Neon (Singapore), each step after pressing Log in ran one after the other:
+- waking the connection: ~1.0 s;
+- finding the user: 0.4 s;
+- the password check: 0.08 s;
+- rehashing an old-backend password: +0.4 s;
+- creating the session: 0.4 s;
+- the login page reloading itself: 0.4 s;
+- the admin lookup: 0.4 s;
+- Home's overview: 0.4–1.0 s.
+
+Three of those are gone:
+- `startSession` puts the new session straight into the sign-in cache, and login primes the role cache (`primeRole`). The first dashboard page doesn't look up who you are or whether you're an admin.
+- Login and signup no longer call `router.invalidate()`. It reloaded the login page only to be redirected away. `clearCache()` stays.
+- Upgrading an imported bcrypt password to scrypt runs in the background. A failure is logged and retried at the next login.
+
+**State now**
+Builds and typechecks. About 1.2 s less per login (1.6 s for old-backend accounts). Still slow:
+- the first query after Neon goes idle;
+- the India–Singapore round trip on each remaining query;
+- Home loading every session.
+
+**Files**
+src/server/auth.ts, src/server/session.server.ts, src/server/dashboard/store.server.ts, src/routes/login.tsx, src/routes/signup.tsx
+
+## 2026-10-23 — Voice tab rebuilt around "how it sounds, how it hears"
+
+**What changed**
+- **Speaking comes first** ("How your agent sounds"), then Listening ("How your agent hears"). Both are in plain words.
+- **Play sample:** the voice dropdown has a ▶ Play sample button, so you hear a voice before saving.
+  - It opens a player in place under the voice settings, labelled "Sample of Thalia".
+  - The player has play/pause, a waveform to click or arrow through, the time, and volume (mute plus a slider).
+  - It stays open while you change voices, and each new pick loads and plays.
+  - The player is the session replay's, moved to `kit/AudioPlayer.tsx`, so audio looks the same everywhere. Session replays gain volume and keyboard seeking too.
+  - Samples are made by `scripts/voice-samples.py` with the voice backend's own TTS clients and stored in R2 under `samples/voices/<service>/<voice>.wav`. `/api/voice-sample` serves them, for logged-in users and only for voices in `src/lib/dashboard/voice-samples.json`.
+  - The script loads only the Deepgram and Sarvam clients. The backend's `tts` and `services` packages import torch, which Windows Application Control blocks on this machine.
+  - The 11 Deepgram Aura voices are done.
+  - No samples for ElevenLabs, Google or Resemble: their voice is a pasted ID the person has already heard on that platform.
+- **Provider tiles** show the reason to pick each one ("Fastest", "Best for Hinglish", "Indian voices", "Most natural"…) and where it processes the audio ("Audio processed in India / US").
+- **A warning** when the agent speaks one language and listens for another.
+- **Saved voices:** "Set here | Use a saved one". With nothing saved, it says where to save one instead of being greyed out.
+- **Copy config** appeared three times. It is now once, in a ⋯ menu, as "Copy settings as JSON". There is a "Try it in Test" link in the header.
+- **Look:**
+  - one accent colour (the purple Speaking colour and the coloured left stripes are gone);
+  - tokens instead of hard-coded colours;
+  - speaker and ear icons (Speaking had the ⚡ bolt);
+  - text at 18px (names, values, More settings) and 16px (labels, descriptions, notes).
+
+**State now**
+Builds and typechecks. Not looked at in a browser.
+- **Sarvam samples:** not made. Both Sarvam keys returned 402 "Credits exhausted", and we're leaving Sarvam for now. Re-run with `--only sarvam` later; it skips what's already there.
+- **Sarvam `bulbul:v2`:** Sarvam now refuses it ("deprecated, use bulbul:v3"), but the dashboard still offers it.
+- **Not built:** voice cards with samples in a grid, and a live "hold to speak" listening test. The Play button sits in the voice cell, and listening is tried in Test.
+
+**Files**
+src/routes/dashboard.flows.$flowId.voice.tsx, src/components/dashboard/ProviderEditor.tsx, src/lib/dashboard/providers.ts, src/lib/dashboard/voice-samples.json, src/routes/api.voice-sample.ts, src/server/r2.server.ts, scripts/voice-samples.py, src/styles/dashboard-m3.css, src/styles/dashboard-controls.css
+
+## 2026-10-23 — Import screens that don't jump
+
+**What changed**
+- Import a flow (from New flow and the workflow editor) and Import flows (several, from the Flows list) follow internal-shortlisting's resume upload.
+- The drop area: one dashed box with an upload icon, "Add a flow file" and one line of help. It tints when a file is dragged over it.
+- Line tabs across the top, full width with icons: **Upload | Paste JSON**, as on internal-shortlisting's "Upload \| Already uploaded". Before, swapping a tall text area for a short drop area made the dialog jump. Now both tabs show a box of the same 240px height, and switching is instant.
+- 672px wide like the HR dialog, with a 56px-tall footer.
+- Under the box, a row that is always there. It shows the file and its step count with a check, why it didn't read, or "No file chosen yet". With several files, the list scrolls inside a fixed slot, so the dialog never changes size.
+- Footer: Cancel (40%) and Import / Create flows (60%), joined across the full width, never greyed out. Pressing with nothing chosen says what is missing.
+- Type: titles and file names 18px; help, steps and status 16px.
+
+**State now**
+Builds and typechecks. Not looked at in a browser.
+
+**Files**
+src/components/workflow/Transfer.tsx, src/components/workflow/workflow.css, src/styles/dashboard-m3.css
+
+## 2026-10-23 — New flow dialog, and dialogs that stopped short of the top
+
+**What changed**
+- **Start from** is a connected two-column grid: cells 2px apart, only the grid's four outer corners round, the chosen one tonal with a check. It becomes one column on a phone. The first template is the default, and "Import a file" comes last.
+- Every dialog title is now 36px, the page-title size (the replay dialog keeps its own 26px).
+- Template names say what the agent does: Simple conversation, Fast reply, Ends the call itself, Answers from your documents, Blank. Before they were technical ("Quick ack + main LLM").
+- Type scale: the Name and Start from labels, template names and the name field 18px; descriptions 16px.
+- Picking a template fills in the name with the template's name, unless the person has typed one of their own.
+- The dialog is wide (up to 1040px).
+- Footer: Import a flow (25%), Cancel (25%) and Create flow (50%), joined across the full width. Import moved out of the grid. Once a file is in, the button reads "Replace file" and a note under the grid says the flow starts from it.
+- Sixth template, **Takes a message**: asks for a name, a number and a reason, then reads them back. This is the receptionist job most voice agents start as, and it needs no integration.
+- Blank works again: an empty workflow is accepted as a draft. The `start_node` check applies once there are steps.
+- Create flow is never greyed out. With no name it says "Give the flow a name." on the field. Import with no file opens the import dialog.
+- Every dashboard `Dialog` now renders into the `.db` root through a portal. Rendered inside the page, a transformed ancestor gave `position: fixed` its own box, so the blurred backdrop started about 24px down and left a hard line across the top bar.
+
+**State now**
+Builds and typechecks. Not looked at in a browser.
+
+**Files**
+src/routes/dashboard.flows.index.tsx, src/lib/workflow/templates.ts, src/components/dashboard/ui.tsx, src/styles/dashboard-m3.css
+
+## 2026-10-23 — Flows list rebuilt around "which agent, and is it working?"
+
+**What changed**
+- The table follows internal-shortlisting's openings table:
+  - Name with a meta line under it.
+  - Status as a chip, with the reason in its tooltip.
+  - Numbers in tabular figures, and "—" when empty.
+  - Optional columns behind a **Columns** menu, remembered per browser.
+  - A pinned **Actions** column.
+  - Cells at 18px; headers, meta and chips at 16px.
+- Columns, in order:
+  - **Flow** (name; under it Avatar, Phone or Voice, and the owner's name on someone else's flow);
+  - **Status** (Live, Quiet, Tested or Not tried);
+  - **Sessions** (real sessions only; tests are counted apart);
+  - **Last session** ("3 days ago");
+  - **Minutes**;
+  - **Connections**.
+  API key and Created moved to the Columns menu.
+- Row actions cut from five to three: Test, Duplicate, Delete. Clicking the row opens the flow. Export is in the selection bar.
+- The status filter replaces "activity". The default sort is **Recently used**.
+- `listFlows` returns `tests`, `lastAt`, `kind` and `owner`, counted in one grouped query over the sessions table.
+- Who wants what on this page is written in `mindsets/voxio-users.md` ("Flows list").
+
+**State now**
+Builds and typechecks. Not looked at in a browser.
+
+**Files**
+src/routes/dashboard.flows.index.tsx, src/server/dashboard/api.ts, src/lib/dashboard/types.ts, src/styles/dashboard-m3.css, mindsets/voxio-users.md
+
+## 2026-10-23 — Dashboard data straight from Neon, page by page
+
+**What changed**
+- The dashboard no longer reads or writes flows through the Voxio backend. Everything goes to Neon through Prisma, the same tables the voice servers read. The backend is used only for voice: test calls, browser tests, outbound calls, plus face uploads (they need the face_detection service).
+- Access follows the backend's database service (`routers/services.py`): a flow is reachable by its owner, or by an admin (`users.role = admin`). Nobody else gets a row back. Updates are keyed on the owner too.
+- Writes follow the database service's rules:
+  - a workflow needs a `start_node` that is one of its steps;
+  - server-owned keys can't be patched;
+  - faces get the `version` hash voicebot uses to refresh its cache;
+  - new keys use its format (`vk_` + 64 characters);
+  - deleting or rotating replaces the key, and numbers follow.
+- Pages load only what they show:
+  - the Flows list: names, numbers and minutes;
+  - Home: sessions;
+  - a flow: just that flow.
+  Saves read and write only that flow (`loadFlow`, `mutateFlow`). The whole-account load is left for account pages, and parallel requests now share one query.
+- Admin flows that used to be "live" have no overlay any more. Their settings save to the table like any other, which fixes the "Saved, then lost" bug.
+- Admins also see the flows named in `VOXIO_FLOW_API_KEY_*` / `VX_FLOW_API_KEY`. `DASHBOARD_LIVE_EMAILS` is no longer used.
+- Hover preloads are reused for 30 s (`defaultPreloadStaleTime` was 0).
+- Plan: added section 11 to `docs/AI_ASSISTANT_AND_VAD_PLAN.md`.
+
+**Why**
+The dashboard took up to a minute. Measured on the largest account (482 flows): every page loaded the whole account (3.7 s, 2.2 MB), every save loaded it twice, and the backend took 5–10 s for each live flow. Each page is now one query: 0.4–0.85 s from here, almost all of it the India–Singapore round trip.
+
+**State now**
+Builds and typechecks. Not tried in a browser. Attaching a number is limited to the user's own flows. Still to do: host the server in Singapore next to Neon (each query would drop to a few ms); account pages (Voices, Knowledge, Settings) still load the whole account.
+
+**Files**
+src/server/dashboard/api.ts, store.server.ts, flows.server.ts, src/lib/dashboard/knobs.ts, src/router.tsx, docs/AI_ASSISTANT_AND_VAD_PLAN.md
+
+## 2026-10-23 — Login and signup fixes
+
+**What changed**
+- Log in and Create account stay clickable. An empty or invalid field now says what is missing, on that field.
+- A wrong password shows its message just above the button, with a link to the contact form.
+- A "Forgot password?" link goes to the contact form for now.
+- Messages clear as soon as you type.
+- The login label reads "Email". Old-backend usernames still work.
+- The show-password eye no longer disappears. Edge's own reveal button is hidden, and autofill no longer paints over it.
+- Email and password (and name on signup) are now connected fields (`AuthGroup`): one unit, cells 2px apart, labels inside, errors under the group.
+- Auth pages moved onto the type scale: 36px title, 18px body, inputs and buttons, 16px hints and errors.
+- Copied `learn.md` and `rules/` from internal-shortlisting.
+- Added `mindsets/voxio-users.md`: researched mindsets for the six Voxio roles.
+
+**Why**
+The pages broke the rules in `rules/ui.md` and `learn.md`: greyed-out buttons with no reason, a failure with no way out, and the error away from where the eye is.
+
+**State now**
+Builds. There is no real password reset yet; the link goes to the contact form.
+
+**Files**
+src/routes/login.tsx, src/routes/signup.tsx, src/styles/auth.css, learn.md, rules/
+
+## 2026-10-22 — Soniox max speakers and speaker-label removal
+
+**What changed**
+Soniox STT settings gain "Max speakers" (shown when "Tell speakers apart" is on). The Say step gains two advanced switches, off by default: "Clean values before sending" (`remove`) and "Remove speaker labels" (`remove_stt`). Dropped the unused `speaker-lock` from the admissions call config.
+
+**Files**
+src/lib/dashboard/providers.ts, src/lib/workflow/registry.ts, src/server/voice/admissionsCall.ts
+
+## 2026-10-15 — Tester guide for the OSCE scenarios
+
+**What changed**
+Added `docs/OSCE_SCENARIOS_FOR_TESTERS.md`. It covers:
+- **How a session runs:** the interview, how to end it, the score and its bands, and the clinical-reasoning reflection.
+- **The 18 points** every interview is marked on.
+- **One section per scenario:** who the patient is, how they talk, what is hidden and what brings it out, what a good student does, and one thing to try.
+
+**Why**
+Testers had no context on what each scenario expects of the student.
+
+**State now**
+The 18 dashboard flows are 9 scenarios saved twice. Each pair was checked as identical (same account, same workflow fingerprint). Yamamoto and the Nakamura copy are noted as outside the 18.
+
 ## 2026-10-15 — Subtler group colours, matched to Echobotics
 
 **What changed**

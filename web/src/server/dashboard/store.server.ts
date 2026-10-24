@@ -10,7 +10,7 @@
 // The sample-data helpers below seeded the old demo account. Nothing calls
 // them now; that data belongs to an ordinary user.
 
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
 import type { Prisma } from '@prisma/client'
 
@@ -39,6 +39,10 @@ export type Store = {
 
 export const newKey = (prefix = 'vx') => `${prefix}_${randomBytes(18).toString('base64url')}`
 
+const KEY_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+/** A flow key in the voice backend's own format (`services.generate_api_key`): `vk_` and 64 letters or digits. */
+export const flowKey = () => 'vk_' + Array.from({ length: 64 }, () => KEY_CHARS[randomInt(KEY_CHARS.length)]).join('')
+
 
 const json = (v: unknown) => (v ?? {}) as Prisma.InputJsonValue
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
@@ -59,16 +63,17 @@ const splitProvider = (c: ProviderConfig) => {
   return { service, config: json(config) }
 }
 
+/** Everything one flow's page needs: its agent, voices, numbers, sessions and recent deliveries. */
+export const flowInclude = {
+  agent: true, stt: true, tts: true,
+  numbers: { orderBy: { phoneNumber: 'asc' } },
+  sessions: { orderBy: { startTime: 'desc' } },
+  deliveries: { orderBy: { at: 'desc' }, take: 200 },
+} satisfies Prisma.FlowInclude
+export type FlowRow = Prisma.FlowGetPayload<{ include: typeof flowInclude }>
+
 const userInclude = {
-  flows: {
-    orderBy: { createdAt: 'asc' },
-    include: {
-      agent: true, stt: true, tts: true,
-      numbers: { orderBy: { phoneNumber: 'asc' } },
-      sessions: { orderBy: { startTime: 'desc' } },
-      deliveries: { orderBy: { at: 'desc' }, take: 200 },
-    },
-  },
+  flows: { orderBy: { createdAt: 'asc' }, include: flowInclude },
   stt: { where: { isPreset: true }, orderBy: { createdAt: 'asc' } },
   tts: { where: { isPreset: true }, orderBy: { createdAt: 'asc' } },
   numbers: { orderBy: { phoneNumber: 'asc' } },
@@ -76,9 +81,9 @@ const userInclude = {
   knowledge: { orderBy: { createdAt: 'asc' }, include: { sources: { orderBy: { addedAt: 'asc' } } } },
 } satisfies Prisma.UserInclude
 type UserRow = Prisma.UserGetPayload<{ include: typeof userInclude }>
-type SessionRow = UserRow['flows'][number]['sessions'][number]
+type SessionRow = FlowRow['sessions'][number]
 
-function toSession(r: SessionRow): Session {
+export function toSession(r: SessionRow): Session {
   return {
     ...(r.extra as Record<string, unknown>),
     sessionId: r.sessionId, type: r.type, startTime: r.startTime.toISOString(), endTime: r.endTime.toISOString(),
@@ -86,6 +91,29 @@ function toSession(r: SessionRow): Session {
     aiTokens: r.aiTokens, humanTokens: r.humanTokens, transcription: r.transcription,
     recordingUrl: r.recordingUrl ?? undefined, from: r.from ?? undefined, to: r.to ?? undefined, status: r.status ?? undefined,
   }
+}
+
+/** One flow row as the dashboard's FlowDoc. */
+export function flowDocOf(f: FlowRow): FlowDoc {
+  return {
+  integrations: [], 'web-actions': [],
+  ...(f.runtime as Record<string, unknown>),
+  key: f.apiKey, source: 'mock', mock: [],
+  flow_name: f.flowName, created_at: f.createdAt.toISOString(),
+  workflow: f.agent.workflow as FlowDoc['workflow'],
+  'webhook-url': f.agent.webhookUrl,
+  'webhook-secret': f.webhookSecret ?? undefined,
+  'webhook-events': f.webhookEvents.length ? f.webhookEvents : undefined,
+  stt: provider(f.stt), tts: provider(f.tts),
+  kbs: f.kbs,
+  faces: { version: null, expressions: [], transitions: [], ...(f.faces as object) },
+  vision_id: (f.visionId ?? null) as FlowDoc['vision_id'],
+  running_vision_id: (f.runningVisionId ?? null) as FlowDoc['running_vision_id'],
+  'process-type': f.processType, xml: f.xml,
+  numbers: f.numbers.map((n) => ({ phone_number: n.phoneNumber, provider: n.provider ?? undefined, added_at: iso(n.attachedAt) })),
+  sessions: f.sessions.map(toSession),
+  deliveries: f.deliveries.map((d) => ({ id: d.id, at: d.at.toISOString(), event: d.event, url: d.url, status: d.status, ms: d.ms, attempt: d.attempt, request: d.request, response: d.response ?? undefined })),
+  } as FlowDoc
 }
 
 function toStore(u: UserRow): Store {
@@ -113,25 +141,7 @@ function toStore(u: UserRow): Store {
       deleted[f.apiKey] = { name: f.flowName, deletedAt, sessions: f.sessions.map(toSession) }
       continue
     }
-    flows[f.apiKey] = {
-      integrations: [], 'web-actions': [],
-      ...(f.runtime as Record<string, unknown>),
-      key: f.apiKey, source: 'mock', mock: [],
-      flow_name: f.flowName, created_at: f.createdAt.toISOString(),
-      workflow: f.agent.workflow as FlowDoc['workflow'],
-      'webhook-url': f.agent.webhookUrl,
-      'webhook-secret': f.webhookSecret ?? undefined,
-      'webhook-events': f.webhookEvents.length ? f.webhookEvents : undefined,
-      stt: provider(f.stt), tts: provider(f.tts),
-      kbs: f.kbs,
-      faces: { version: null, expressions: [], transitions: [], ...(f.faces as object) },
-      vision_id: (f.visionId ?? null) as FlowDoc['vision_id'],
-      running_vision_id: (f.runningVisionId ?? null) as FlowDoc['running_vision_id'],
-      'process-type': f.processType, xml: f.xml,
-      numbers: f.numbers.map((n) => ({ phone_number: n.phoneNumber, provider: n.provider ?? undefined, added_at: iso(n.attachedAt) })),
-      sessions: f.sessions.map(toSession),
-      deliveries: f.deliveries.map((d) => ({ id: d.id, at: d.at.toISOString(), event: d.event, url: d.url, status: d.status, ms: d.ms, attempt: d.attempt, request: d.request, response: d.response ?? undefined })),
-    } as FlowDoc
+    flows[f.apiKey] = flowDocOf(f)
   }
   return { account, flows, overlays: {}, deleted }
 }
@@ -143,12 +153,19 @@ const CACHE_MS = 20_000
 const cache = new Map<string, { at: number; store: Store }>()
 const forget = (userId: string) => cache.delete(userId)
 
+// Pages ask for the account several at a time (loader, preload, sidebar);
+// they share one query instead of each running their own.
+const loading = new Map<string, Promise<Store>>()
+
 export async function load(user: AuthUser, fresh = false): Promise<Store> {
   const hit = cache.get(user.id)
   if (!fresh && hit && Date.now() - hit.at < CACHE_MS) return structuredClone(hit.store)
-  const store = await loadRows(user)
-  cache.set(user.id, { at: Date.now(), store })
-  return structuredClone(store)
+  let p = fresh ? undefined : loading.get(user.id)
+  if (!p) {
+    p = loadRows(user).then((store) => { cache.set(user.id, { at: Date.now(), store }); return store }).finally(() => loading.delete(user.id))
+    if (!fresh) loading.set(user.id, p)
+  }
+  return structuredClone(await p)
 }
 
 async function loadRows(user: AuthUser): Promise<Store> {
@@ -180,13 +197,22 @@ function deliveryData(d: Delivery) {
   return { id: d.id, at: date(d.at), event: d.event, url: d.url, status: d.status, ms: Math.round(d.ms), attempt: d.attempt, request: json(d.request), response: d.response ?? null }
 }
 
+/** `version` hashes the face uuids; voicebot uses it to drop its face cache (database/flow_.py `faces_manifest`). */
+function facesManifest(faces: FlowDoc['faces']) {
+  const expressions = faces?.expressions ?? []
+  const transitions = faces?.transitions ?? []
+  const uuids = [...expressions, ...transitions].map((x) => String((x as { uuid?: string }).uuid ?? '')).sort()
+  const version = uuids.length ? createHash('sha256').update(uuids.join(',')).digest('hex').slice(0, 16) : null
+  return { ...faces, version, expressions, transitions }
+}
+
 /** The flow's own columns (not its agent, voices or child rows). */
 function flowColumns(f: FlowDoc) {
   const runtime: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(f)) if (!FLOW_COLUMNS.has(k) && v !== undefined) runtime[k] = v
   return {
     flowName: f.flow_name, processType: String(f['process-type'] ?? 'speech-native'), xml: String(f.xml ?? ''),
-    kbs: f.kbs ?? [], faces: json(f.faces), visionId: f.vision_id ? json(f.vision_id) : undefined,
+    kbs: f.kbs ?? [], faces: json(facesManifest(f.faces)), visionId: f.vision_id ? json(f.vision_id) : undefined,
     runningVisionId: f.running_vision_id ? json(f.running_vision_id) : undefined, runtime: json(runtime),
     webhookSecret: f['webhook-secret'] ?? null, webhookEvents: f['webhook-events'] ?? [],
   }
@@ -207,6 +233,61 @@ function numberMap(s: Store) {
 
 function byId<T>(list: T[], id: (x: T) => string) {
   return new Map(list.map((x) => [id(x), x]))
+}
+
+/**
+ * The writes that turn `prev` into `f` for one flow owned by `userId`
+ * (a create when there is no `prev`). New stt / tts rows belong to that owner.
+ */
+export function flowOps(userId: string, key: string, prev: FlowDoc | undefined, f: FlowDoc): Prisma.PrismaPromise<unknown>[] {
+  const ops: Prisma.PrismaPromise<unknown>[] = []
+  const connectUser = { connect: { id: userId } }
+  f.key = key
+  const voice = (c: ProviderConfig | null) => (c ? { create: { user: connectUser, ...splitProvider(c) } } : undefined)
+  if (!prev) {
+    ops.push(db.flow.create({
+      data: {
+        apiKey: key, user: connectUser, createdAt: f.created_at ? date(f.created_at) : undefined, ...flowColumns(f),
+        agent: { create: { user: connectUser, workflow: json(withStart(f.workflow)), webhookUrl: f['webhook-url'] ?? '' } },
+        stt: voice(f.stt), tts: voice(f.tts),
+        sessions: { create: f.sessions.map(sessionData) },
+        deliveries: { create: (f.deliveries ?? []).map(deliveryData) },
+      },
+    }))
+    return ops
+  }
+  const data: Prisma.FlowUpdateInput = {}
+  if (!same(flowColumns(f), flowColumns(prev))) Object.assign(data, flowColumns(f))
+  if (!same(f.workflow, prev.workflow) || f['webhook-url'] !== prev['webhook-url']) {
+    data.agent = { update: { workflow: json(withStart(f.workflow)), webhookUrl: f['webhook-url'] ?? '' } }
+  }
+  for (const k of ['stt', 'tts'] as const) {
+    if (same(f[k], prev[k])) continue
+    data[k] = f[k]
+      ? { upsert: { create: { user: connectUser, ...splitProvider(f[k]!) }, update: splitProvider(f[k]!) } }
+      : { disconnect: true }
+  }
+  if (!same(f.sessions, prev.sessions)) {
+    const had = byId(prev.sessions, (x) => x.sessionId)
+    const now = byId(f.sessions, (x) => x.sessionId)
+    data.sessions = {
+      deleteMany: { sessionId: { in: [...had.keys()].filter((id) => !now.has(id)) } },
+      create: f.sessions.filter((x) => !had.has(x.sessionId)).map(sessionData),
+      update: f.sessions.filter((x) => had.has(x.sessionId) && !same(had.get(x.sessionId), x))
+        .map((x) => ({ where: { sessionId: x.sessionId }, data: sessionData(x) })),
+    }
+  }
+  if (!same(f.deliveries, prev.deliveries)) {
+    const had = new Set((prev.deliveries ?? []).map((d) => d.id))
+    const now = new Set((f.deliveries ?? []).map((d) => d.id))
+    data.deliveries = {
+      deleteMany: { id: { in: [...had].filter((id) => !now.has(id)) } },
+      create: (f.deliveries ?? []).filter((d) => !had.has(d.id)).map(deliveryData),
+    }
+  }
+  // The owner is part of the key, so a write can never land on someone else's flow.
+  if (Object.keys(data).length) ops.push(db.flow.update({ where: { apiKey: key, userId }, data }))
+  return ops
 }
 
 /** Write the difference between two versions of an account's store. */
@@ -267,53 +348,7 @@ async function save(userId: string, before: Store, after: Store) {
     ops.push(db.flow.deleteMany({ where: { apiKey: key, userId } }))
     if (agentId) ops.push(db.agent.deleteMany({ where: { id: agentId, userId } }))
   }
-  for (const [key, f] of Object.entries(after.flows)) {
-    f.key = key
-    const prev = before.flows[key]
-    const voice = (c: ProviderConfig | null) => (c ? { create: { user: connectUser, ...splitProvider(c) } } : undefined)
-    if (!prev) {
-      ops.push(db.flow.create({
-        data: {
-          apiKey: key, user: connectUser, createdAt: f.created_at ? date(f.created_at) : undefined, ...flowColumns(f),
-          agent: { create: { user: connectUser, workflow: json(withStart(f.workflow)), webhookUrl: f['webhook-url'] ?? '' } },
-          stt: voice(f.stt), tts: voice(f.tts),
-          sessions: { create: f.sessions.map(sessionData) },
-          deliveries: { create: (f.deliveries ?? []).map(deliveryData) },
-        },
-      }))
-      continue
-    }
-    const data: Prisma.FlowUpdateInput = {}
-    if (!same(flowColumns(f), flowColumns(prev))) Object.assign(data, flowColumns(f))
-    if (!same(f.workflow, prev.workflow) || f['webhook-url'] !== prev['webhook-url']) {
-      data.agent = { update: { workflow: json(withStart(f.workflow)), webhookUrl: f['webhook-url'] ?? '' } }
-    }
-    for (const k of ['stt', 'tts'] as const) {
-      if (same(f[k], prev[k])) continue
-      data[k] = f[k]
-        ? { upsert: { create: { user: connectUser, ...splitProvider(f[k]!) }, update: splitProvider(f[k]!) } }
-        : { disconnect: true }
-    }
-    if (!same(f.sessions, prev.sessions)) {
-      const had = byId(prev.sessions, (x) => x.sessionId)
-      const now = byId(f.sessions, (x) => x.sessionId)
-      data.sessions = {
-        deleteMany: { sessionId: { in: [...had.keys()].filter((id) => !now.has(id)) } },
-        create: f.sessions.filter((x) => !had.has(x.sessionId)).map(sessionData),
-        update: f.sessions.filter((x) => had.has(x.sessionId) && !same(had.get(x.sessionId), x))
-          .map((x) => ({ where: { sessionId: x.sessionId }, data: sessionData(x) })),
-      }
-    }
-    if (!same(f.deliveries, prev.deliveries)) {
-      const had = new Set((prev.deliveries ?? []).map((d) => d.id))
-      const now = new Set((f.deliveries ?? []).map((d) => d.id))
-      data.deliveries = {
-        deleteMany: { id: { in: [...had].filter((id) => !now.has(id)) } },
-        create: (f.deliveries ?? []).filter((d) => !had.has(d.id)).map(deliveryData),
-      }
-    }
-    if (Object.keys(data).length) ops.push(db.flow.update({ where: { apiKey: key }, data }))
-  }
+  for (const [key, f] of Object.entries(after.flows)) ops.push(...flowOps(userId, key, before.flows[key], f))
 
   // Numbers last, so they can point at flows created above.
   const n0 = numberMap(before)
@@ -351,10 +386,10 @@ export async function mutate<T>(user: AuthUser, fn: (s: Store) => T): Promise<T>
  * cascade on a real delete, and the user wants to keep them. Its numbers are
  * detached so they can go on another flow. The caller kills the key first.
  */
-export async function markFlowDeleted(user: AuthUser, key: string) {
-  forget(user.id)
+export async function markFlowDeleted(ownerId: string, key: string) {
+  forget(ownerId)
   await withDb(async () => {
-    const f = await db.flow.findFirst({ where: { apiKey: key, userId: user.id }, select: { id: true, runtime: true } })
+    const f = await db.flow.findFirst({ where: { apiKey: key, userId: ownerId }, select: { id: true, runtime: true } })
     if (!f) throw new Error('Flow not found.')
     const runtime = { ...((f.runtime as Record<string, unknown> | null) ?? {}), deleted_at: new Date().toISOString() }
     await db.$transaction([
@@ -364,10 +399,10 @@ export async function markFlowDeleted(user: AuthUser, key: string) {
   })
 }
 
-/** Move a flow to a new key; its numbers follow via ON UPDATE CASCADE. */
-export async function rekeyFlow(user: AuthUser, from: string, to: string) {
-  forget(user.id)
-  await withDb(() => db.flow.updateMany({ where: { apiKey: from, userId: user.id }, data: { apiKey: to } }))
+/** Move a flow to a new key; its numbers follow via ON UPDATE CASCADE. The old key stops working at once. */
+export async function rekeyFlow(ownerId: string, from: string, to: string) {
+  forget(ownerId)
+  await withDb(() => db.flow.updateMany({ where: { apiKey: from, userId: ownerId }, data: { apiKey: to, updatedAt: new Date() } }))
 }
 
 // ------------------------------------------------------------------ sample data
@@ -504,7 +539,7 @@ export function blankFlow(key: string, name: string, workflow = structuredClone(
     'pre-fire': true,
     'pre-fire-config': { min: 50, max: 5000, current: 100 },
     inactivity: true,
-    'inactivity-metadata': { 'time-period': 1000, 'max-times': 3, 'inactivity-type': 'static', message: 'Are you still there?', 'interruption-type': 'full', 'interruption-metadata': {} },
+    'inactivity-metadata': { 'time-period': 8, 'max-times': 3, 'inactivity-type': 'static', message: 'Are you still there?', 'interruption-type': 'full', 'interruption-metadata': {} },
     'grain-voice': false,
     'grain-level': 0.025,
   }
@@ -549,4 +584,86 @@ export function demoStore(base: Account): Store {
     flows: { [sandbox.key]: sandbox, [clinic.key]: clinic },
     overlays: {},
   }
+}
+
+// ------------------------------------------------------------------ one flow
+
+// Pages that show one flow read and write only that flow, not the whole
+// account. The rules are the voice backend's (database/routers/services.py):
+// a flow is reachable by its owner, or by an admin; nobody else.
+
+const roles = new Map<string, { at: number; admin: boolean }>()
+
+/** Remember a role read elsewhere (at login), so the first page doesn't look it up again. */
+export function primeRole(userId: string, role: string) {
+  roles.set(userId, { at: Date.now(), admin: role === 'admin' })
+}
+
+/** Admins may act on any flow, as in the database service's `require_owner`. */
+export async function isAdmin(user: AuthUser): Promise<boolean> {
+  const hit = roles.get(user.id)
+  if (hit && Date.now() - hit.at < 60_000) return hit.admin
+  const row = await withDb(() => db.user.findUnique({ where: { id: user.id }, select: { role: true } }))
+  const admin = row?.role === 'admin'
+  roles.set(user.id, { at: Date.now(), admin })
+  return admin
+}
+
+export type FlowAccess = { flowId: string; ownerId: string; own: boolean; deleted: boolean }
+
+/** Who may reach this flow key: its owner or an admin. Null for anyone else, or no such flow. */
+export async function flowAccess(user: AuthUser, key: string): Promise<FlowAccess | null> {
+  const row = await withDb(() => db.flow.findUnique({ where: { apiKey: key }, select: { id: true, userId: true, runtime: true } }))
+  if (!row) return null
+  const own = row.userId === user.id
+  if (!own && !(await isAdmin(user))) return null
+  return { flowId: row.id, ownerId: row.userId, own, deleted: !!(row.runtime as { deleted_at?: string } | null)?.deleted_at }
+}
+
+/** One flow as the dashboard sees it, or null when this user may not see it. */
+export async function loadFlow(user: AuthUser, key: string): Promise<{ doc: FlowDoc; access: FlowAccess } | null> {
+  // One query, then the owner check on the row: nothing is returned to anyone else.
+  const row = await withDb(() => db.flow.findUnique({ where: { apiKey: key }, include: flowInclude, relationLoadStrategy: 'join' }))
+  if (!row) return null
+  const own = row.userId === user.id
+  if (!own && !(await isAdmin(user))) return null
+  const deleted = !!(row.runtime as { deleted_at?: string } | null)?.deleted_at
+  if (deleted) return null
+  return { doc: flowDocOf(row), access: { flowId: row.id, ownerId: row.userId, own, deleted } }
+}
+
+/** The database service refuses a workflow without a start_node that is one of its nodes; so do we. */
+export function requireStartNode(wf: FlowDoc['workflow']) {
+  const nodes = wf?.nodes
+  if (!nodes || typeof nodes !== 'object') throw new Error('The workflow has no steps map.')
+  // An empty workflow is a draft (the Blank template): nothing to run yet, so nothing to check.
+  if (!Object.keys(nodes).length) return
+  const start = withStart(wf).start_node
+  if (!start) throw new Error('The workflow has no first step.')
+  if (!(String(start) in nodes)) throw new Error(`The workflow's first step "${start}" isn't one of its steps.`)
+}
+
+/**
+ * Run `fn` on one flow and write what it changed, as its owner. Reads and
+ * writes just that flow, so a save costs the same on any size of account.
+ * The owner's cached account copy is dropped, so other pages reload it.
+ */
+export async function mutateFlow<T>(user: AuthUser, key: string, fn: (f: FlowDoc) => T): Promise<T> {
+  const loaded = await loadFlow(user, key)
+  if (!loaded) throw new Error('Flow not found.')
+  const { doc: before, access } = loaded
+  const after = structuredClone(before)
+  const out = fn(after)
+  if (!same(after.workflow, before.workflow)) requireStartNode(after.workflow)
+  const ops = flowOps(access.ownerId, key, before, after)
+  if (ops.length) await withDb(() => db.$transaction(ops))
+  forget(access.ownerId)
+  return out
+}
+
+/** Create one flow for `ownerId`, without loading the rest of the account. */
+export async function createFlowRow(ownerId: string, f: FlowDoc) {
+  requireStartNode(f.workflow)
+  await withDb(() => db.$transaction(flowOps(ownerId, f.key, undefined, f)))
+  forget(ownerId)
 }

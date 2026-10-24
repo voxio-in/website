@@ -17,9 +17,9 @@ const PUBLIC_BASE = (process.env.R2_PUBLIC_BASE_URL || '').replace(/\/+$/, '')
 
 const EXPIRES = 3600
 
-/** The object key a saved URL or key points at (`sessions/…` or `previews/…`), or null if it isn't ours. */
+/** The object key a saved URL or key points at (`sessions/…`, `previews/…` or `samples/…`), or null if it isn't ours. */
 function keyOf(url: string): string | null {
-  const m = /(?:^|\/)((?:sessions|previews)\/.*)$/.exec(url.split('?')[0])
+  const m = /(?:^|\/)((?:sessions|previews|samples)\/.*)$/.exec(url.split('?')[0])
   return m ? decodeURIComponent(m[1]) : null
 }
 

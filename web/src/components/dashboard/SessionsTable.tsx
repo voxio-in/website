@@ -14,6 +14,7 @@ import { Pager, TableCard, TableFilter, usePaged } from './TableCard'
 import { Dialog, Loading, rowLink } from './ui'
 import WirePanel from './test/WirePanel'
 import { VideoPlayer } from './kit/VideoPlayer'
+import { AudioPlayer } from './kit/AudioPlayer'
 
 const PAGE = 10
 
@@ -24,10 +25,18 @@ const CHANNELS = [
   { value: 'avatar', label: 'Video' },
   { value: 'chat', label: 'Chat' },
 ]
+// Most sessions record no status, so "unknown" is its own answer, never counted as completed.
 const STATES = [
   { value: 'all', label: 'All statuses' },
   { value: 'completed', label: 'Completed' },
-  { value: 'other', label: 'Not completed' },
+  { value: 'other', label: 'Didn’t finish' },
+  { value: 'unknown', label: 'Not recorded' },
+]
+// Real sessions first: tests are the owner's own tries, one click away.
+const WHO = [
+  { value: 'real', label: 'Real sessions' },
+  { value: 'all', label: 'With tests' },
+  { value: 'tests', label: 'Only tests' },
 ]
 
 const CHANNEL = {
@@ -37,7 +46,7 @@ const CHANNEL = {
   chat: { label: 'Chat', icon: 'list', replay: 'Open', title: 'Chat' },
 } satisfies Record<string, { label: string; icon: IconName; replay: string; title: string }>
 const channel = (t: string) => CHANNEL[channelOf(t)]
-const isOk = (s: Session) => !s.status || s.status === 'completed'
+const stateOf = (s: Session) => (!s.status ? 'unknown' : s.status === 'completed' ? 'completed' : 'other')
 
 export default function SessionsTable({ sessions, empty = 'No sessions yet.', highlight, flowKey }: {
   sessions: Session[]
@@ -51,20 +60,27 @@ export default function SessionsTable({ sessions, empty = 'No sessions yet.', hi
   const [q, setQ] = useState('')
   const [chan, setChan] = useState('all')
   const [state, setState] = useState('all')
+  // Read after mount: the list lives in this browser only.
+  const [tests, setTests] = useState<Set<string>>(() => new Set())
+  useEffect(() => setTests(testSessionIds()), [sessions])
+  // A test that was just run (?session=) must be visible, so it opens with tests shown.
+  const [picked, setWho] = useState(() => (highlight && sessions.find((s) => s.sessionId === highlight)?.test ? 'all' : 'real'))
+  // Until there is a real session, the tests are the history: show them, and no Show filter.
+  const anyReal = useMemo(() => sessions.some((s) => !isTestSession(s, tests)), [sessions, tests])
+  const who = anyReal ? picked : 'all'
   const rowsAll = useMemo(() => {
     // "/filter refund" (or just "refund") matches numbers, date, type, status and the transcript.
     const needle = q.trim().replace(/^\/filter\s*/i, '').toLowerCase()
     const said = (t: unknown) => (typeof t === 'string' ? t : Array.isArray(t) ? t.map((x) => (x as { content?: string })?.content ?? '').join(' ') : '')
     return sessions
+      .filter((s) => who === 'all' || (who === 'tests') === isTestSession(s, tests))
       .filter((s) => chan === 'all' || channelOf(s.type) === chan)
-      .filter((s) => state === 'all' || (state === 'completed') === isOk(s))
+      .filter((s) => state === 'all' || state === stateOf(s))
       .filter((s) => !needle || `${s.from ?? ''} ${s.to ?? ''} ${s.status ?? ''} ${s.type} ${fmtDate(s.startTime)} ${said(s.transcription)}`.toLowerCase().includes(needle))
-  }, [sessions, q, chan, state])
+  }, [sessions, q, chan, state, who, tests])
   const paged = usePaged(rowsAll, PAGE)
   const { setPage } = paged
-  // Read after mount: the list lives in this browser only.
-  const [tests, setTests] = useState<Set<string>>(() => new Set())
-  useEffect(() => setTests(testSessionIds()), [sessions])
+  const hasTests = useMemo(() => sessions.some((s) => isTestSession(s, tests)), [sessions, tests])
   const marked = useRef<HTMLTableRowElement>(null)
   useEffect(() => {
     const i = highlight ? rowsAll.findIndex((s) => s.sessionId === highlight) : -1
@@ -78,6 +94,7 @@ export default function SessionsTable({ sessions, empty = 'No sessions yet.', hi
       title="Sessions"
       search={sessions.length ? { value: q, onChange: setQ, placeholder: 'Search, or /filter <keyword>', count: `${rowsAll.length.toLocaleString()} of ${sessions.length.toLocaleString()}` } : undefined}
       filters={sessions.length ? <>
+        {hasTests && anyReal && <TableFilter label="Show" value={who} options={WHO} onChange={setWho} />}
         <TableFilter label="Filter by channel" value={chan} options={CHANNELS} onChange={setChan} />
         <TableFilter label="Filter by status" value={state} options={STATES} onChange={setState} />
       </> : undefined}
@@ -86,7 +103,7 @@ export default function SessionsTable({ sessions, empty = 'No sessions yet.', hi
       {!sessions.length ? <p className="db-tcard-empty">{empty}</p> : !rowsAll.length ? <p className="db-tcard-empty">No sessions match. Try another search or filter.</p> : (
       <table className="db-flows db-sesstable">
         <thead>
-          <tr><th>When</th><th>Channel</th><th>Caller</th><th className="db-num">Minutes</th><th>Status</th><th aria-label="Replay" /></tr>
+          <tr><th>When</th><th>What was said</th><th>Channel</th><th>Caller</th><th className="db-num">Minutes</th><th>Status</th><th aria-label="Replay" /></tr>
         </thead>
         <tbody>
           {paged.shown.map((s) => {
@@ -97,7 +114,8 @@ export default function SessionsTable({ sessions, empty = 'No sessions yet.', hi
             return (
               <tr key={s.sessionId} {...rowLink(() => setOpen(s))} ref={s.sessionId === highlight ? marked : undefined}
                 className={s.sessionId === highlight ? 'is-marked' : undefined}>
-                <td>{fmtDate(s.startTime)}{isTestSession(s, tests) && <span className="db-testchip">Test</span>}</td>
+                <td className="db-whencell">{fmtDate(s.startTime)}{isTestSession(s, tests) && <span className="db-testchip">Test</span>}</td>
+                <td className="db-saidcell">{firstWords(s) || <span className="db-muted">—</span>}</td>
                 <td><span className="db-channel"><Icon name={c.icon} size={16} />{c.label}</span></td>
                 <td className="db-mono">{s.from ?? s.to ?? '—'}</td>
                 <td className="db-num">{fmtMin(billedMinutes(s.totalConnectedTime))}</td>
@@ -120,9 +138,19 @@ export default function SessionsTable({ sessions, empty = 'No sessions yet.', hi
   )
 }
 
+/** An unrecorded status reads as unknown, not as completed. */
 function StatusText({ s }: { s: Session }) {
-  const ok = isOk(s)
-  return <span className={`db-status ${ok ? 'is-ok' : s.status?.startsWith('scheduled') ? '' : 'is-err'}`}>{ok ? 'Completed' : s.status}</span>
+  const st = stateOf(s)
+  if (st === 'unknown') return <span className="db-status" title="This session didn’t record how it ended">—</span>
+  if (st === 'completed') return <span className="db-status is-ok">Completed</span>
+  return <span className={`db-status ${s.status?.startsWith('scheduled') ? '' : 'is-err'}`}>{s.status}</span>
+}
+
+/** The caller's first words, or the agent's when the caller said nothing: what the session was about. */
+function firstWords(s: Session): string {
+  const turns = transcript(s).filter((t) => !t.data)
+  // Speaker tags ("<speaker_1>") are the recogniser's, not words anyone said.
+  return (turns.find((t) => !t.ai) ?? turns[0])?.text.replace(/<speaker_\d+>\s*/g, '').slice(0, 140) ?? ''
 }
 
 // ------------------------------------------------------------------ dialog
@@ -219,7 +247,6 @@ function ReplayDialog({ s: given, flowKey, onClose }: { s: Session; flowKey?: st
 
 // ------------------------------------------------------------------ audio
 
-const BARS = 72
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
 
 /** Big play button, a waveform drawn from the actual audio, click-to-seek. */
@@ -239,77 +266,6 @@ function Recording({ src, camera }: { src: string; camera?: string }) {
   }, [src, known])
   if (!kind) return <Loading label="Loading recording" />
   return kind === 'audio' ? <AudioPlayer src={src} /> : <DualVideo agent={src} client={camera} />
-}
-
-function AudioPlayer({ src }: { src: string }) {
-  const ref = useRef<HTMLAudioElement>(null)
-  const [peaks, setPeaks] = useState<number[] | null>(null)
-  const [playing, setPlaying] = useState(false)
-  const [t, setT] = useState(0)
-  const [dur, setDur] = useState(0)
-
-  // Decode once to draw the real waveform; fall back to flat bars if it can't be read.
-  useEffect(() => {
-    let dead = false
-    ;(async () => {
-      try {
-        const buf = await (await fetch(src)).arrayBuffer()
-        const ctx = new AudioContext()
-        const audio = await ctx.decodeAudioData(buf)
-        ctx.close()
-        const data = audio.getChannelData(0)
-        const step = Math.floor(data.length / BARS)
-        const out: number[] = []
-        for (let i = 0; i < BARS; i++) {
-          let max = 0
-          for (let j = i * step; j < (i + 1) * step; j += 16) max = Math.max(max, Math.abs(data[j]))
-          out.push(max)
-        }
-        const top = Math.max(...out, 0.001)
-        if (!dead) setPeaks(out.map((p) => Math.max(0.06, p / top)))
-      } catch {
-        if (!dead) setPeaks(Array(BARS).fill(0.3))
-      }
-    })()
-    return () => { dead = true }
-  }, [src])
-
-  useEffect(() => {
-    ref.current?.play().catch(() => {})
-  }, [src])
-
-  const toggle = () => {
-    const a = ref.current
-    if (!a) return
-    if (a.paused) a.play().catch(() => {})
-    else a.pause()
-  }
-  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const a = ref.current
-    if (!a || !dur) return
-    const r = e.currentTarget.getBoundingClientRect()
-    a.currentTime = ((e.clientX - r.left) / r.width) * dur
-  }
-  const progress = dur ? t / dur : 0
-
-  return (
-    <div className="db-player">
-      <audio ref={ref} src={src} preload="auto"
-        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
-        onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDur(e.currentTarget.duration)} />
-      <button className="db-playbtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}>
-        {playing
-          ? <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2" /><rect x="14" y="5" width="4" height="14" rx="1.2" /></svg>
-          : <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5Z" /></svg>}
-      </button>
-      <div className="db-wave" onClick={seek} role="slider" aria-label="Seek" aria-valuemin={0} aria-valuemax={Math.round(dur)} aria-valuenow={Math.round(t)}>
-        {(peaks ?? Array(BARS).fill(0.15)).map((p, i) => (
-          <span key={i} className={i / BARS < progress ? 'is-played' : undefined} style={{ height: `${Math.round(p * 100)}%` }} />
-        ))}
-      </div>
-      <span className="db-player-time">{clock(t)} <small>/ {clock(dur)}</small></span>
-    </div>
-  )
 }
 
 // ------------------------------------------------------------------ video

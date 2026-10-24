@@ -1,7 +1,7 @@
-import { /* Link, */ createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 
-import { AuthField, AuthLayout, safeNext } from '#/components/auth/AuthPage'
+import { AuthField, AuthGroup, AuthLayout, safeNext } from '#/components/auth/AuthPage'
 import { getMe, logIn } from '#/server/auth'
 
 export const Route = createFileRoute('/login')({
@@ -19,21 +19,24 @@ function Login() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [err, setErr] = useState<string | null>(null)
+  const [err, setErr] = useState<{ text: string; field?: 'email' | 'password' } | null>(null)
   const [busy, setBusy] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email.trim()) return setErr({ text: 'Enter your email.', field: 'email' })
+    if (!password) return setErr({ text: 'Enter your password.', field: 'password' })
     setBusy(true)
     setErr(null)
     try {
       const r = await logIn({ data: { login: email, password } })
-      if (!r.ok) return setErr(r.reason)
+      if (!r.ok) return setErr({ text: r.reason })
+      // Drop anything cached for whoever was signed in before, then go. Not invalidate(): that
+      // reloads this page first, a round trip just to be redirected away from it.
       router.clearCache()
-      await router.invalidate()
       navigate({ href: safeNext(next) })
     } catch {
-      setErr('Something went wrong. Please try again.')
+      setErr({ text: 'Something went wrong. Please try again.' })
     } finally {
       setBusy(false)
     }
@@ -41,15 +44,18 @@ function Login() {
 
   return (
     <AuthLayout title="Welcome back" sub="Log in to manage your voice agents."
-      // Sign-up is off for now; restore this to bring it back.
-      foot={null}
-      // foot={<>New to Voxio? <Link to="/signup" search={next ? { next } : {}}>Create an account</Link></>}
+      foot={<>New to Voxio? <Link to="/signup" search={next ? { next } : {}}>Create an account</Link></>}
     >
       <form className="au-form" onSubmit={submit} noValidate>
-        {err && <div className="au-alert" role="alert">{err}</div>}
-        <AuthField label="Email or username" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required value={email} onChange={(e) => setEmail(e.target.value)} />
-        <AuthField label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button className="au-submit" disabled={busy || !email || !password}>{busy ? 'Logging in…' : 'Log in'}</button>
+        {/* Accounts from the old backend still log in by username; the server accepts either. */}
+        <AuthGroup error={err?.field ? err.text : undefined}>
+          <AuthField label="Email" type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus required value={email} onChange={(e) => { setEmail(e.target.value); setErr(null) }} error={err?.field === 'email' ? err.text : undefined} />
+          <AuthField label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => { setPassword(e.target.value); setErr(null) }} error={err?.field === 'password' ? err.text : undefined} />
+        </AuthGroup>
+        {/* No reset flow yet: send people to the contact form until one exists. */}
+        <Link to="/contact" className="au-forgot">Forgot password?</Link>
+        {err && !err.field && <div className="au-alert" role="alert">{err.text} <Link to="/contact">Reset it with us</Link></div>}
+        <button className="au-submit" disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
       </form>
     </AuthLayout>
   )

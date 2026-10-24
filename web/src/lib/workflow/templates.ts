@@ -10,6 +10,7 @@
 //   - `start_node` and `variables` are required; `variables` declares the state and its defaults.
 
 import type { Workflow } from './convert'
+import { specFor } from './registry'
 
 const say = (speak: string, extra: Record<string, unknown> = {}) => ({ out_dict: { speak, ...extra }, interruption_type: 'no', interruption_metadata: {} })
 
@@ -51,11 +52,13 @@ const variables = (extra: Record<string, unknown> = {}) => ({
 
 export type Template = { id: string; name: string; blurb: string; workflow: Workflow }
 
+// Names and blurbs say what the agent does, in plain words: most people picking one aren't technical
+// (mindsets/voxio-users.md). The first is the default.
 export const TEMPLATES: Template[] = [
   {
     id: 'simple',
-    name: 'Simple assistant',
-    blurb: 'Greet, listen, answer with one LLM.',
+    name: 'Simple conversation',
+    blurb: 'Greets the person, listens and answers.',
     workflow: {
       start_node: 'greeting',
       variables: variables(),
@@ -70,8 +73,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'ack',
-    name: 'Quick ack + main LLM',
-    blurb: 'A tiny model acknowledges instantly while the main one thinks.',
+    name: 'Fast reply',
+    blurb: 'Says “one moment” at once while it works out the full answer.',
     workflow: {
       start_node: 'greeting',
       variables: variables({ conversation_history_ack: { type: 'list', default: [] } }),
@@ -92,8 +95,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'hangup',
-    name: 'Branch on hang-up',
-    blurb: 'The LLM decides when the call is done; a branch says goodbye.',
+    name: 'Ends the call itself',
+    blurb: 'Knows when the conversation is over and says goodbye.',
     workflow: {
       start_node: 'greeting',
       variables: variables(),
@@ -114,8 +117,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'rag',
-    name: 'Knowledge support',
-    blurb: 'Look up the knowledge base, then answer from it.',
+    name: 'Answers from your documents',
+    blurb: 'Looks up your knowledge base before it answers.',
     workflow: {
       start_node: 'greeting',
       variables: variables({ context: { type: 'str', default: '' } }),
@@ -139,9 +142,33 @@ export const TEMPLATES: Template[] = [
     },
   },
   {
+    // The receptionist job most voice agents start as: works without any integration.
+    id: 'message',
+    name: 'Takes a message',
+    blurb: 'Asks for a name, number and reason, then reads it back.',
+    workflow: {
+      start_node: 'greeting',
+      variables: variables(),
+      nodes: {
+        greeting: { type: 'out', parameters: say('Hello, sorry we missed you. Can I take a message?'), next: 'ask_for_input' },
+        ask_for_input: listen(['llm', 'transcription']),
+        transcription: transcription(),
+        llm: {
+          type: 'llm-streaming',
+          parameters: llm('You take messages. Ask for the caller’s name, a number to call back and the reason, one at a time. Then read all three back, thank them and say someone will call back soon. Keep each reply short.'),
+          next: ['response', 'ask_for_input'],
+        },
+        response: response(['speak', 'hangup']),
+      },
+    },
+  },
+  {
     id: 'blank',
     name: 'Blank',
-    blurb: 'An empty canvas: add every step yourself.',
+    blurb: 'Start empty and add every step yourself.',
     workflow: { variables: variables(), nodes: {} },
   },
 ]
+
+/** Templates people can pick: none that uses a step the editor hides (Look up knowledge, for now), or it couldn't be saved. */
+export const OFFERED_TEMPLATES = TEMPLATES.filter((t) => Object.values(t.workflow.nodes ?? {}).every((n) => !specFor(String((n as { type?: unknown }).type)).hidden))

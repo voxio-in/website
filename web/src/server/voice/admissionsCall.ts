@@ -161,7 +161,6 @@ export function buildNimcCustoms({
       service: "soniox",
       language: ["hi", "en"],
       "enable-speaker-diarization": true,
-      "speaker-lock": "first",
       "max-speakers": 1,
     },
     "pre-fire": true,

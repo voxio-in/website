@@ -24,6 +24,8 @@ export type Workflow = {
     edgeStyle?: EdgeStyle
     /** Hand-moved right-angle lines: segment positions, px from the line's start. */
     bends?: Record<string, Bend>
+    /** Which side of each step a line leaves and enters, when not right → left. */
+    sides?: Record<string, { from?: Side; to?: Side }>
   }
   [extra: string]: unknown
 }
@@ -43,7 +45,9 @@ export type GraphNode = { id: string; position: { x: number; y: number } | null;
 export type EdgeStyle = 'step' | 'curve'
 /** A right-angle line: start → (x1,·) → (x1,y) → (x2,y) → (x2,·) → end, relative to its start. */
 export type Bend = { x1: number; y: number; x2: number }
-export type GraphEdge = { id: string; source: string; target: string; sourceHandle: string; bend?: Bend }
+/** A side of a step's card; every side has one connection point, in its middle. */
+export type Side = 'top' | 'right' | 'bottom' | 'left'
+export type GraphEdge = { id: string; source: string; target: string; sourceHandle: string; bend?: Bend; from?: Side; to?: Side }
 export type Graph = {
   nodes: GraphNode[]
   edges: GraphEdge[]
@@ -56,6 +60,24 @@ export const NEXT_HANDLE = 'next'
 export const mapHandle = (value: string) => `m:${value}`
 export const isMapHandle = (h: string) => h.startsWith('m:')
 export const mapValue = (h: string) => h.slice(2)
+
+// Canvas connection points. A one-way-out step has one on every side, and each works
+// both ways: "next" (right), "next-top", "next-bottom", "next-left". A Branch's paths
+// leave on the right; it is entered on "in-top", "in-left" or "in-bottom".
+export const SIDES: Side[] = ['top', 'right', 'bottom', 'left']
+/** The connection point on a side of a one-way-out step. */
+export const sideHandle = (side: Side) => (side === 'right' ? NEXT_HANDLE : `next-${side}`)
+/** The connection point on a side of a Branch, for lines coming in. */
+export const inHandle = (side: Side) => `in-${side}`
+/** What a connection point means to the engine: every side of a step is its "next". */
+export const handleRoute = (h: string | null | undefined) => (!h || h.startsWith('next') ? NEXT_HANDLE : h)
+/** The side a connection point sits on. */
+export function handleSide(h: string | null | undefined): Side | undefined {
+  if (!h) return undefined
+  if (h === NEXT_HANDLE) return 'right'
+  const s = h.replace(/^(next|in)-/, '')
+  return (SIDES as string[]).includes(s) ? (s as Side) : undefined
+}
 
 const asList = (v: unknown): string[] =>
   typeof v === 'string' ? [v] : Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
@@ -107,7 +129,14 @@ export function toGraph(wf: Workflow): Graph {
   }
 
   const bends = ui?.bends ?? {}
-  for (const e of edges) { const b = bends[e.id]; if (b && typeof b === 'object') e.bend = b }
+  const sides = ui?.sides ?? {}
+  for (const e of edges) {
+    const b = bends[e.id]
+    if (b && typeof b === 'object') e.bend = b
+    const s = sides[e.id]
+    if (s?.from) e.from = s.from
+    if (s?.to) e.to = s.to
+  }
   return { nodes: gNodes, edges, extra, edgeStyle: ui?.edgeStyle }
 }
 
@@ -159,6 +188,10 @@ export function toWorkflow(graph: Graph, opts: { start?: string; withUi?: boolea
     if (Object.keys(positions).length) ui.positions = positions
     if (graph.edgeStyle) ui.edgeStyle = graph.edgeStyle
     if (Object.keys(bends).length) ui.bends = bends
+    // Right → left is the default; only other sides are written.
+    const sides = Object.fromEntries(graph.edges.filter((e) => (e.from && e.from !== 'right') || (e.to && e.to !== 'left'))
+      .map((e) => [e.id, { ...(e.from && e.from !== 'right' ? { from: e.from } : {}), ...(e.to && e.to !== 'left' ? { to: e.to } : {}) }]))
+    if (Object.keys(sides).length) ui.sides = sides
     if (Object.keys(ui).length) wf.ui = ui
   }
   return wf

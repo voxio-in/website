@@ -95,7 +95,7 @@
 .db-provtile b { font-size: 17px; font-weight: 600; }
 .db-provtile span { font-size: 14.5px; color: var(--db-muted); line-height: 1.35; }
 .db-provtile:hover { background: rgb(var(--ink) / 0.06); }
-.db-provtile.is-on { border-color: rgba(94, 230, 200, 0.55); background: rgba(94, 230, 200, 0.08); box-shadow: 0 0 0 1px rgba(94, 230, 200, 0.25) inset; }
+.db-provtile.is-on { border-color: color-mix(in srgb, var(--db-accent) 55%, transparent); background: color-mix(in srgb, var(--db-accent) 8%, transparent); }
 .db-fieldgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px 22px; }
 .db-fieldgrid .db-field.is-inline { flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; background: rgb(var(--ink) / 0.025); }
 .db-more { border-top: 1px solid var(--hair); padding-top: 14px; }
@@ -110,11 +110,9 @@
   display: flex; flex-direction: column; gap: 22px; padding: 26px 28px; border-radius: var(--radius);
   background: var(--surface); border: 1px solid var(--hair); box-shadow: var(--glow); position: relative; overflow: visible;
 }
-.db-voicesec::before { content: ""; position: absolute; left: 0; top: 24px; bottom: 24px; width: 3px; border-radius: 0 3px 3px 0; background: #5ee6c8; }
-.db-voicesec.is-tts::before { background: #c79bff; }
 .db-voicesec-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.db-voicesec-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; color: var(--db-accent-text); background: rgba(94, 230, 200, 0.12); }
-.db-voicesec.is-tts .db-voicesec-icon { color: #d7c4ff; background: rgba(199, 155, 255, 0.14); }
+/* One accent for the whole page; both halves look the same. */
+.db-voicesec-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0; color: var(--db-accent-text); background: var(--m3-tonal); }
 .db-voicesec-title { flex: 1; min-width: 200px; display: flex; flex-direction: column; }
 .db-voicesec-title .db-h2 { margin: 0; font-size: 20px; }
 .db-voicesec-title span { color: var(--db-muted); font-size: 16px; }

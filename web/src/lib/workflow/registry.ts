@@ -31,6 +31,20 @@ export type FieldKind =
   | 'decideon'
   /** What a Listen step saves the caller's answer as. */
   | 'listen'
+  /** Say's "Hang up after saying this": out_dict.hangup. */
+  | 'hangup'
+  /** A 0–1 chance shown as a percentage. */
+  | 'percent'
+  /** Say: "These words | What the AI decided". */
+  | 'saymode'
+  /** Say speaking the AI's reply: also hang up when the AI says so (variables has hangup). */
+  | 'aihangup'
+  /** AI thinks: what it decides each turn, as switches (llm_return_type speak / hangup). */
+  | 'decides'
+  /** AI answers: may end the call (llm_return_type hangup). */
+  | 'canend'
+  /** Which conversation memory it shares (history_key), from the ones in the workflow. */
+  | 'memory'
 
 export type Field = {
   key: string
@@ -44,7 +58,17 @@ export type Field = {
   requires?: string
   /** Groups fields under a heading in the settings panel. */
   section?: 'output' | 'memory' | 'timing'
+  /** Shown only when this holds for the step's settings. */
+  when?: (p: Record<string, unknown>) => boolean
+  /** Shown only when another AI step starts from the same step (they race). */
+  racing?: boolean
+  /** Works only with this voice service; otherwise the panel says why. */
+  tts?: string
 }
+
+/** A Say that speaks an AI's reply instead of its own words. */
+export const speaksAi = (p: Record<string, unknown>) =>
+  Array.isArray(p.variables) && p.variables.includes('speak') && !String((p.out_dict as { speak?: unknown } | undefined)?.speak ?? '').trim()
 
 export type OutMode = 'single' | 'mappings' | 'none'
 
@@ -53,6 +77,8 @@ export type NodeGroup = 'Conversation' | 'AI' | 'Logic' | 'Knowledge' | 'Shopify
 export type NodeSpec = {
   type: string
   label: string
+  /** The start of new step ids of this kind ("say", "listen"…); the label otherwise. */
+  base?: string
   group: NodeGroup
   icon: IconName
   /** Accent colour for the card and picker tile. */
@@ -64,6 +90,8 @@ export type NodeSpec = {
   out: OutMode
   fields: Field[]
   defaults: Record<string, unknown>
+  /** Shown when a step has nothing to set on its main tab. */
+  setupNote?: string
   /** One plain sentence about what this step will do, for the canvas card. */
   summary: (p: Record<string, unknown>) => string
   aliases?: string[]
@@ -119,17 +147,19 @@ export const friendlyVar = (k: string) => SPECIAL_OUTPUTS[k]?.label ?? ({ user_i
 const EMOTION_STYLES = [{ value: 'eleven_v3', label: 'ElevenLabs v3', info: 'Adds cues like [laughs] or [whispers] that ElevenLabs v3 voices perform.' }]
 
 const brain: Field[] = [
-  { key: 'system_prompt', label: 'Instructions', kind: 'prompt', help: 'Tell the agent who it is, what to do and how to talk.', placeholder: 'You are a friendly receptionist for…' },
+  { key: 'system_prompt', label: 'Instructions', kind: 'prompt', help: 'Who the agent is, what to do and how to talk.', placeholder: 'You are a friendly receptionist for…' },
   { key: 'model', label: 'Model', kind: 'model', help: 'Which AI writes the reply. The provider comes with it.' },
-  { key: 'llm_return_type', label: 'What it decides', kind: 'schema', advanced: true, section: 'output', help: 'Things the AI fills in every turn. The spoken reply is what the caller hears; the rest goes to your webhook.' },
+  { key: 'llm_return_type', label: 'Everything it decides', kind: 'schema', advanced: true, section: 'output', help: 'Every field the AI fills in each turn, by name. The spoken reply is what the caller hears; the rest goes to your webhook and later steps.' },
 ]
+const decides: Field = { key: 'llm_return_type', label: 'It decides', kind: 'decides', help: 'What this AI works out each turn. Later steps speak it or branch on it.' }
+const canEnd: Field = { key: 'llm_return_type', label: 'Can end the call', kind: 'canend', help: 'Lets the AI hang up once the conversation is over.' }
 const memory: Field[] = [
   { key: 'input_variables', label: 'What it reads', kind: 'schema', advanced: true, section: 'memory', help: 'Information from earlier steps the AI can use.' },
-  { key: 'history_key', label: 'Shared memory', kind: 'text', advanced: true, section: 'memory', help: 'Steps with the same name here remember the same conversation.' },
+  { key: 'history_key', label: 'Shares memory with', kind: 'memory', advanced: true, section: 'memory', help: 'AI steps that share a memory remember the same conversation.' },
   { key: 'summariser', label: 'Summarise long calls', kind: 'bool', advanced: true, section: 'memory', help: 'Keeps long conversations quick by summarising older turns.' },
 ]
 const emotion: Field[] = [
-  { key: 'emotion', label: 'Add emotion', kind: 'bool', help: 'Lets the voice sound happy, calm or excited where it fits.' },
+  { key: 'emotion', label: 'Add emotion', kind: 'bool', tts: 'elevenlabs', help: 'Lets the voice sound happy, calm or excited where it fits.' },
   { key: 'emotion_tts', label: 'Emotion style', kind: 'select', options: EMOTION_STYLES, requires: 'emotion', help: 'Which voice understands the emotion cues.' },
 ]
 
@@ -167,28 +197,35 @@ const modelName = (p: Record<string, unknown>) => MODELS[String(p.service)]?.fin
 
 export const NODE_SPECS: NodeSpec[] = [
   {
-    type: 'out', label: 'Say', group: 'Conversation', icon: 'voice', color: '#5ee6c8', hue: 165, glyph: '❝',
-    blurb: 'Speaks a line you write: greetings, confirmations, goodbyes. Can also speak what an AI decision wrote.',
+    type: 'out', label: 'Say', base: 'say', group: 'Conversation', icon: 'voice', color: '#5ee6c8', hue: 165, glyph: '❝',
+    blurb: 'Speaks a line you write: greetings, confirmations, goodbyes. Can also speak the reply of an AI that thinks silently.',
     out: 'single',
     fields: [
-      { key: 'out_dict', label: 'What to say', kind: 'speak', placeholder: 'Hi! Thanks for calling…' },
+      { key: 'out_dict', label: 'Say', kind: 'saymode', help: 'Your own words, or the reply an AI step before it decided.' },
+      { key: 'out_dict', label: 'What to say', kind: 'speak', placeholder: 'Hi! Thanks for calling…', when: (p) => !speaksAi(p) },
+      { key: 'out_dict', label: 'Hang up after saying this', kind: 'hangup', help: 'Ends the call once this line is spoken, as a goodbye does.', when: (p) => !speaksAi(p) },
+      { key: 'variables', label: 'Hang up when the AI says so', kind: 'aihangup', help: 'Ends the call after this reply when the AI decided the conversation is over.', when: speaksAi },
       interrupt,
-      { key: 'out_dict', label: 'Also send', kind: 'kv', advanced: true, help: 'Extra details sent to your webhook, not spoken — like end the call.' },
+      { key: 'out_dict', label: 'Also send', kind: 'kv', advanced: true, help: 'Extra details sent to your webhook, not spoken.' },
       { key: 'variables', label: 'Pass along', kind: 'vars', advanced: true, help: 'Values from earlier steps to send with it.' },
+      { key: 'remove', label: 'Tidy values before sending', kind: 'bool', advanced: true, help: 'Removes tags from the values passed along.' },
+      { key: 'remove_stt', label: 'Remove speaker labels', kind: 'bool', advanced: true, requires: 'remove', help: 'Drops labels like <speaker_1> from what the caller said.' },
     ],
-    defaults: { out_dict: { speak: '' }, interruption_type: 'full', interruption_metadata: {} },
+    defaults: { out_dict: { speak: '' }, interruption_type: 'no', interruption_metadata: {} },
     summary: (p) => {
       const speak = (p.out_dict as Record<string, unknown> | undefined)?.speak
       if (typeof speak === 'string' && speak.trim()) return `“${clip(speak)}”`
+      if (Array.isArray(p.variables) && p.variables.includes('speak')) return 'Speaks the AI’s reply'
       const vars = Array.isArray(p.variables) ? p.variables : []
       return vars.length ? `Sends ${vars.join(', ')} (silently)` : 'Nothing to say yet'
     },
   },
   {
-    type: 'input', label: 'Listen', group: 'Conversation', icon: 'phone', color: '#7aa9ff', hue: 215, glyph: '◉',
+    type: 'input', label: 'Listen', base: 'listen', group: 'Conversation', icon: 'phone', color: '#7aa9ff', hue: 215, glyph: '◉',
     blurb: 'Waits until the caller finishes talking, then saves their words for the next step.',
     out: 'single',
-    fields: [{ key: 'input_variables', label: 'Save what they say as', kind: 'listen', help: 'The name later steps use to read the caller’s answer. Almost always “What the caller said”.' }],
+    setupNote: 'Waits for the caller to finish, then passes their words on. Nothing to set here. What it does when the caller goes quiet is on the Behaviour tab.',
+    fields: [{ key: 'input_variables', label: 'Save what they say as', kind: 'listen', advanced: true, help: 'The name later steps use to read the caller’s answer. Almost always “What the caller said”.' }],
     defaults: { input_variables: { user_input: 'str' } },
     summary: (p) => {
       const names = Object.keys((p.input_variables as object) ?? {})
@@ -196,12 +233,12 @@ export const NODE_SPECS: NodeSpec[] = [
     },
   },
   {
-    type: 'random-speak-out', label: 'Filler', group: 'Conversation', icon: 'list', color: '#8fd3ff', hue: 200, glyph: '≈',
+    type: 'random-speak-out', label: 'Filler', base: 'filler', group: 'Conversation', icon: 'list', color: '#8fd3ff', hue: 200, glyph: '≈',
     blurb: 'Plays a short “one moment…” so the caller isn’t left in silence while a slow step works.',
     out: 'single',
     fields: [
-      { key: 'phrases', label: 'Phrases', kind: 'list', help: 'One is picked at random each time.' },
-      { key: 'variance', label: 'Chance to speak', kind: 'number', advanced: true, help: 'How often it says anything, from 0 (never) to 1 (every time). 0.5 speaks about half the time.' },
+      { key: 'phrases', label: 'Phrases', kind: 'list', help: 'One is picked at random each time. It only helps when it runs beside a slow step: connect it from the same Listen as that step, so they start together.' },
+      { key: 'variance', label: 'How often it speaks', kind: 'percent', advanced: true, help: 'At 100% it says a phrase every time; at 50%, about every other time.' },
     ],
     defaults: { phrases: ['One moment…', 'Let me check that.'], variance: 1.0 },
     summary: (p) => {
@@ -210,19 +247,19 @@ export const NODE_SPECS: NodeSpec[] = [
     },
   },
   {
-    type: 'llm-streaming', label: 'AI reply', group: 'AI', icon: 'bolt', color: '#c79bff', hue: 270, glyph: '✦',
+    type: 'llm-streaming', label: 'AI answers (out loud)', base: 'ai_answers', group: 'AI', icon: 'bolt', color: '#c79bff', hue: 270, glyph: '✦',
     blurb: 'The AI answers out loud, word by word, so the caller hears it sooner. Best for normal chat.',
     out: 'single',
-    fields: [...brain, interrupt, ...memory,
-      { key: 'stream_timeout', label: 'Give up after', kind: 'seconds', advanced: true, section: 'timing', help: 'When two AI replies race, drop this one if it takes longer than this.' }],
+    fields: [...brain, canEnd, interrupt, ...memory,
+      { key: 'stream_timeout', label: 'Give up after', kind: 'seconds', advanced: true, section: 'timing', racing: true, help: 'Another AI starts from the same step. If this one takes longer than this, the other is heard.' }],
     defaults: aiDefaults,
     summary: (p) => (String(p.system_prompt ?? '').trim() ? `${modelName(p)} · ${clip(p.system_prompt, 52)}` : `${modelName(p)} · no instructions yet`),
   },
   {
-    type: 'llm', label: 'AI decision', group: 'AI', icon: 'check', color: '#e0a3ff', hue: 285, glyph: '✧',
-    blurb: 'The AI thinks first and fills in fields (a reply, “end the call”…). Silent: follow it with Say or Branch.',
+    type: 'llm', label: 'AI thinks (silent)', base: 'ai_thinks', group: 'AI', icon: 'check', color: '#e0a3ff', hue: 285, glyph: '✧',
+    blurb: 'The AI decides things (a reply, “end the call”…) without speaking. Comes with a Say that speaks its reply.',
     out: 'single',
-    fields: [...brain, ...emotion, ...memory],
+    fields: [...brain, decides, ...emotion, ...memory],
     defaults: aiDefaults,
     summary: (p) => (String(p.system_prompt ?? '').trim() ? `${modelName(p)} · ${clip(p.system_prompt, 52)}` : `${modelName(p)} · no instructions yet`),
   },
@@ -233,11 +270,11 @@ export const NODE_SPECS: NodeSpec[] = [
     fields: [...brain.filter((f) => f.key !== 'llm_return_type'), ...emotion, ...memory],
     defaults: { ...aiDefaults, prompt_template: 'web_navigation', llm_return_type: undefined },
     summary: (p) => `${modelName(p)} · drives the page`,
-    unsupported: 'Coming soon — not available on calls yet.',
+    unsupported: 'This step can’t run on calls yet. Remove it, or use AI answers instead.',
   },
   {
-    type: 'conditional', label: 'Branch', group: 'Logic', icon: 'flows', color: '#ffc670', hue: 38, glyph: '⑂',
-    blurb: 'Sends the call down a different path based on a value, like an AI decision’s yes or no.',
+    type: 'conditional', label: 'Branch', base: 'branch', group: 'Logic', icon: 'flows', color: '#ffc670', hue: 38, glyph: '⑂',
+    blurb: 'Sends the call down a different path based on a value, like the AI’s yes or no on ending the call.',
     out: 'mappings',
     fields: [
       { key: 'input_variables', label: 'Decide on', kind: 'decideon', help: 'Something an earlier step decided, like End the call.' },

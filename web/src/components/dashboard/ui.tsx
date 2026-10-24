@@ -3,6 +3,7 @@
 import { BorderBeam } from 'border-beam'
 import { motion, useReducedMotion } from 'motion/react'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ThinkingOrb } from 'thinking-orbs'
 
 import { billedMinutes } from '#/lib/dashboard/client'
@@ -215,8 +216,14 @@ export function Dialog({ title, sub, onClose, children, wide, big, actions, layo
   }, [onClose])
   const reduce = useReducedMotion()
   const cls = `db-dialog${wide ? ' is-wide' : ''}${big ? ' is-big' : ''}`
+  // Rendered into the dashboard root, not where it is written: a transformed or
+  // container-query ancestor would give `position: fixed` its own box, and the
+  // backdrop would stop short of the screen's edges (a hard line at the top).
+  const [root, setRoot] = useState<HTMLElement | null>(null)
+  useEffect(() => { setRoot(document.querySelector<HTMLElement>('.db') ?? document.body) }, [])
+  if (!root) return null
   if (layoutId) {
-    return (
+    return createPortal(
       <motion.div className="db-dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduce ? 0 : 0.25 }}>
         <motion.div className={`${cls} is-morph`} role="dialog" aria-modal="true" aria-label={title}
@@ -227,16 +234,18 @@ export function Dialog({ title, sub, onClose, children, wide, big, actions, layo
             {children}
           </motion.div>
         </motion.div>
-      </motion.div>
+      </motion.div>,
+      root,
     )
   }
-  return (
+  return createPortal(
     <div className="db-dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={cls} role="dialog" aria-modal="true" aria-label={title}>
         <DialogHead title={title} sub={sub} actions={actions} onClose={onClose} />
         {children}
       </div>
-    </div>
+    </div>,
+    root,
   )
 }
 

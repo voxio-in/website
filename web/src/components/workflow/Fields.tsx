@@ -4,11 +4,13 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-import { Dropdown, NumberUnit, Tags } from '#/components/dashboard/controls'
+import { Dropdown, NumberUnit, Slider, Tags } from '#/components/dashboard/controls'
 import Icon from '#/components/dashboard/Icon'
 import { AiGlow, Toggle } from '#/components/dashboard/ui'
 import { GrowArea } from './GrowArea'
-import { INTERRUPT_OPTIONS, MODELS, PROVIDERS, SPECIAL_OUTPUTS, friendlyVar, prettyName, type Field } from '#/lib/workflow/registry'
+import { INTERRUPT_OPTIONS, MODELS, PROVIDERS, SPECIAL_OUTPUTS, friendlyVar, prettyName, speaksAi, type Field } from '#/lib/workflow/registry'
+import { SegmentTabs } from '#/components/dashboard/kit/SegmentTabs'
+import { toast } from '#/components/ui/halo-toast'
 
 /** Things fields need from outside the workflow, e.g. the account's knowledge bases. */
 export const FieldOptions = createContext<{
@@ -18,6 +20,10 @@ export const FieldOptions = createContext<{
   /** For the open step: where each of its outputs leads (handle → step names), and a way to jump there. */
   routes?: Record<string, string[]>
   goTo?: (id: string) => void
+  /** The open step's id, e.g. to name its own memory. */
+  stepId?: string
+  /** Conversation memories the workflow's AI steps use (history_key values). */
+  memories?: string[]
 }>({ knowledge: [], variables: [] })
 
 type Props = {
@@ -47,6 +53,32 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
       return <NumberUnit value={value as number | undefined} step={Number.isInteger(value ?? 1) ? 1 : 0.1} onChange={onChange} />
     case 'bool':
       return <Toggle on={!!value} onChange={onChange} />
+    case 'hangup': {
+      const out = obj(value)
+      return <Toggle on={!!out.hangup} onChange={(b) => onChange(b ? { ...out, hangup: true } : drop(out, 'hangup'))} />
+    }
+    case 'saymode': {
+      const vars = Array.isArray(params.variables) ? params.variables.map(String) : []
+      const out = obj(value)
+      return <SegmentTabs label="What it says" value={speaksAi(params) ? 'ai' : 'words'} options={SAY_MODES}
+        onChange={(m) => m === 'ai'
+          ? onPatch({ out_dict: drop(out, 'speak'), variables: [...new Set([...vars, 'speak'])] })
+          : onPatch({ out_dict: { ...out, speak: String(out.speak ?? '') }, variables: vars.filter((v) => v !== 'speak' && v !== 'hangup') })} />
+    }
+    case 'aihangup': {
+      const vars = Array.isArray(value) ? value.map(String) : []
+      return <Toggle on={vars.includes('hangup')} onChange={(b) => onChange(b ? [...vars, 'hangup'] : vars.filter((v) => v !== 'hangup'))} />
+    }
+    case 'decides':
+      return <Decides value={obj(value)} onChange={onChange} />
+    case 'canend': {
+      const cur = obj(value)
+      return <Toggle on={'hangup' in cur} onChange={(b) => onChange(b ? { ...cur, hangup: RETURN_FIELDS.hangup } : drop(cur, 'hangup'))} />
+    }
+    case 'memory':
+      return <Memory value={str(value)} onChange={onChange} />
+    case 'percent':
+      return <Slider value={Math.round(Number(value ?? 1) * 100)} min={0} max={100} step={5} unit="%" onChange={(v) => onChange(v / 100)} />
     case 'select':
       // Switching the AI provider also picks that provider's first model: the old model id means nothing there.
       if (field.key === 'service' && field.options === PROVIDERS) {
@@ -69,8 +101,17 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
         : <input className="db-in" placeholder="Knowledge base name" value={str(value)} onChange={(e) => onChange(e.target.value)} />
     }
     case 'prompt':
-      return <GrowArea title={field.label} minRows={4} value={typeof value === 'string' ? value : JSON.stringify(value ?? '', null, 2)} placeholder={field.placeholder}
+      return <>
+        <GrowArea title={field.label} minRows={4} value={typeof value === 'string' ? value : JSON.stringify(value ?? '', null, 2)} placeholder={field.placeholder}
         onChange={onChange} className="wf-prompt" glow={(a) => <AiGlow>{a}</AiGlow>} />
+        {/* An empty box starts from an example rather than nothing. */}
+        {!str(value).trim() && (
+          <div className="wf-chips wf-examples">
+            <span>Start from an example:</span>
+            {PROMPT_EXAMPLES.map((x) => <button type="button" key={x.label} className="wf-pick" onClick={() => onChange(x.text)}>{x.label}</button>)}
+          </div>
+        )}
+      </>
     case 'speak': {
       const out = obj(value)
       return (
@@ -88,7 +129,7 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
     case 'schema':
       return <Schema value={obj(value)} onChange={onChange} />
     case 'mappings':
-      return <Mappings value={obj(value)} onChange={onChange} />
+      return <Mappings value={obj(value)} onChange={onChange} yesNo={typeOfDecision(params, variables) === 'bool'} />
 
     case 'json':
       return <JsonEdit value={value} onChange={onChange} />
@@ -142,12 +183,56 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
     }
     case 'decideon': {
       const cur = Object.keys(obj(value))[0] ?? ''
-      const opts = variables.map((v) => ({ value: v.value, label: friendlyVar(v.value), hint: TYPE_WORD[v.type] }))
+      // Yes/no answers first; lists and groups (conversation history…) can't be branched on.
+      const usable = variables.filter((v) => v.type !== 'list' && v.type !== 'dict').sort((a, b) => Number(b.type === 'bool') - Number(a.type === 'bool'))
+      const opts = usable.map((v) => ({ value: v.value, label: friendlyVar(v.value), hint: TYPE_WORD[v.type] }))
       if (cur && !opts.some((o) => o.value === cur)) opts.unshift({ value: cur, label: friendlyVar(cur), hint: '' })
       return <Dropdown value={cur} options={opts} placeholder="Choose what to check" aria-label="Decide on"
-        onChange={(k) => onChange({ [k]: variables.find((v) => v.value === k)?.type ?? 'str' })} />
+        onChange={(k) => {
+          const type = variables.find((v) => v.value === k)?.type ?? 'str'
+          // A yes/no gets its two paths at once; Otherwise is always there.
+          const maps = obj(params.mappings)
+          onPatch({ input_variables: { [k]: type }, ...(type === 'bool' ? { mappings: { true: maps.true ?? '', false: maps.false ?? '' } } : {}) })
+        }} />
     }
   }
+}
+
+const SAY_MODES = [{ value: 'words', label: 'These words' }, { value: 'ai', label: 'What the AI decided' }] as const
+
+const PROMPT_EXAMPLES = [
+  { label: 'Friendly assistant', text: 'You are a friendly, concise voice assistant. Keep replies to one or two sentences.' },
+  { label: 'Takes a message', text: 'You take messages. Ask for the caller’s name, a number to call back and the reason, one at a time. Then read all three back, thank them and say someone will call back soon. Keep each reply short.' },
+  { label: 'Short survey', text: 'Ask three short survey questions, one at a time. Set hangup to true once all three are answered.' },
+]
+
+/** The two answers the pipeline acts on by itself, as the templates describe them. */
+const RETURN_FIELDS = {
+  speak: { type: 'str', description: 'What to say to the caller.' },
+  hangup: { type: 'bool', description: 'True once the conversation is over.' },
+}
+
+/** AI thinks: the answers people understand as switches; anything else stays in Developer settings. */
+function Decides({ value, onChange }: { value: Record<string, unknown>; onChange: (v: unknown) => void }) {
+  const others = Object.keys(value).filter((k) => !(k in RETURN_FIELDS)).length
+  const flip = (k: keyof typeof RETURN_FIELDS, on: boolean) => onChange(on ? { ...value, [k]: RETURN_FIELDS[k] } : drop(value, k))
+  return (
+    <div className="wf-decides">
+      <label className="wf-decide"><span><b>What to say next</b><small>A Say step after it speaks this</small></span><Toggle on={'speak' in value} onChange={(b) => flip('speak', b)} /></label>
+      <label className="wf-decide"><span><b>Whether the call is over</b><small>A Branch can act on it, or a Say can hang up</small></span><Toggle on={'hangup' in value} onChange={(b) => flip('hangup', b)} /></label>
+      {others > 0 && <p className="wf-help">Also decides {others} other thing{others === 1 ? '' : 's'}, under Developer settings.</p>}
+    </div>
+  )
+}
+
+/** Shared memory as a choice of the memories in this workflow, never free text (a typo splits it). */
+function Memory({ value, onChange }: { value: string; onChange: (v: unknown) => void }) {
+  const { memories = [], stepId } = useContext(FieldOptions)
+  const own = `${stepId ?? 'step'}_memory`
+  const name = (m: string) => (m === 'conversation_history' ? 'The main conversation' : prettyName(m.replace(/^conversation_history_?/, '') || m))
+  const all = [...new Set(['conversation_history', ...memories, ...(value ? [value] : [])])]
+  const opts = [...all.map((m) => ({ value: m, label: name(m), hint: m === own ? 'Only this step' : undefined })), ...(all.includes(own) ? [] : [{ value: own, label: 'Its own memory', hint: 'Only this step' }])]
+  return <Dropdown value={value || 'conversation_history'} options={opts} onChange={onChange} aria-label="Shares memory with" />
 }
 
 const TYPE_WORD: Record<string, string> = { str: 'Text', bool: 'Yes / no', int: 'Number', float: 'Number', list: 'List', dict: 'Group' }
@@ -213,10 +298,6 @@ function KV({ value, onChange }: { value: Record<string, unknown>; onChange: (v:
   const rows = Object.entries(value).filter(([k]) => k !== 'speak' && k !== 'hangup')
   return (
     <div className="wf-rows">
-      <div className="wf-special">
-        <span><b>End the call</b><small>Hang up after saying this</small></span>
-        <Toggle on={!!value.hangup} onChange={(b) => onChange(b ? { ...value, hangup: true } : drop(value, 'hangup'))} />
-      </div>
       {rows.map(([k, v], i) => (
         <div className="wf-row" key={i}>
           <input className="db-in wf-key" value={k} placeholder="Name" onChange={(e) => onChange(renameKey(value, k, e.target.value))} />
@@ -292,25 +373,45 @@ function Schema({ value, onChange }: { value: Record<string, unknown>; onChange:
   )
 }
 
-/** Path names only; where each path goes is drawn on the canvas. */
-function Mappings({ value, onChange }: { value: Record<string, unknown>; onChange: (v: unknown) => void }) {
+/** What a Branch decides on is: yes/no, or text, from the step that produces it. */
+function typeOfDecision(params: Record<string, unknown>, variables: { value: string; type: string }[]) {
+  const [k, v] = Object.entries(obj(params.input_variables))[0] ?? []
+  if (!k) return ''
+  return variables.find((x) => x.value === k)?.type ?? (typeof v === 'string' ? v : str((v as { type?: unknown } | undefined)?.type))
+}
+
+/** A Branch's paths, where each leads, and Otherwise. Yes/no paths are fixed; text paths match exactly. */
+function Mappings({ value, onChange, yesNo }: { value: Record<string, unknown>; onChange: (v: unknown) => void; yesNo: boolean }) {
   const { routes, goTo } = useContext(FieldOptions)
+  const to = (h: string) => routes?.[h] ?? []
+  const remove = (k: string) => {
+    onChange(drop(value, k))
+    // Its line goes with it (the editor drops lines of removed paths); say so.
+    const lines = to(`m:${k}`)
+    if (lines.length) toast.success(`Removed the “${k}” path`, `Its line to ${lines.map(prettyName).join(', ')} went too. Undo (Ctrl+Z) brings it back.`)
+  }
+  const where = (h: string) => to(h).length
+    ? to(h).map((t) => <button key={t} type="button" className="wf-pathto-chip" onClick={() => goTo?.(t)} title={`Open ${prettyName(t)}`}>→ {prettyName(t)}</button>)
+    : <span className="wf-pathto-none">Not connected yet: drag from this path’s dot on the card</span>
   return (
     <div className="wf-rows">
+      {!yesNo && <p className="wf-help">A path is taken when the answer is exactly its word, like “booking”. Tell the AI the words to use in its instructions.</p>}
       {Object.keys(value).map((k, i) => (
         <div className="wf-row wf-pathrow" key={i}>
           <span className="wf-pathdot" />
-          <input className="db-in" value={k} placeholder="e.g. yes" title={k === 'true' ? 'Matches yes' : k === 'false' ? 'Matches no' : undefined}
-            onChange={(e) => onChange(renameKey(value, k, e.target.value))} />
-          <button type="button" className="db-iconbtn" aria-label="Remove path" onClick={() => onChange(drop(value, k))}><Icon name="close" size={15} /></button>
-          <span className="wf-pathto">
-            {(routes?.[`m:${k}`] ?? []).length
-              ? routes![`m:${k}`].map((t) => <button key={t} type="button" className="wf-pathto-chip" onClick={() => goTo?.(t)} title={`Open ${prettyName(t)}`}>→ {prettyName(t)}</button>)
-              : <span className="wf-pathto-none">Not connected yet: drag from this path’s dot on the card</span>}
-          </span>
+          {k === 'true' || k === 'false'
+            ? <span className="wf-pathname">{k === 'true' ? 'Yes' : 'No'}</span>
+            : <input className="db-in" value={k} placeholder="e.g. maybe" onChange={(e) => onChange(renameKey(value, k, e.target.value))} />}
+          {!yesNo && <button type="button" className="db-iconbtn" aria-label="Remove path" onClick={() => remove(k)}><Icon name="close" size={18} /></button>}
+          <span className="wf-pathto">{where(`m:${k}`)}</span>
         </div>
       ))}
-      <button type="button" className="db-add" onClick={() => onChange({ ...value, [nextKey(value, 'path')]: '' })}>+ Add path</button>
+      <div className="wf-row wf-pathrow is-else">
+        <span className="wf-pathdot" />
+        <span className="wf-pathname">Otherwise</span>
+        <span className="wf-pathto">{where('next')}</span>
+      </div>
+      {!yesNo && <button type="button" className="db-add" onClick={() => onChange({ ...value, [nextKey(value, 'path')]: '' })}>+ Add path</button>}
     </div>
   )
 }

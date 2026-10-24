@@ -19,6 +19,7 @@ function WorkflowPage() {
     <WorkflowEditor
       key={flow.key}
       title={flow.flow_name}
+      ttsService={typeof flow.tts === 'object' ? flow.tts?.service : undefined}
       initial={initial}
       onTest={() => navigate({ to: '/dashboard/flows/$flowId/test', params: { flowId: flow.key } })}
       onSave={async (workflow) => {

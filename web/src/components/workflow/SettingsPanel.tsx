@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-import { CopyJson, Label } from '#/components/dashboard/controls'
-import { Code2Icon } from 'lucide-react'
+import { Label } from '#/components/dashboard/controls'
+import { CopySettingsMenu } from '#/components/dashboard/kit/CopySettingsMenu'
 import Icon from '#/components/dashboard/Icon'
 import type { NodeData } from '#/lib/workflow/convert'
 import { prettyName, specFor, type Field } from '#/lib/workflow/registry'
@@ -19,7 +19,13 @@ type Props = {
   onDelete: () => void
   onDuplicate: () => void
   onClose: () => void
+  /** Another AI step starts from the same step as this one (they race). */
+  racing?: boolean
+  /** The flow's voice service, for settings that work with one voice only. */
+  ttsService?: string
 }
+
+const SERVICE_NAME: Record<string, string> = { deepgram: 'Deepgram', sarvam: 'Sarvam', elevenlabs: 'ElevenLabs', google: 'Google', resembleai: 'Resemble' }
 
 // Headings for grouped settings, so the More tab reads as a few clear topics.
 const SECTIONS = {
@@ -42,20 +48,10 @@ function groups(fields: Field[]): [Field['section'] | undefined, Field[]][] {
 /** Step names stay machine-safe; people type normal words. */
 const toId = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9?]+/g, '_').replace(/^_+|_+$/g, '')
 
-export default function SettingsPanel({ id, data, isStart, issues, onParams, onRename, onStart, onDelete, onDuplicate, onClose }: Props) {
+export default function SettingsPanel({ id, data, isStart, issues, onParams, onRename, onStart, onDelete, onDuplicate, onClose, racing, ttsService }: Props) {
   const spec = specFor(data.type)
-  // Open on More when Setup has nothing filled in but More does, e.g. a Say
-  // step that speaks nothing and only passes values along.
-  const [tab, setTab] = useState<'setup' | 'more'>(() => {
-    const filled = (k: string, v: unknown) => k === 'out_dict' ? !!(v as Record<string, unknown> | undefined)?.speak
-      : v !== undefined && v !== '' && !(typeof v === 'object' && v && !Object.keys(v).length)
-    const setup = spec.fields.filter((f) => !f.advanced && f.kind !== 'interrupt' && f.kind !== 'bool')
-    const more = spec.fields.filter((f) => f.advanced)
-    const moreFilled = more.some((f) => f.key === 'out_dict'
-      ? Object.keys((data.parameters.out_dict as object) ?? {}).some((k) => k !== 'speak')
-      : filled(f.key, data.parameters[f.key]))
-    return setup.length && !setup.some((f) => filled(f.key, data.parameters[f.key])) && moreFilled ? 'more' : 'setup'
-  })
+  // Every step opens on its main settings: what decides the step (Say's words or the AI's reply, what an AI decides) is there.
+  const [tab, setTab] = useState<'setup' | 'more'>('setup')
   const [name, setName] = useState(prettyName(id))
   const p = data.parameters
 
@@ -66,8 +62,10 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
     onParams(next)
   }
 
-  const fields = spec.fields.filter((f) => (tab === 'more' ? f.advanced : !f.advanced) && (!f.requires || !!p[f.requires]))
-  const hasMore = spec.fields.some((f) => f.advanced)
+  // Only settings that apply to this step as it is now.
+  const applies = (f: Field) => (!f.requires || !!p[f.requires]) && (!f.when || f.when(p)) && (!f.racing || !!racing)
+  const fields = spec.fields.filter((f) => (tab === 'more' ? f.advanced : !f.advanced) && applies(f))
+  const hasMore = spec.fields.some((f) => f.advanced && applies(f))
 
   return (
     <aside className="wf-panel" style={{ '--c': spec.color } as React.CSSProperties}>
@@ -91,19 +89,28 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
 
       {hasMore && (
         <div className="db-pills wf-panel-tabs">
-          <button className={tab === 'setup' ? 'is-on' : ''} onClick={() => setTab('setup')}>Setup</button>
-          <button className={tab === 'more' ? 'is-on' : ''} onClick={() => setTab('more')}>More</button>
+          <button className={tab === 'setup' ? 'is-on' : ''} onClick={() => setTab('setup')}>Main settings</button>
+          <button className={tab === 'more' ? 'is-on' : ''} onClick={() => setTab('more')}>Developer settings</button>
         </div>
       )}
 
       <div className="wf-panel-body">
         {groups(fields).map(([sec, list]) => {
-          const rows = list.map((f, i) => (
-            <div key={`${f.key}-${i}`} className={`wf-field${f.kind === 'bool' ? ' is-inline' : ''}`}>
-              <Label info={f.help}>{f.label}</Label>
-              <FieldInput field={f} value={p[f.key]} params={p} onChange={(v) => set(f.key, v)} onPatch={(patch) => onParams({ ...p, ...patch })} />
-            </div>
-          ))
+          const rows = list.map((f, i) => {
+            // A setting that needs another voice says so instead of a switch that does nothing.
+            const off = f.tts && ttsService !== f.tts
+            const inline = (f.kind === 'bool' || f.kind === 'hangup' || f.kind === 'aihangup' || f.kind === 'canend') && !off
+            return (
+              <div key={`${f.key}-${i}`} className={`wf-field${inline ? ' is-inline' : ''}${off ? ' is-off' : ''}`}>
+                <Label>{f.label}</Label>
+                {off
+                  ? <p className="wf-help">Works only with an ElevenLabs voice. This flow speaks with {SERVICE_NAME[ttsService ?? ''] ?? 'another service'}.</p>
+                  : <FieldInput field={f} value={p[f.key]} params={p} onChange={(v) => set(f.key, v)} onPatch={(patch) => onParams({ ...p, ...patch })} />}
+                {/* The one line that decides the choice, in view, not only behind an (i). */}
+                {f.help && !off && <p className="wf-help">{f.help}</p>}
+              </div>
+            )
+          })
           if (!sec) return rows
           return (
             <section key={sec} className="wf-sec">
@@ -115,16 +122,16 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
             </section>
           )
         })}
-        {!fields.length && <p className="db-muted">Nothing to set up — this step just works.</p>}
+        {!fields.length && <p className="wf-help">{tab === 'setup' && spec.setupNote ? spec.setupNote : 'Nothing to set here. This step just works.'}</p>}
       </div>
 
       {/* Labelled actions; when "Make first step" needs the room they shrink to icons. */}
       <div className={`wf-panel-foot${isStart ? '' : ' is-tight'}`}>
         {!isStart && <button className="db-btn db-btn-icon db-btn-sm" onClick={onStart}><Icon name="play" size={15} />Make first step</button>}
         <span style={{ flex: 1 }} />
-        <CopyJson value={p} label="Copy JSON" icon={<Code2Icon size={16} />} />
         <button className="wf-foot-btn" onClick={onDuplicate} aria-label="Duplicate"><Icon name="copy" size={16} /><span className="wf-foot-label">Duplicate</span></button>
-        <button className="wf-foot-btn is-danger" onClick={onDelete} aria-label="Delete step"><Icon name="trash" size={16} /><span className="wf-foot-label">Delete</span></button>
+        <button className="wf-foot-btn is-danger" onClick={onDelete} aria-label="Delete step" title="Undo (Ctrl+Z) brings it back"><Icon name="trash" size={16} /><span className="wf-foot-label">Delete</span></button>
+        <CopySettingsMenu settings={p} />
       </div>
     </aside>
   )

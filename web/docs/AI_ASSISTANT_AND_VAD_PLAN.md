@@ -538,3 +538,49 @@ Options on any chart: `showValues`, `goalLine`, `unit`, `format` (number, percen
   ]
 }
 ```
+
+---
+
+## 11. From the user research (2026-10-23)
+
+Based on `mindsets/voxio-users.md`. Most users are programme owners who aren't technical, many of them older or reading English as a second language. Approvers decide on trust.
+
+### 11.1 Never open on an empty chat
+
+Nearly half of Japanese small firms not using AI don't know what it could do for them (Japan SME survey 2026). An empty box doesn't help someone who doesn't know what to ask.
+
+- The panel opens with three suggestions tied to the current page and flow. They are written in the user's field, not ours:
+  - On a flow's Behaviour tab: "Make the patient harder to talk to".
+  - On Sessions: "Why did the last session fail?".
+  - On Home with no flows: "Set up a patient interview from a template".
+- The suggestions are worked out from what's on the page (the last session failed, a test never ran, a field is empty), not fixed per route.
+- A suggestion runs when clicked. Typing hides the suggestions.
+
+### 11.2 Say where session data goes
+
+Ministries, hospitals and Japanese buyers ask where data lives and whether it trains models.
+
+- A per-account **Assistant data** setting shows which model provider and region are used, and whether transcripts and recordings may be sent to the model.
+- **Off** means the Assistant works only with settings and aggregate numbers, never transcripts.
+- Customer data is never used for training, and the setting says so in writing.
+- Accounts on a regulated plan (government, health) start with transcripts **off**.
+
+### 11.3 Log reads, not only writes
+
+Compliance reviewers expect an audit trail (collections QA practice in India).
+
+- Every Assistant tool call is logged in `AssistantAudit` (user, thread, tool, what was read, when), including reads of sessions and transcripts. `ChangeLog` (1.3) only covers writes.
+- An account owner can view and export the log from Settings.
+
+### 11.4 Resellers: what VAD still needs
+
+VAD as planned (sections 2.5, 9.7) covers showing results and publishing a link. What resellers also need:
+
+| Need | Add |
+|---|---|
+| Their clients log in | Viewer accounts. The reseller invites a client by email, and the client sees only their dashboards. |
+| Their own brand | Logo, colours and name on dashboards and the viewer login. Later, a custom domain. |
+| Separate clients | A **client** level: flows and dashboards grouped per client. |
+| Their own billing | Usage per client (minutes, sessions) and an export. Taking payment can wait. |
+
+Open question: is "their own login" for clients (viewer accounts), or one password per published dashboard? It decides whether the client level is needed now.

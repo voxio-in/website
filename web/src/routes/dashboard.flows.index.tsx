@@ -7,12 +7,14 @@ import { Dialog, Notice, rowLink } from '#/components/dashboard/ui'
 import { undoToast } from '#/components/ui/halo-toast'
 import { NAME_MAX, clipName, maskKey, unwire } from '#/lib/dashboard/client'
 import type { Connection, FlowSummary } from '#/lib/dashboard/types'
-import { TEMPLATES } from '#/lib/workflow/templates'
+import { LIVE_DAYS, ago, nextStepOf, statusOf } from '#/lib/dashboard/flowStatus'
+import { OFFERED_TEMPLATES, TEMPLATES } from '#/lib/workflow/templates'
 import { createFlow, deleteFlow, duplicateFlow, getFlow, listFlows } from '#/server/dashboard/api'
 import { ExportDialog, ImportDialog, MultiImportDialog, type ImportItem } from '#/components/workflow/Transfer'
 import type { Workflow } from '#/lib/workflow/convert'
 import type { FlowDoc } from '#/lib/dashboard/types'
-import { DownloadIcon, UploadIcon, XIcon } from 'lucide-react'
+import { ChevronDownIcon, Columns3Icon, DownloadIcon, UploadIcon, XIcon } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/base-ui/popover'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 
 // Bouncy: the selection group overshoots a little as it pushes New flow along.
@@ -39,11 +41,14 @@ const LINKS = [
   { value: 'none', label: 'Not connected' },
 ]
 const ACTIVITY = [
-  { value: 'all', label: 'All activity' },
-  { value: 'used', label: 'Has sessions' },
-  { value: 'unused', label: 'No sessions yet' },
+  { value: 'all', label: 'All statuses' },
+  { value: 'live', label: 'Live' },
+  { value: 'quiet', label: 'Quiet' },
+  { value: 'tested', label: 'Tested' },
+  { value: 'new', label: 'Not tried' },
 ]
 const SORTS = [
+  { value: 'recent', label: 'Recently used' },
   { value: 'new', label: 'Newest first' },
   { value: 'old', label: 'Oldest first' },
   { value: 'name', label: 'Name A–Z' },
@@ -51,6 +56,8 @@ const SORTS = [
   { value: 'minutes', label: 'Most minutes' },
 ]
 const SORT_BY: Record<string, (a: FlowSummary, b: FlowSummary) => number> = {
+  // Last real session first; flows never used fall back to newest.
+  recent: (a, b) => (b.lastAt ?? '').localeCompare(a.lastAt ?? '') || (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
   new: (a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
   old: (a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''),
   name: (a, b) => a.name.localeCompare(b.name),
@@ -66,9 +73,18 @@ function Flows() {
   const [q, setQ] = useState('')
   const [link, setLink] = useState('all')
   const [activity, setActivity] = useState('all')
-  const [sort, setSort] = useState('new')
+  const [sort, setSort] = useState('recent')
+  const [cols, setCols] = useState<Set<OptionalCol>>(() => readCols())
   const [creating, setCreating] = useState(!!search.new)
   const [name, setName] = useState('')
+  const [nameErr, setNameErr] = useState(false)
+  // Picking a template names the flow after it, unless the person has typed a name of their own.
+  const pickTemplate = (id: string) => {
+    const prev = TEMPLATES.find((t) => t.id === template)
+    if (!name.trim() || name === prev?.name || name === 'Imported flow') setName(TEMPLATES.find((t) => t.id === id)?.name ?? name)
+    setNameErr(false)
+    setTemplate(id)
+  }
   const [template, setTemplate] = useState(TEMPLATES[0].id)
   const [confirm, setConfirm] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -83,21 +99,28 @@ function Flows() {
   const [working, setWorking] = useState<string | null>(null)
   // Flows deleted with Undo still pending: hidden at once, removed when the toast closes.
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const flows = (res.ok ? res.data : []).filter((f) => !hidden.has(f.key))
+  const everything = (res.ok ? res.data : []).filter((f) => !hidden.has(f.key))
+  // Only admins get other people's flows. Their own work comes first; everyone's is one click away.
+  const hasOthers = everything.some((f) => f.owner)
+  const [scope, setScope] = useState('mine')
+  const flows = hasOthers && scope === 'mine' ? everything.filter((f) => !f.owner) : everything
 
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
     return flows
       .filter((f) => !t || `${f.name} ${f.key} ${f.connections.map((c) => c.label).join(' ')}`.toLowerCase().includes(t))
       .filter((f) => link === 'all' || (link === 'none' ? !f.connections.length : f.connections.some((c) => c.kind === link)))
-      .filter((f) => activity === 'all' || (activity === 'used') === f.sessions > 0)
+      .filter((f) => activity === 'all' || statusOf(f).id === activity)
       .sort(SORT_BY[sort])
   }, [flows, q, link, activity, sort])
   const paged = usePaged(shown, 10)
 
   // Creating takes a few seconds on the backend; a second press would make a second flow.
   const create = async () => {
-    if (busy || !name.trim()) return
+    if (busy) return
+    // Never a greyed-out button: say what is missing, on the field.
+    if (!name.trim()) return setNameErr(true)
+    if (template === IMPORT && !imported) return setImporting(true)
     setBusy(true)
     setErr(null)
     try {
@@ -110,11 +133,6 @@ function Flows() {
     }
   }
 
-  const exportFlow = async (key: string, name: string) => {
-    const r = unwire<FlowDoc>(await getFlow({ data: { key } }))
-    if (!r.ok) return setErr(r.reason)
-    setExporting({ name, workflow: r.data.workflow })
-  }
   const startImport = () => { setBulk(true) }
   // Import several workflows at once (Import button): each becomes a flow, voice included.
   const [bulk, setBulk] = useState(false)
@@ -137,7 +155,7 @@ function Flows() {
   }
   const toggle = (key: string) => setPicked((p) => { const n = new Set(p); if (n.has(key)) n.delete(key); else n.add(key); return n })
   const pickedFlows = flows.filter((f) => picked.has(f.key))
-  const deletable = pickedFlows.filter((f) => f.source === 'mock')
+  const deletable = pickedFlows
   const pageKeys = paged.shown.map((f) => f.key)
   const allOnPage = pageKeys.length > 0 && pageKeys.every((k) => picked.has(k))
   const togglePage = () => setPicked((p) => { const n = new Set(p); pageKeys.forEach((k) => (allOnPage ? n.delete(k) : n.add(k))); return n })
@@ -207,7 +225,7 @@ function Flows() {
       {err && <Notice kind="err">{err}</Notice>}
       {!res.ok && <Notice kind="err">{res.reason}</Notice>}
 
-      {res.ok && !flows.length ? (
+      {res.ok && !everything.length ? (
         <div className="db-emptystate">
           <span className="db-emptystate-icon"><Icon name="flows" size={28} /></span>
           <b>Create your first flow</b>
@@ -216,7 +234,7 @@ function Flows() {
           <button className="db-btn db-btn-icon" onClick={startImport}><UploadIcon size={18} /> Import JSON</button>
           <span className="db-examples-label">Or start from an example</span>
           <div className="db-examples is-grid">
-            {[...TEMPLATES.filter((t) => t.id === 'blank'), ...TEMPLATES.filter((t) => t.id !== 'blank')].map((t) => (
+            {[...OFFERED_TEMPLATES.filter((t) => t.id === 'blank'), ...OFFERED_TEMPLATES.filter((t) => t.id !== 'blank')].map((t) => (
               <button key={t.id} className="db-example" onClick={() => { setTemplate(t.id); setName(t.name); setCreating(true) }}>
                 <span className="db-example-icon"><Icon name={TEMPLATE_ICON[t.id] ?? 'flows'} size={20} /></span>
                 <span><b>{t.name}</b><small>{t.blurb}</small></span>
@@ -226,13 +244,17 @@ function Flows() {
           </div>
         </div>
       ) : (
+      <>
+      <NeedsYou flows={flows} onShow={(id) => { setActivity(id); setLink('all'); setQ('') }} />
       <TableCard
         title="All flows"
         search={{ value: q, onChange: setQ, placeholder: 'Search flows', count: `${shown.length.toLocaleString()} of ${flows.length.toLocaleString()}` }}
         filters={<>
+          {hasOthers && <TableFilter label="Whose flows" sort value={scope} options={SCOPES} onChange={setScope} />}
+          <TableFilter label="Filter by status" value={activity} options={ACTIVITY} onChange={setActivity} />
           <TableFilter label="Filter by connection" value={link} options={LINKS} onChange={setLink} />
-          <TableFilter label="Filter by activity" value={activity} options={ACTIVITY} onChange={setActivity} />
           <TableFilter label="Sort" sort value={sort} options={SORTS} onChange={setSort} />
+          <ColumnsMenu value={cols} onChange={(c) => { setCols(c); saveCols(c) }} />
         </>}
         actions={
           <LayoutGroup>
@@ -266,56 +288,67 @@ function Flows() {
 
         <table className="db-flows">
           <thead>
-            <tr><th className="db-pickcell"><input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label="Select all flows on this page" /></th><th>Name</th><th>API key</th><th className="db-num">Sessions</th><th className="db-num">Minutes</th><th>Connections</th><th aria-label="Actions" /></tr>
+            <tr>
+              <th className="db-pickcell"><input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label="Select all flows on this page" /></th>
+              <th>Flow</th>
+              <th>Status</th>
+              <th className="db-num">Sessions</th>
+              <th>Last session</th>
+              <th className="db-num">Minutes</th>
+              <th>Connections</th>
+              {cols.has('key') && <th>API key</th>}
+              {cols.has('created') && <th>Created</th>}
+              <th className="db-actcell db-pinned">Actions</th>
+            </tr>
           </thead>
           <tbody>
-            {paged.shown.map((f) => (
-              <tr key={f.key} {...rowLink(() => navigate({ to: '/dashboard/flows/$flowId', params: { flowId: f.key } }))}>
-                <td className="db-pickcell" data-norow onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={picked.has(f.key)} onChange={() => toggle(f.key)} aria-label={`Select ${f.name}`} />
-                </td>
-                <td>
-                  <span className="db-namecell">
-                    <span className="db-initial" data-live={f.source === 'live'}>{f.name.slice(0, 1).toUpperCase()}</span>
-                    <span className="db-namecell-text">
-                      <Link to="/dashboard/flows/$flowId" params={{ flowId: f.key }} className="db-flowlink" title={f.name.length > NAME_MAX ? f.name : undefined}>{clipName(f.name)}</Link>
-                      {f.error && <span className="db-namecell-meta"><span className="db-rowerr">{f.error}</span></span>}
+            {paged.shown.map((f) => {
+              const st = statusOf(f)
+              return (
+                <tr key={f.key} {...rowLink(() => navigate({ to: '/dashboard/flows/$flowId', params: { flowId: f.key } }))}>
+                  <td className="db-pickcell" data-norow onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={picked.has(f.key)} onChange={() => toggle(f.key)} aria-label={`Select ${f.name}`} />
+                  </td>
+                  <td>
+                    <span className="db-namecell">
+                      <span className="db-namecell-text">
+                        <Link to="/dashboard/flows/$flowId" params={{ flowId: f.key }} className="db-flowlink" title={f.name.length > NAME_MAX ? f.name : undefined}>{clipName(f.name)}</Link>
+                        {/* What it is, and whose it is when it isn't yours. */}
+                        <span className="db-namecell-meta">
+                          {f.error ? <span className="db-rowerr">{f.error}</span> : <>{KIND_LABEL[f.kind]}{f.owner ? ` · ${f.owner}’s` : ''}</>}
+                        </span>
+                      </span>
                     </span>
-                  </span>
-                </td>
-                <td><KeyCell value={f.key} /></td>
-                <td className="db-num">{f.sessions.toLocaleString()}</td>
-                <td className="db-num">{f.minutes.toLocaleString()}</td>
-                <td><Connections list={f.connections} flowKey={f.key} /></td>
-                <td className="db-actcell">
-                  {/* One connected icon group; the hovered button widens to show its label. */}
-                  <span className="db-btngroup is-icons" role="group" aria-label={`${f.name} actions`}>
-                    <Link to="/dashboard/flows/$flowId/test" params={{ flowId: f.key }} className="db-gbtn" aria-label={`Test ${f.name}`}>
-                      <Icon name="play" size={18} /><span className="db-gbtn-label">Test</span>
-                    </Link>
-                    <Link to="/dashboard/flows/$flowId/workflow" params={{ flowId: f.key }} className="db-gbtn" aria-label={`Edit ${f.name}'s workflow`}>
-                      <Icon name="edit" size={18} /><span className="db-gbtn-label">Edit</span>
-                    </Link>
-                    <button type="button" className="db-gbtn" aria-label={`Duplicate ${f.name}`} onClick={() => duplicate(f.key)}>
-                      <Icon name="copy" size={18} /><span className="db-gbtn-label">Duplicate</span>
-                    </button>
-                    <button type="button" className="db-gbtn" aria-label={`Export ${f.name}`} onClick={() => exportFlow(f.key, f.name)}>
-                      <DownloadIcon size={18} /><span className="db-gbtn-label">Export</span>
-                    </button>
-                    <button type="button" className="db-gbtn is-danger" title={f.source === 'mock' ? undefined : 'Can’t be deleted from here yet'}
-                      aria-label={`Delete ${f.name}`} disabled={f.source !== 'mock'} onClick={() => askDelete(f)}>
-                      <Icon name="trash" size={18} /><span className="db-gbtn-label">Delete</span>
-                    </button>
-                  </span>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td><span className={`db-state db-state-${st.id}`} title={st.why}>{st.label}</span></td>
+                  <td className="db-num">{f.sessions ? f.sessions.toLocaleString() : <span className="db-muted">—</span>}</td>
+                  <td>{f.lastAt ? <span title={new Date(f.lastAt).toLocaleString()}>{ago(f.lastAt)}</span> : <span className="db-muted">—</span>}</td>
+                  <td className="db-num">{f.minutes ? f.minutes.toLocaleString() : <span className="db-muted">—</span>}</td>
+                  <td><Connections list={f.connections} flowKey={f.key} /></td>
+                  {cols.has('key') && <td data-norow onClick={(e) => e.stopPropagation()}><KeyCell value={f.key} /></td>}
+                  {cols.has('created') && <td className="db-muted">{f.createdAt ? new Date(f.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>}
+                  <td className="db-actcell db-pinned" data-norow onClick={(e) => e.stopPropagation()}>
+                    {/* One connected icon group; the hovered button widens to show its label. Opening the flow is the row itself. */}
+                    <span className="db-btngroup is-icons" role="group" aria-label={`${f.name} actions`}>
+                      <NextStep f={f} />
+                      <button type="button" className="db-gbtn" aria-label={`Duplicate ${f.name}`} onClick={() => duplicate(f.key)}>
+                        <Icon name="copy" size={18} /><span className="db-gbtn-label">Duplicate</span>
+                      </button>
+                      <button type="button" className="db-gbtn is-danger" aria-label={`Delete ${f.name}`} onClick={() => askDelete(f)}>
+                        <Icon name="trash" size={18} /><span className="db-gbtn-label">Delete</span>
+                      </button>
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
             {!shown.length && (
-              <tr><td colSpan={7} className="db-tableempty">{flows.length ? 'No flows match. Try another search or filter.' : 'No flows yet.'}</td></tr>
+              <tr><td colSpan={8 + cols.size} className="db-tableempty">{flows.length ? 'No flows match. Try another search or filter.' : 'No flows yet.'}</td></tr>
             )}
           </tbody>
         </table>
       </TableCard>
+      </>
       )}
 
       {bulk && <MultiImportDialog onCreate={importOne} onClose={() => setBulk(false)} onDone={() => router.invalidate()} />}
@@ -339,28 +372,33 @@ function Flows() {
       )}
 
       {creating && (
-        <Dialog title="New flow" onClose={() => setCreating(false)}>
-          <label className="db-field">
+        <Dialog wide title="New flow" onClose={() => setCreating(false)}>
+          <label className={`db-field db-newname${nameErr ? ' has-err' : ''}`}>
             <span className="db-flabel">Name</span>
-            <input className="db-in db-in-lg" autoFocus placeholder="e.g. Clinic front desk" value={name}
-              onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
+            <input className="db-in db-in-lg" autoFocus placeholder="e.g. Clinic front desk" value={name} aria-invalid={nameErr}
+              onChange={(e) => { setName(e.target.value); setNameErr(false) }} onKeyDown={(e) => e.key === 'Enter' && create()} />
+            {nameErr && <em className="db-fielderr">Give the flow a name.</em>}
           </label>
-          <span className="db-flabel db-dialog-label">Start from</span>
-          <div className="db-tplgrid">
-            {TEMPLATES.map((t) => (
-              <button key={t.id} className={`db-tpl${template === t.id ? ' is-on' : ''}`} onClick={() => setTemplate(t.id)} aria-pressed={template === t.id}>
-                <b>{t.name}</b><span>{t.blurb}</span>
+          {/* Connected options, one question: what should it do. The first is the default; Import is last, for people who have a file. */}
+          <span className="db-flabel db-tpllabel" id="start-from">Start from</span>
+          <div className="db-tplgroup" role="radiogroup" aria-labelledby="start-from">
+            {OFFERED_TEMPLATES.map((t) => (
+              <button key={t.id} type="button" role="radio" aria-checked={template === t.id} className={`db-tplcell${template === t.id ? ' is-on' : ''}`} onClick={() => pickTemplate(t.id)}>
+                <span className="db-tplcell-text"><b>{t.name}</b><span>{t.blurb}</span></span>
+                {template === t.id && <Icon name="check" size={20} />}
               </button>
             ))}
-            <button className={`db-tpl${template === IMPORT ? ' is-on' : ''}`} aria-pressed={template === IMPORT}
-              onClick={() => (imported && template !== IMPORT ? setTemplate(IMPORT) : setImporting(true))}>
-              <b><UploadIcon size={14} /> Import JSON</b>
-              <span>{imported ? `${Object.keys(imported.nodes ?? {}).length} steps imported · click again to replace` : 'Paste or upload a workflow you exported.'}</span>
-            </button>
           </div>
-          <div className="db-dialog-foot">
-            <button className="db-btn" disabled={busy} onClick={() => setCreating(false)}>Cancel</button>
-            <button className="db-btn db-primary" disabled={!name.trim() || busy || (template === IMPORT && !imported)} onClick={create}>{busy ? 'Creating…' : 'Create flow'}</button>
+          {imported && template === IMPORT && (
+            <p className="db-importnote">Starting from the file you imported: {Object.keys(imported.nodes ?? {}).length} steps. Pick a template above to use that instead.</p>
+          )}
+          {/* One joined row: Import a flow 25%, Cancel 25%, Create flow 50%. The finishing action is the widest and last. */}
+          <div className="db-btngroup db-dialog-split" role="group">
+            <button type="button" className={`db-gbtn${template === IMPORT ? ' is-on' : ''}`} disabled={busy} onClick={() => setImporting(true)}>
+              <UploadIcon size={18} />{imported ? 'Replace file' : 'Import a flow'}
+            </button>
+            <button type="button" className="db-gbtn" disabled={busy} onClick={() => setCreating(false)}>Cancel</button>
+            <button type="button" className="db-gbtn is-lead" disabled={busy} onClick={create}>{busy ? 'Creating…' : 'Create flow'}</button>
           </div>
         </Dialog>
       )}
@@ -382,7 +420,7 @@ function KeyCell({ value }: { value: string }) {
 }
 
 // What each starting template does, as an icon.
-const TEMPLATE_ICON: Record<string, IconName> = { blank: 'edit', simple: 'voice', ack: 'bolt', hangup: 'phone', rag: 'book' }
+const TEMPLATE_ICON: Record<string, IconName> = { blank: 'edit', simple: 'voice', ack: 'bolt', hangup: 'phone', rag: 'book', message: 'list' }
 
 const KIND_ICON = { number: 'phone', integration: 'plug', webhook: 'webhook', web: 'cursor' } as const
 // The flow page where each kind of connection is set up.
@@ -409,5 +447,93 @@ function Connections({ list, flowKey }: { list: Connection[]; flowKey: string })
         </span>
       )}
     </span>
+  )
+}
+
+// ------------------------------------------------------------------ status and columns
+
+const KIND_LABEL: Record<FlowSummary['kind'], string> = { avatar: 'Avatar', phone: 'Phone', voice: 'Voice' }
+
+const SCOPES = [{ value: 'mine', label: 'My flows' }, { value: 'all', label: 'Everyone’s' }]
+
+/** The one step that moves this flow on, named for its state (`nextStepOf`). */
+function NextStep({ f }: { f: FlowSummary }) {
+  const step = nextStepOf(f)
+  return (
+    <Link to={(step.to ? `/dashboard/flows/$flowId/${step.to}` : '/dashboard/flows/$flowId') as '/dashboard/flows/$flowId'} params={{ flowId: f.key }}
+      className="db-gbtn db-nextstep" aria-label={`${step.label}: ${f.name}`}>
+      <Icon name={step.icon} size={18} /><span>{step.label}</span>
+    </Link>
+  )
+}
+
+/**
+ * What needs the person, as actions rather than counts, above the table. Each line filters the
+ * table to those flows. Nothing to do: nothing shown. Group is the unit; the line is the step.
+ */
+function NeedsYou({ flows, onShow }: { flows: FlowSummary[]; onShow: (status: string) => void }) {
+  const n = (test: (f: FlowSummary) => boolean) => flows.filter(test).length
+  const unconnected = n((f) => statusOf(f).id === 'tested' && !f.connections.length)
+  const untried = n((f) => statusOf(f).id === 'new')
+  const quiet = n((f) => statusOf(f).id === 'quiet')
+  const flowsWord = (k: number) => `${k} flow${k === 1 ? '' : 's'}`
+  const items = [
+    unconnected && { id: 'tested', text: `${flowsWord(unconnected)} ${unconnected === 1 ? 'is' : 'are'} tested but not connected.`, step: 'Connect a number or website' },
+    untried && { id: 'new', text: `${flowsWord(untried)} ${untried === 1 ? 'hasn’t' : 'haven’t'} been tried yet.`, step: 'Try it in Test' },
+    quiet && { id: 'quiet', text: `${flowsWord(quiet)} had no real sessions in the last ${LIVE_DAYS} days.`, step: 'See what happened last' },
+  ].filter(Boolean) as { id: string; text: string; step: string }[]
+  if (!items.length) return null
+  return (
+    <section className="db-needsyou" aria-label="Needs you">
+      {items.map((it) => (
+        <button key={it.id} type="button" className="db-needsyou-row" onClick={() => onShow(it.id)}>
+          <span className="db-needsyou-text">{it.text}</span>
+          <span className="db-needsyou-step">{it.step}<Icon name="back" size={16} /></span>
+        </button>
+      ))}
+    </section>
+  )
+}
+
+type OptionalCol = 'key' | 'created'
+const OPTIONAL_COLS: { id: OptionalCol; label: string }[] = [{ id: 'key', label: 'API key' }, { id: 'created', label: 'Created' }]
+const COLS_KEY = 'vx.dash.flows.cols'
+
+// Which optional columns are on is a per-browser preference.
+function readCols(): Set<OptionalCol> {
+  try { return new Set(JSON.parse(localStorage.getItem(COLS_KEY) ?? '[]') as OptionalCol[]) } catch { return new Set() }
+}
+function saveCols(c: Set<OptionalCol>) {
+  try { localStorage.setItem(COLS_KEY, JSON.stringify([...c])) } catch { /* private window: kept for this visit only */ }
+}
+
+/** The Columns cell of the toolbar: optional columns, off by default. */
+function ColumnsMenu({ value, onChange }: { value: Set<OptionalCol>; onChange: (c: Set<OptionalCol>) => void }) {
+  const [open, setOpen] = useState(false)
+  // Open the menu inside the dashboard root so it keeps the dashboard's colours.
+  const [root, setRoot] = useState<HTMLElement | null>(null)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <span ref={(el) => setRoot((r) => r ?? (el?.closest<HTMLElement>('.db') ?? null))} className={`db-fchip${open ? ' is-open' : ''}`}>
+        <PopoverTrigger asChild>
+          <button type="button" className="db-fchip-btn" aria-label="Choose columns">
+            <Columns3Icon size={16} /><span>Columns</span><ChevronDownIcon size={18} className="db-fchip-chev" />
+          </button>
+        </PopoverTrigger>
+      </span>
+      <PopoverContent align="end" sideOffset={6} className="db-menu" container={root}>
+        {OPTIONAL_COLS.map((c) => (
+          <label key={c.id} className="db-menu-item db-menu-check">
+            <input type="checkbox" checked={value.has(c.id)} onChange={(e) => {
+              const n = new Set(value)
+              if (e.target.checked) n.add(c.id)
+              else n.delete(c.id)
+              onChange(n)
+            }} />
+            <span>{c.label}</span>
+          </label>
+        ))}
+      </PopoverContent>
+    </Popover>
   )
 }

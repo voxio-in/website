@@ -43,12 +43,16 @@ export function KnobList({ knobs, values, onChange }: { knobs: Knob[]; values: R
   }
   return (
     <div className="db-knobs">
-      {knobs.filter((k) => !k.requires || on(k.requires)).map((k) => (
-        <div key={k.key} className={`db-knob-row${k.kind === 'object' ? ' is-block' : ''}${k.requires ? ' is-child' : ''}`}>
-          <Label info={k.help}>{k.label}{k.surface === 'web' && <span className="db-chip">Web</span>}</Label>
-          <div className="db-knob-ctl"><KnobInput knob={k} value={values[k.key]} onChange={(v) => onChange(k.key, v)} /></div>
-        </div>
-      ))}
+      {knobs.filter((k) => !k.requires || on(k.requires)).map((k) => {
+        // A setting that does nothing with the current choice says why, instead of a control that no-ops.
+        const idle = k.needs && String(values[k.needs.key] ?? knobs.find((x) => x.key === k.needs!.key)?.default ?? '') !== k.needs.value
+        return (
+          <div key={k.key} className={`db-knob-row${k.kind === 'object' && !idle ? ' is-block' : ''}${k.requires ? ' is-child' : ''}${idle ? ' is-idle' : ''}`}>
+            <Label info={k.help}>{k.label}{k.surface === 'web' && <span className="db-chip">Web calls</span>}</Label>
+            <div className="db-knob-ctl">{idle ? <span className="db-knob-why">{k.needs!.why}</span> : <KnobInput knob={k} value={values[k.key]} onChange={(v) => onChange(k.key, v)} />}</div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -660,14 +660,7 @@
 .wf-palette-head { padding: 2px 4px 4px; }
 .wf-palette > .wf-psearch { margin: 2px 0 8px; flex: none; }
 
-/* Duplicate on a card: appears on hover / when selected. */
 .wf-node-head { position: relative; }
-.wf-node-dup {
-  margin-left: auto; display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0;
-  border: 0; border-radius: 14px; background: none; color: var(--db-muted); cursor: pointer; opacity: 0; transition: opacity 0.12s, background 0.12s;
-}
-.wf-node:hover .wf-node-dup, .wf-node.is-sel .wf-node-dup { opacity: 1; }
-.wf-node-dup:hover { background: rgb(var(--ink) / 0.08); color: var(--db-text); }
 
 /* Canvas zoom controls follow the theme. */
 .wf-canvas .react-flow__controls-button svg { fill: currentColor; }
@@ -729,3 +722,118 @@
 .wf-sec-head b { font-size: 14.5px; font-weight: 600; }
 .wf-sec-head small { font-size: 13px; color: var(--db-muted); line-height: 1.4; }
 .wf-sec-icon { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+
+/* ---------- Script view, view tabs and the type scale (mindsets: Workflow editor) ----------
+   Cards: names 18px; kind, summary, paths and chips 16px. Panel labels 18px, help 16px.
+   Script: one column of what the agent says and is told, in conversation order. */
+.wf .wf-modes { margin-left: 8px; }
+.wf .wf-modes button { font-size: 16px; padding: 6px 16px; }
+.wf .wf-title strong { font-size: 18px; }
+.wf .wf-state, .wf .wf-health { font-size: 16px; }
+.wf .wf-node { width: 300px; }
+.wf .wf-node-name { font-size: 18px; }
+.wf .wf-node-kind, .wf .wf-node-sum, .wf .wf-path, .wf .wf-chip, .wf .wf-goes { font-size: 16px; }
+.wf .wf-startflag { font-size: 14px; }
+.wf .wf-quick-btn, .wf .wf-quick-menu button, .wf .wf-quick-title { font-size: 16px; }
+.wf .wf-pname { font-size: 18px; }
+.wf .wf-pblurb, .wf .wf-plabel { font-size: 16px; }
+.wf .wf-plabel { text-transform: none; letter-spacing: 0; }
+.wf .wf-panel { width: 440px; }
+.wf .wf-panel-kind, .wf .wf-panel-blurb, .wf .wf-panel-issues, .wf .wf-issue { font-size: 16px; }
+.wf .wf-field > .db-flabel { font-size: 18px; }
+.wf .wf-field .db-in, .wf .wf-prompt textarea, .wf .wf-field textarea { font-size: 16px; }
+.wf .wf-sec-head b { font-size: 18px; }
+.wf .wf-sec-head small, .wf .db-fhelp { font-size: 16px; }
+
+.wf .wf-script { position: absolute; inset: 0; overflow-y: auto; }
+.wf .wf-script-inner { max-width: 880px; margin: 0 auto; padding: 28px 24px 96px; display: flex; flex-direction: column; gap: 12px; }
+.wf .wf-script-lead { margin: 0 0 8px; font-size: 18px; line-height: 26px; color: var(--db-muted); }
+.wf .wf-script-h { margin: 24px 0 0; font-size: 24px; line-height: 32px; font-weight: 600; }
+.wf .wf-script-note { margin: 0; font-size: 16px; color: var(--db-muted); }
+.wf .wf-script-item { display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; border-radius: 20px; background: var(--db-card); border: 1px solid rgb(var(--ink) / 0.08); border-left: 4px solid var(--c); }
+.wf .wf-script-item.has-err { border-color: rgba(255, 122, 122, 0.55); }
+.wf .wf-script-head { display: flex; align-items: center; gap: 14px; }
+.wf .wf-script-titles { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.wf .wf-script-titles b { font-size: 18px; font-weight: 600; }
+.wf .wf-script-titles span { font-size: 16px; color: var(--db-muted); }
+.wf .wf-script-item textarea { font-size: 18px; line-height: 1.55; }
+.wf .wf-script-issues { margin: 0; padding: 10px 14px 10px 30px; border-radius: 12px; background: rgba(255, 122, 122, 0.07); font-size: 16px; }
+.wf .wf-script-issues .is-error { color: var(--db-err-text); }
+.wf .wf-script-issues .is-warning { color: var(--db-warn-text); }
+.wf .wf-script-quiet { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 10px 22px; font-size: 16px; color: var(--db-muted); }
+.wf .wf-script-quiet b { color: var(--db-text); font-weight: 600; }
+.wf .wf-script-quiet > span:nth-child(2) { flex: 1; min-width: 0; }
+.wf .wf-script-show { flex-shrink: 0; border: 0; background: none; padding: 6px 10px; border-radius: 10px; font: inherit; font-size: 16px; color: var(--db-accent-text); cursor: pointer; }
+.wf .wf-script-show:hover { background: rgb(var(--ink) / 0.06); }
+.wf .wf-script-show:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; }
+.wf .wf-script-loop { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0; font-size: 16px; color: var(--db-muted); }
+.wf .wf-script-loop svg { transform: scaleY(-1); }
+
+/* Start from a template: one tonal cell per template, 2px apart. */
+.db .wf-tpls { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 12px; }
+.db .wf-tpl { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; text-align: left; border: 0; border-radius: 8px; background: var(--cell); color: var(--db-text); font: inherit; cursor: pointer; }
+.db .wf-tpl:hover { background: var(--cell-hi); }
+.db .wf-tpl:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; }
+.db .wf-tpl b { font-size: 18px; font-weight: 600; }
+.db .wf-tpl span { font-size: 16px; color: var(--db-muted); }
+@media (max-width: 560px) { .db .wf-tpls { grid-template-columns: 1fr; } }
+
+/* ---------- Adding steps: moves, suggestions, branch paths, an empty start ---------- */
+/* On a branch path the + is a round button; its words are its label for screen readers. */
+.wf .wf-quick:not(.is-below) .wf-quick-label { display: none; }
+.wf .wf-quick.is-below .wf-quick-btn { height: 32px; padding: 0 14px 0 10px; }
+.wf .wf-quick-menu { width: 280px; max-height: 420px; overflow-y: auto; }
+.wf .wf-quick-title { font-size: 14px; text-transform: none; letter-spacing: 0; padding: 10px 8px 4px; }
+.wf .wf-quick-menu button { padding: 8px; }
+.wf .wf-quick-menu .wf-tile { width: 30px; height: 30px; }
+.wf .wf-chip.is-end { color: var(--db-err-text); background: rgba(255, 122, 122, 0.12); }
+.wf .wf-pathname { flex: 1; min-width: 0; padding: 0 4px; font-size: 18px; font-weight: 600; }
+/* An empty canvas: one way to start, in the middle. */
+.wf .wf-empty {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; width: min(460px, calc(100% - 32px));
+  display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 28px; text-align: center;
+  border-radius: 28px; background: var(--db-card); border: 1px solid rgb(var(--ink) / 0.08); box-shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.6);
+}
+.wf .wf-empty b { font-size: 24px; line-height: 32px; font-weight: 600; }
+.wf .wf-empty span { font-size: 18px; line-height: 26px; color: var(--db-muted); }
+.wf .wf-empty .db-btn-lg { width: 100%; justify-content: center; height: 52px; font-size: 18px; margin-top: 8px; }
+.wf .wf-empty .db-btn:not(.db-btn-lg) { font-size: 16px; }
+
+/* ---------- Step settings: help in view, choices that decide the step first ---------- */
+.wf .wf-help { margin: 0; font-size: 16px; line-height: 22px; color: var(--db-muted); }
+.wf .wf-field.is-inline { flex-wrap: wrap; row-gap: 4px; }
+.wf .wf-field.is-inline > .wf-help { flex-basis: 100%; }
+.wf .wf-field.is-off > .db-flabel { color: var(--db-muted); }
+.wf .wf-panel .db-in, .wf .wf-panel .db-dd-btn, .wf .wf-panel .db-stepper input, .wf .wf-panel .db-tags input,
+.wf .wf-panel .db-tag, .wf .wf-panel .wf-pick, .wf .wf-panel .db-add, .wf .wf-panel .m3-seg-btn, .wf .wf-panel .wf-subrow { font-size: 16px; }
+.wf .wf-panel .wf-panel-tabs button { font-size: 16px; }
+.wf .wf-panel .wf-name { font-size: 20px; }
+.wf .wf-panel .m3-seg { width: 100%; }
+.wf .wf-panel .m3-seg-btn { flex: 1; justify-content: center; }
+/* AI thinks: what it decides, as switches. */
+.wf .wf-decides { display: flex; flex-direction: column; gap: 2px; }
+.wf .wf-decide { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 8px; background: rgb(var(--ink) / 0.04); cursor: pointer; }
+.wf .wf-decide:first-child { border-radius: 16px 16px 8px 8px; }
+.wf .wf-decide:nth-last-child(1 of .wf-decide) { border-radius: 8px 8px 16px 16px; }
+.wf .wf-decide > span { display: flex; flex-direction: column; gap: 2px; }
+.wf .wf-decide b { font-size: 16px; font-weight: 600; }
+.wf .wf-decide small { font-size: 16px; color: var(--db-muted); }
+/* Instructions: examples to start from when the box is empty. */
+.wf .wf-examples { align-items: center; }
+.wf .wf-examples > span { font-size: 16px; color: var(--db-muted); }
+/* Branch: Otherwise is a path too, always last. */
+.wf .wf-pathrow.is-else .wf-pathname { color: var(--db-muted); font-weight: 500; }
+
+/* ---------- Connection points on every side ----------
+   One dot in the middle of each side. They stay faint until the card is hovered or a
+   line is being drawn, so a card at rest shows only the dots its lines use. */
+.wf .react-flow__handle.wf-h-side { opacity: 0.35; transition: opacity 0.15s; }
+.wf .react-flow__node:hover .react-flow__handle.wf-h-side,
+.wf .react-flow__handle.wf-h-side.connectingfrom,
+.wf .react-flow__handle.wf-h-side.connectingto,
+.wf .react-flow.is-connecting .react-flow__handle.wf-h-side,
+.wf .react-flow__connection-path ~ .react-flow__handle.wf-h-side { opacity: 1; }
+/* "Add next step" sits at the bottom right, clear of the bottom connection point. */
+.wf .wf-quick.is-below { left: auto; right: 16px; transform: none; }
+.wf .wf-quick.is-below .wf-quick-menu { left: auto; right: 0; transform: none; }
+@media (prefers-reduced-motion: reduce) { .wf .react-flow__handle.wf-h-side { transition: none; } }

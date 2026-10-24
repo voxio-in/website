@@ -7,7 +7,8 @@ export function getRouter() {
     routeTree,
     scrollRestoration: true,
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    // A hover preload is reused for 30 s instead of fetching the page again on every hover.
+    defaultPreloadStaleTime: 30_000,
 
     // Shown while a route resolves. defaultPendingMs holds it back so a fast
     // navigation never flashes a skeleton, and defaultPendingMinMs keeps it on

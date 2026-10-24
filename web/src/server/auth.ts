@@ -7,7 +7,7 @@ import { createServerFn } from '@tanstack/react-start'
 
 import { db, withDb } from '#/server/db'
 import { currentUser, decoyHash, endSession, forgetSessions, hashPassword, isBcrypt, startSession, verifyPassword, type AuthUser } from '#/server/session.server'
-import { newKey } from '#/server/dashboard/store.server'
+import { newKey, primeRole } from '#/server/dashboard/store.server'
 
 export type { AuthUser }
 export type AuthResult = { ok: true; user: AuthUser } | { ok: false; reason: string; field?: 'name' | 'email' | 'password' }
@@ -22,7 +22,7 @@ function checkPassword(pw: string): string | null {
   return null
 }
 
-const SIGNUP_OFF: boolean = true
+const SIGNUP_OFF: boolean = false
 
 export const signUp = createServerFn({ method: 'POST' })
   .inputValidator((d: { name: string; email: string; password: string }) => d)
@@ -42,8 +42,10 @@ export const signUp = createServerFn({ method: 'POST' })
 
     const hashed = await hashPassword(password)
     const user = await withDb(() => db.user.create({ data: { name, email, password: hashed, apiKey: newKey('user') } }))
-    await startSession(user.id)
-    return { ok: true, user: { id: user.id, email: user.email, name: user.name } }
+    const me = { id: user.id, email: user.email, name: user.name }
+    await startSession(user.id, me)
+    primeRole(user.id, user.role)
+    return { ok: true, user: me }
   })
 
 /**
@@ -69,13 +71,18 @@ export const logIn = createServerFn({ method: 'POST' })
     // Always run a hash check so response time doesn't reveal whether the account exists.
     const ok = await verifyPassword(password, user?.password ?? (await decoyHash()))
     if (!user || !ok) return { ok: false, reason: 'That login and password don’t match.' }
-    // Upgrade an imported bcrypt hash to scrypt now that we have the password.
+    // Upgrade an imported bcrypt hash to scrypt now that we have the password. In the
+    // background: the person is signed in either way, and the next login retries if it fails.
     if (isBcrypt(user.password)) {
-      const upgraded = await hashPassword(password)
-      await withDb(() => db.user.update({ where: { id: user.id }, data: { password: upgraded } }))
+      void hashPassword(password)
+        .then((upgraded) => withDb(() => db.user.update({ where: { id: user.id }, data: { password: upgraded } })))
+        .catch((e) => console.warn(`password upgrade for ${user.id} failed: ${(e as Error).message}`))
     }
-    await startSession(user.id)
-    return { ok: true, user: { id: user.id, email: user.email, name: user.name } }
+    const me = { id: user.id, email: user.email, name: user.name }
+    // The first dashboard page needs who this is and whether they're an admin; both are known now.
+    await startSession(user.id, me)
+    primeRole(user.id, user.role)
+    return { ok: true, user: me }
   })
 
 export const logOut = createServerFn({ method: 'POST' }).handler(async () => {

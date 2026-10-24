@@ -22,7 +22,8 @@ const FIELD_TYPE: Record<Field['kind'], string> = {
   text: 'string', number: 'number', bool: 'boolean', select: 'string', prompt: 'string', model: 'string', kv: 'object',
   list: 'string[]', schema: '{ name: { type, description } }', typemap: '{ name: type }', mappings: '{ value: step | step[] }',
   knowledge: 'string', json: 'object', speak: 'string', interrupt: 'string', seconds: 'number (seconds)', vars: 'string[]',
-  decideon: '{ name: type }', listen: '{ name: type }',
+  decideon: '{ name: type }', listen: '{ name: type }', hangup: 'out_dict.hangup: boolean', percent: 'number (0 to 1)', saymode: 'out_dict.speak or variables', aihangup: 'string[]',
+  decides: '{ speak, hangup }', canend: '{ hangup }', memory: 'string',
 }
 
 const fmt = (v: unknown) => (v === undefined ? '—' : typeof v === 'string' ? `"${v}"` : JSON.stringify(v))
@@ -217,7 +218,7 @@ const workflowPages: DocPage[] = [
   "next": ["ack", "main_reply", "transcription"]
 }`}</Code>
         <p>
-          When two or more <strong>AI reply</strong> steps run side by side, the one that starts speaking first is heard
+          When two or more <strong>AI answers</strong> steps run side by side, the one that starts speaking first is heard
           first. The others are held, then played in the order they started. Give a held step a <C>stream_timeout</C>
           (seconds) and it's dropped if it's still waiting after that long, so a stale answer is never spoken.
         </p>
@@ -268,15 +269,15 @@ const workflowPages: DocPage[] = [
         <H2 id="who-writes-what">Who writes what</H2>
         <Table head={['Step', 'Writes', 'Reads']} rows={[
           ['Listen', <>What the caller said, under each name in its <C>input_variables</C></>, '—'],
-          ['AI decision', <>Every field it returns (its <C>llm_return_type</C>), and its memory under <C>history_key</C></>, <>Its <C>input_variables</C>, and its memory</>],
-          ['AI reply', <>Only its memory under <C>history_key</C>. The reply itself is spoken, not saved.</>, <>Its <C>input_variables</C>, and its memory</>],
+          ['AI thinks', <>Every field it returns (its <C>llm_return_type</C>), and its memory under <C>history_key</C></>, <>Its <C>input_variables</C>, and its memory</>],
+          ['AI answers', <>Only its memory under <C>history_key</C>. The reply itself is spoken, not saved.</>, <>Its <C>input_variables</C>, and its memory</>],
           ['Say', '—', <>The names in its <C>variables</C></>],
           ['Branch', '—', <>The first name in its <C>input_variables</C></>],
         ]} />
-        <Note kind="warn">Only an <strong>AI decision</strong> saves its fields. To branch on something the AI decided, use AI decision, not AI reply.</Note>
+        <Note kind="warn">Only an <strong>AI thinks</strong> saves its fields. To branch on something the AI decided, use AI thinks, not AI answers.</Note>
 
         <H2 id="values-that-act">Values that do something</H2>
-        <p>When a Say step sends these, or an AI reply returns them, the pipeline acts on them:</p>
+        <p>When a Say step sends these, or an AI answers step returns them, the pipeline acts on them:</p>
         <Table head={['Value', 'What happens']} rows={[
           ...Object.entries(SPECIAL_OUTPUTS).map(([k, v]) => [<C>{k}</C>, `${v.label}: ${v.note}.`]),
           [<C>interruption_type</C>, <>Sets how this one message can be interrupted. See <DocLink to="turn-taking-interruptions">Interruptions</DocLink>.</>],
@@ -285,7 +286,7 @@ const workflowPages: DocPage[] = [
 
         <NextSteps items={[
           { to: 'workflows-patterns', label: 'Patterns', what: 'put values to work.' },
-          { to: 'steps-ai-decision', label: 'AI decision', what: 'decide fields with an AI.' },
+          { to: 'steps-ai-decision', label: 'AI thinks', what: 'decide fields with an AI.' },
         ]} />
       </>
     ),
@@ -299,7 +300,7 @@ const workflowPages: DocPage[] = [
     body: () => (
       <>
         <H2 id="fast-chat">Fast, natural chat</H2>
-        <p>Listen → <strong>AI reply</strong> → back to Listen. The AI speaks as it writes, so the caller hears the first words soonest. The AI can still end the call by returning <C>hangup</C>.</p>
+        <p>Listen → <strong>AI answers</strong> → back to Listen. The AI speaks as it writes, so the caller hears the first words soonest. The AI can still end the call by returning <C>hangup</C>.</p>
         <Code lang="json">{`
 "ask_for_input": { "type": "input", "parameters": { "input_variables": { "user_input": "str" } }, "next": "chat" },
 "chat": {
@@ -320,7 +321,7 @@ const workflowPages: DocPage[] = [
 "main": { "type": "llm-streaming", "parameters": { "model": "openai/gpt-oss-120b", "history_key": "conversation_history", "stream_timeout": 8, "system_prompt": "…" }, "next": "ask_for_input" }`}</Code>
 
         <H2 id="decide-then-branch">Decide, then branch</H2>
-        <p>An <strong>AI decision</strong> fills in fields; a <strong>Say</strong> speaks the reply; a <strong>Branch</strong> picks the path from a field.</p>
+        <p>An <strong>AI thinks</strong> fills in fields; a <strong>Say</strong> speaks the reply; a <strong>Branch</strong> picks the path from a field.</p>
         <Code lang="json">{`
 "decide": {
   "type": "llm",
@@ -423,7 +424,7 @@ const STEP_DOCS: StepDoc[] = [
     ],
     examples: [
       { title: 'A fixed line', text: 'A greeting that can’t be talked over:', json: `{ "type": "out", "parameters": { "out_dict": { "speak": "Hi! Thanks for calling Sunrise Dental." }, "interruption_type": "no" }, "next": "ask_for_input" }` },
-      { title: 'Speak what the AI decided', text: 'After an AI decision, speak its reply and pass on its hang-up decision:', json: `{ "type": "out", "parameters": { "variables": ["speak", "hangup"] }, "next": "ask_for_input" }` },
+      { title: 'Speak what the AI decided', text: 'After an AI thinks step, speak its reply and pass on its hang-up decision:', json: `{ "type": "out", "parameters": { "variables": ["speak", "hangup"] }, "next": "ask_for_input" }` },
       { title: 'Send data without speaking', text: 'Record an outcome for your webhook, silently:', json: `{ "type": "out", "parameters": { "out_dict": { "stage": "booking_confirmed" }, "variables": ["outcome"] } }` },
     ],
   },
@@ -474,13 +475,13 @@ const STEP_DOCS: StepDoc[] = [
     examples: [
       { title: 'A chatty receptionist', text: 'The usual conversational step:', json: `{ "type": "llm-streaming", "parameters": { "system_prompt": "You are the receptionist at Sunrise Dental. Be warm and brief.", "service": "groq", "model": "openai/gpt-oss-120b", "input_variables": { "user_input": { "type": "str", "description": "What the caller said." } }, "llm_return_type": { "speak": { "type": "str", "description": "What to say." }, "hangup": { "type": "bool", "description": "True to end the call." } }, "history_key": "conversation_history" }, "next": "ask_for_input" }` },
     ],
-    tips: <Note kind="warn">Because nothing it returns is saved to state, a Branch can't act on an AI reply. Use <DocLink to="steps-ai-decision">AI decision</DocLink> when the next step depends on what the AI decided.</Note>,
+    tips: <Note kind="warn">Because nothing it returns is saved to state, a Branch can't act on an AI answers step. Use <DocLink to="steps-ai-decision">AI thinks</DocLink> when the next step depends on what the AI decided.</Note>,
   },
   {
     type: 'llm', slug: 'steps-ai-decision',
     how: (
       <Steps>
-        <li>Builds the instructions the same way as AI reply, plus emotion cues if <C>emotion</C> is on.</li>
+        <li>Builds the instructions the same way as AI answers, plus emotion cues if <C>emotion</C> is on.</li>
         <li>Asks the AI for a JSON answer with the fields in <C>llm_return_type</C>, and waits for the whole answer.</li>
         <li>Saves every returned field to the call's state (a plain-text answer is saved as <C>llm_response</C>), and the exchange to memory.</li>
         <li>Says nothing. Follow it with a <DocLink to="steps-say">Say</DocLink> that speaks <C>speak</C>, and a <DocLink to="steps-branch">Branch</DocLink> if the call should go different ways.</li>
@@ -493,7 +494,7 @@ const STEP_DOCS: StepDoc[] = [
     examples: [
       { title: 'Qualify a lead', text: 'Decide a reply, whether to hang up, and an outcome for your dashboard:', json: `{ "type": "llm", "parameters": { "system_prompt": "Find out if the caller wants a demo this week.", "service": "groq", "model": "openai/gpt-oss-120b", "llm_return_type": { "speak": { "type": "str", "description": "What to say." }, "hangup": { "type": "bool", "description": "True once done." }, "outcome": { "type": "str", "description": "demo_booked, later or not_interested" } }, "history_key": "conversation_history" }, "next": "reply" }` },
     ],
-    tips: <p>It waits for the full answer before anything is said, so it's slower to the first word than AI reply. Use it where you need the fields; use AI reply for plain chat.</p>,
+    tips: <p>It waits for the full answer before anything is said, so it's slower to the first word than AI answers step. Use it where you need the fields; use AI answers for plain chat.</p>,
   },
   {
     type: 'conditional', slug: 'steps-branch',
@@ -515,7 +516,7 @@ const STEP_DOCS: StepDoc[] = [
     type: 'llm_webnavigation', slug: 'steps-guide-on-website',
     how: (
       <Steps>
-        <li>Works like AI decision, with the <C>web_navigation</C> prompt template.</li>
+        <li>Works like AI thinks, with the <C>web_navigation</C> prompt template.</li>
         <li>Returns <C>speak</C> and a list of <C>actions</C> (scroll, click, fill in). Markers in <C>speak</C> say when each action happens, so the page moves as the agent talks about it.</li>
       </Steps>
     ),
@@ -539,7 +540,7 @@ const stepPages: DocPage[] = [
         })} />
 
         <H2 id="choosing">Choosing between the AI steps</H2>
-        <Table head={['', 'AI reply', 'AI decision']} rows={[
+        <Table head={['', 'AI answers', 'AI thinks']} rows={[
           ['Speaks', 'Yes, as it writes', 'No: follow it with Say'],
           ['First word', 'Fastest', 'After the whole answer'],
           ['Saves its fields for later steps', 'No', 'Yes'],
@@ -624,7 +625,7 @@ const stepPages: DocPage[] = [
         <p>
           If the provider fails, or takes longer than 20 seconds (10 seconds to the first word when streaming), the turn is
           retried once on the next provider in the configured fallback order, with that provider's default model. Once an
-          AI reply has started speaking it isn't switched mid-sentence. If both fail, the agent says its fallback line.
+          AI answers has started speaking it isn't switched mid-sentence. If both fail, the agent says its fallback line.
         </p>
 
         <H2 id="what-it-reads">What it reads</H2>
@@ -638,7 +639,7 @@ const stepPages: DocPage[] = [
         <p>
           <C>llm_return_type</C> is the shape of the AI's answer: each field with a type and a description the AI reads.
           <C> speak</C> is what's said and <C>hangup</C> ends the call. Add your own and describe the allowed values
-          clearly; an AI decision saves them for Branch, Say and your webhook.
+          clearly; an AI thinks step saves them for Branch, Say and your webhook.
         </p>
         <Code lang="json">{`
 "llm_return_type": {
@@ -667,15 +668,15 @@ const stepPages: DocPage[] = [
 
         <H2 id="emotion">Emotion</H2>
         <p>
-          On an AI decision, <C>emotion: true</C> teaches the AI to add voice cues such as <C>[laughs]</C> or
+          On an AI thinks step, <C>emotion: true</C> teaches the AI to add voice cues such as <C>[laughs]</C> or
           <C> [whispers]</C> in <C>speak</C>. <C>emotion_tts</C> picks the cue style; <C>eleven_v3</C> matches the ElevenLabs
           v3 voice model, which performs them. With any other voice the cues would be read out, so leave it off. See{' '}
           <DocLink to="voice-emotion">Emotion</DocLink>.
         </p>
 
         <NextSteps items={[
-          { to: 'steps-ai-reply', label: 'AI reply', what: 'the streaming AI step.' },
-          { to: 'steps-ai-decision', label: 'AI decision', what: 'the deciding AI step.' },
+          { to: 'steps-ai-reply', label: 'AI answers', what: 'the streaming AI step.' },
+          { to: 'steps-ai-decision', label: 'AI thinks', what: 'the deciding AI step.' },
         ]} />
       </>
     ),
@@ -808,7 +809,7 @@ await voxio.flows.update(flowKey, {
       <>
         <Steps>
           <li>On <strong>Voice</strong>, set speaking to <strong>ElevenLabs</strong> with the <C>eleven_v3</C> model.</li>
-          <li>On the AI decision step that writes the reply, turn on <strong>Add emotion</strong> (<C>emotion: true</C>) and keep <strong>Emotion style</strong> on ElevenLabs v3 (<C>emotion_tts: "eleven_v3"</C>).</li>
+          <li>On the AI thinks step that writes the reply, turn on <strong>Add emotion</strong> (<C>emotion: true</C>) and keep <strong>Emotion style</strong> on ElevenLabs v3 (<C>emotion_tts: "eleven_v3"</C>).</li>
           <li>Speak its <C>speak</C> with a Say step as usual. The cues are performed, not read.</li>
         </Steps>
         <Code lang="json">{`
@@ -817,7 +818,7 @@ await voxio.flows.update(flowKey, {
   "parameters": { "system_prompt": "…", "emotion": true, "emotion_tts": "eleven_v3", "llm_return_type": { "speak": { "type": "str", "description": "What to say." } } },
   "next": "reply"
 }`}</Code>
-        <Note kind="warn">Other voices read cues like <C>[laughs]</C> out loud. Only turn emotion on with ElevenLabs v3. AI reply steps don't add cues.</Note>
+        <Note kind="warn">Other voices read cues like <C>[laughs]</C> out loud. Only turn emotion on with ElevenLabs v3. AI answers steps don't add cues.</Note>
         <p>To show a reply without its cues (for example in a transcript), send it through a Say step with <C>remove: true</C> and <C>remove_tts: true</C>.</p>
         <NextSteps items={[{ to: 'voice-speaking-elevenlabs', label: 'ElevenLabs', what: 'all ElevenLabs settings.' }]} />
       </>
@@ -841,7 +842,6 @@ const turnPages: DocPage[] = [
           them in <C>runtime</C>. They apply from the next session.
         </p>
         <Code lang="js">{RUNTIME_CODE(`    "process-type": "speech-native",
-    "speaker-turn-timeout-ms": 500,
     "pre-fire": true,`)}</Code>
 
         <H2 id="engine">Conversation engine</H2>
@@ -852,8 +852,8 @@ const turnPages: DocPage[] = [
 
         <H2 id="tuning">Tuning</H2>
         <Table head={['If callers say…', 'Try']} rows={[
-          ['“It keeps cutting me off”', <>Raise <C>speaker-turn-timeout-ms</C> (e.g. 800). On Deepgram Flux, raise <C>eot-threshold</C>.</>],
-          ['“There’s a long pause before it answers”', <>Lower <C>speaker-turn-timeout-ms</C>, turn on <C>pre-fire</C> and <C>first-chunk-fast</C>.</>],
+          ['“It keeps cutting me off”', <>Use <C>"process-type": "stt-native"</C>, which waits for the finished words, and turn <C>pre-fire</C> off. On Deepgram Flux, raise <C>eot-threshold</C>.</>],
+          ['“There’s a long pause before it answers”', <>Use <C>"process-type": "speech-native"</C>, turn on <C>warmup-agent</C> and <C>first-chunk-fast</C>, then <C>pre-fire</C>.</>],
           ['“It stops talking when I say hmm”', <>Add the filler words to <C>ignore-words</C> on the speaking steps. See <DocLink to="turn-taking-interruptions">Interruptions</DocLink>.</>],
           ['“It reacts to noise”', <>Raise <C>vad-threshold</C> (web) or <C>voice-isolation</C>.</>],
         ]} />
@@ -874,8 +874,8 @@ const turnPages: DocPage[] = [
     body: () => (
       <>
         <p>
-          Every step that speaks (Say, AI reply) has its own <C>interruption_type</C>, so a disclaimer can be protected
-          while normal chat stays interruptible. An AI reply can also choose it per reply by returning
+          Every step that speaks (Say, AI answers) has its own <C>interruption_type</C>, so a disclaimer can be protected
+          while normal chat stays interruptible. An AI answers can also choose it per reply by returning
           <C> interruption_type</C>.
         </p>
 
@@ -913,8 +913,8 @@ const turnPages: DocPage[] = [
       <>
         <Params items={knobParams('Inactivity')} />
         <Code lang="js">{RUNTIME_CODE(`    "inactivity": true,
-    "inactivity-metadata": { "message": "Are you still there?", "time-period": 6000, "max-times": 2, "interruption-type": "full" },`)}</Code>
-        <Note kind="tip">Keep <C>time-period</C> above a few seconds: people pause to think, look things up or read a number.</Note>
+    "inactivity-metadata": { "message": "Are you still there?", "time-period": 8, "max-times": 2, "interruption-type": "full" },`)}</Code>
+        <Note kind="tip"><C>time-period</C> is in seconds. Keep it above a few seconds: people pause to think, look things up or read a number.</Note>
         <NextSteps items={[{ to: 'turn-taking', label: 'Turn-taking', what: 'reply timing.' }]} />
       </>
     ),

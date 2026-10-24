@@ -9,6 +9,7 @@ import { accountClient } from '#/server/dashboard/flows.server'
 import { db, withDb } from '#/server/db'
 import { putObject, r2Ready } from '#/server/r2.server'
 import { currentUser } from '#/server/session.server'
+import { faceIdsOf } from '#/lib/dashboard/faces'
 
 // The neutral crop for each detector: the raw box for s3fd, bbox_shift 0 for dwpose.
 const BOX_INDEX = { s3fd: 0, dwpose: 4 } as const
@@ -64,8 +65,17 @@ export const Route = createFileRoute('/api/faces')({
       DELETE: async ({ request }) => {
         const me = await currentUser()
         if (!me) return json({ ok: false, reason: 'Please log in again.' }, 401)
-        const uuid = new URL(request.url).searchParams.get('uuid') ?? ''
+        const url = new URL(request.url)
+        const uuid = url.searchParams.get('uuid') ?? ''
         if (uuid) {
+          // Only the owner deletes a face, and not from under a flow unless they confirmed (?force=1).
+          const own = await withDb(() => db.face.findFirst({ where: { uuid, userId: me.id }, select: { uuid: true } }))
+          if (!own) return json({ ok: false, reason: 'Only the person who added this face can delete it.' }, 403)
+          if (url.searchParams.get('force') !== '1') {
+            const flows = await withDb(() => db.flow.findMany({ where: { userId: me.id }, select: { flowName: true, faces: true, runtime: true } }))
+            const users = flows.filter((f) => !(f.runtime as { deleted_at?: string } | null)?.deleted_at && faceIdsOf(f.faces).includes(uuid)).map((f) => f.flowName)
+            if (users.length) return json({ ok: false, reason: `Used by ${users.join(', ')}. Confirm to delete it anyway.`, inUse: users }, 409)
+          }
           try {
             await (await accountClient(me)).faces.delete(uuid)
           } catch (e) {

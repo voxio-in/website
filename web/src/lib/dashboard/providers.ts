@@ -83,6 +83,7 @@ export const STT_PROVIDERS: Provider[] = [
       { key: 'endpoint-sensitivity', label: 'End-of-speech sensitivity', kind: 'slider', min: -1, max: 1, step: 0.1, default: 0, when: { key: 'model', test: (v) => v === 'stt-rt-v5' }, help: 'Higher ends sentences sooner.' },
       { key: 'endpoint-latency-adjustment-level', label: 'Latency adjustment', kind: 'slider', min: 0, max: 3, step: 1, default: 0, when: { key: 'model', test: (v) => v === 'stt-rt-v5' }, help: 'Trade accuracy for speed. 0 is the most accurate.' },
       { key: 'enable-speaker-diarization', label: 'Tell speakers apart', kind: 'bool', default: false, help: 'Label who said what when more than one person talks.' },
+      { key: 'max-speakers', label: 'Max speakers', kind: 'number', min: 1, max: 10, step: 1, default: 1, when: { key: 'enable-speaker-diarization', test: (v) => v === true }, help: 'Speakers are numbered in the order they first talk. Anyone past this number is ignored; 1 listens only to the first speaker.' },
       { key: 'enable-language-identification', label: 'Identify language', kind: 'bool', default: false, help: 'Detect which language each sentence is in.' },
     ],
   },
@@ -202,4 +203,41 @@ export function tidyTts<T extends ProviderConfig | null | undefined>(config: T):
   if (!config || config.service !== 'sarvam' || !('speaker' in config)) return config
   const { speaker, ...rest } = config as ProviderConfig & { speaker?: unknown }
   return { ...rest, voice: rest.voice ?? speaker } as unknown as T
+}
+
+/**
+ * Why someone would pick a provider, in one or two words, and where it
+ * processes the audio. Shown on its tile: the reason sits on the choice, and
+ * regulated buyers ask where audio goes before anything else.
+ * Regions are each provider's default processing location; Google's depends
+ * on the project the voice server uses.
+ */
+export const PROVIDER_NOTES: Record<'stt' | 'tts', Record<string, { best: string; region: string }>> = {
+  stt: {
+    'deepgram-streaming': { best: 'Fastest', region: 'US' },
+    soniox: { best: 'Best for Hinglish', region: 'US' },
+    sarvam: { best: 'Indian languages', region: 'India' },
+  },
+  tts: {
+    deepgram: { best: 'Fastest', region: 'US' },
+    sarvam: { best: 'Indian voices', region: 'India' },
+    elevenlabs: { best: 'Most natural', region: 'US' },
+    google: { best: 'Many languages', region: 'Google Cloud region' },
+    resembleai: { best: 'Your own voice', region: 'US' },
+  },
+}
+
+/** The voice a TTS config uses, as named in the sample list: Deepgram's model, Sarvam's voice. */
+export function sampleVoiceOf(config: ProviderConfig | null | undefined): string | undefined {
+  if (!config) return undefined
+  if (config.service === 'deepgram') return String(config.model ?? '') || undefined
+  if (config.service === 'sarvam') return String(config.voice ?? '') || undefined
+  return undefined
+}
+
+/** The language a config is set to, reduced to its base ("en-IN" → "en"); Soniox lists several. */
+export function languagesOf(config: ProviderConfig | null | undefined): string[] {
+  const v = config?.language
+  const list = Array.isArray(v) ? v.map(String) : v ? [String(v)] : []
+  return list.filter((l) => l && l !== 'unknown' && l !== 'multi').map((l) => l.toLowerCase().split('-')[0])
 }

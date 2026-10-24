@@ -6,14 +6,14 @@ import dagre from '@dagrejs/dagre'
 
 import type { Graph } from './convert'
 
-export const NODE_W = 264
-export const NODE_H = 128
+export const NODE_W = 300
+export const NODE_H = 144
 
 /** Height of one card: the base plus a row per branch path (and "Otherwise"). */
 function heightOf(n: Graph['nodes'][number]) {
   if (n.data.type !== 'conditional') return NODE_H
   const paths = Object.keys((n.data.parameters.mappings as object) ?? {}).length + 1
-  return NODE_H + paths * 38
+  return NODE_H + paths * 42
 }
 
 /** Positions every node (all = true) or only the ones without a position. */

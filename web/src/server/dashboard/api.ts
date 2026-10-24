@@ -1,25 +1,24 @@
-// Every dashboard read and write. A flow is either live (a real key on the
-// database service) or mock (lives in store.ts). For a live flow, fields the
-// backend accepts go to PUT /flow; the rest land in its mock overlay and come
-// back marked in `mock`. Values travel as JSON strings so server-function
-// serialisation never has to reason about the open-ended document shape.
+// Every dashboard read and write, straight to Neon through Prisma
+// (store.server.ts). A flow is the user's own ("mock" in the UI's words) or,
+// for an admin, someone else's ("live"); both are rows in the same tables.
+// Values travel as JSON strings so server-function serialisation never has to
+// reason about the open-ended document shape.
 
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
-import { Voxio } from 'voxioagent/server'
 import { randomUUID } from 'node:crypto'
 
 import { db, withDb } from '#/server/db'
 import { playableUrl } from '#/server/r2.server'
 import { AVATAR_VOICEBOT, SERVERS } from '#/server/voice/servers'
 import { currentUser } from '#/server/session.server'
-import { LIVE_WRITABLE } from '#/lib/dashboard/knobs'
 import { billedMinutes } from '#/lib/dashboard/client'
 import type { Account, Delivery, FlowDoc, FlowSummary, Result, Session, TestCall, TestSetup, TestTurn } from '#/lib/dashboard/types'
 import { TEMPLATES } from '#/lib/workflow/templates'
-import { extractWorkflow, withStart, type Workflow } from '#/lib/workflow/convert'
+import { extractWorkflow, withStart } from '#/lib/workflow/convert'
 import { TTS_PROVIDERS, tidyTts } from '#/lib/dashboard/providers'
-import { blankFlow, load, markFlowDeleted, mutate, newKey, rekeyFlow, type Overlay } from './store.server'
-import { accountClient, accountKey, createErrorText, createOnBackend, ON_BACKEND, sessionRecordOf, settingsOf } from './flows.server'
+import { faceIdsOf } from '#/lib/dashboard/faces'
+import { blankFlow, createFlowRow, flowAccess, flowKey, isAdmin, load, loadFlow, markFlowDeleted, mutate, mutateFlow, newKey, rekeyFlow } from './store.server'
+import { accountKey, sessionRecordOf } from './flows.server'
 import { cancelTestCall as sdkCancelCall, getSessionRecord, getTestCall, placeTestCall, sdkErrorText, sdkServerReady } from './test.server'
 import type { AuthUser } from '#/server/session.server'
 
@@ -33,13 +32,15 @@ const wire = <T,>(r: Result<T>) => JSON.stringify(r)
 const fail = (reason: string) => wire({ ok: false, reason })
 const errMsg = (e: unknown) => (e as Error)?.message ?? String(e)
 
-// ---------------------------------------------------------------- live flows
+// ---------------------------------------------------------------- access
 
-const LIVE_EMAILS = new Set((process.env.DASHBOARD_LIVE_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))
-const canSeeLive = (me: AuthUser) => LIVE_EMAILS.has(me.email.toLowerCase())
+// Every flow is a row in Neon, read and written here through Prisma; the voice
+// backend is used only to run voice (tests and calls). Who may reach a flow
+// follows the database service: its owner, or an admin (`flowAccess`).
+// Admins also see the flows named in VOXIO_FLOW_API_KEY_* / VX_FLOW_API_KEY in
+// their lists, next to their own.
 
-function liveKeys(me: AuthUser): { key: string; env: string }[] {
-  if (!canSeeLive(me)) return []
+function pinnedKeys(): { key: string; env: string }[] {
   const seen = new Set<string>()
   const out: { key: string; env: string }[] = []
   for (const [env, key] of Object.entries(process.env)) {
@@ -52,103 +53,85 @@ function liveKeys(me: AuthUser): { key: string; env: string }[] {
   return out
 }
 
-// Live flows go through the SDK: read with the flow's own key, written as the signed-in user.
-async function fetchLive(key: string): Promise<Record<string, any>> {
-  return (await new Voxio({ flowKey: key, environment: 'gpu' }).flows.get(key, { keys: ['all'] })) as Record<string, any>
+/** Keys of other people's flows this user's lists include: the pinned ones, for admins only. */
+async function extraKeys(me: AuthUser): Promise<string[]> {
+  return (await isAdmin(me)) ? pinnedKeys().map((p) => p.key) : []
 }
 
-/**
- * A sessions row as the voice server writes it: session.mp4 in recordingUrl,
- * the user's camera in extra.cameraRecordingUrl. Both sit in a private
- * bucket, so sign them.
- */
-function liveSession(r: Record<string, any>): Session {
-  const camera = r.extra?.cameraRecordingUrl
-  return { ...r, recordingUrl: playableUrl(r.recordingUrl ?? undefined), clientVideoUrl: playableUrl(typeof camera === 'string' ? camera : undefined) } as Session
+/** Recordings sit in a private bucket: sign them on the way out, never in the table. */
+function signed(s: Session): Session {
+  const camera = (s as { cameraRecordingUrl?: unknown }).cameraRecordingUrl
+  return { ...s, recordingUrl: playableUrl(s.recordingUrl), clientVideoUrl: playableUrl(typeof camera === 'string' ? camera : undefined) } as Session
 }
 
-/** The live flow document in the dashboard's shape, with its mock overlay applied. */
-function fromLive(key: string, doc: Record<string, any>, overlay: Overlay): FlowDoc {
-  const { agent_id, stt_id, tts_id, faces, numbers, sessions, user_id, api_key, created_at, updated_at, ...knobs } = doc
-  const faceManifest = Array.isArray(faces)
-    ? { version: null, expressions: faces, transitions: doc.transitions ?? [] }
-    : faces ?? { version: null, expressions: [], transitions: [] }
-  const flow: FlowDoc = {
-    ...knobs,
-    key,
-    source: 'live',
-    mock: [],
-    flow_name: doc.flow_name ?? 'Untitled flow',
-    created_at,
-    workflow: agent_id?.workflow ?? { nodes: {} },
-    'webhook-url': agent_id?.['webhook-url'] ?? '',
-    stt: stt_id ?? null,
-    tts: tidyTts(tts_id ?? null),
-    kbs: doc.kbs ?? [],
-    faces: faceManifest,
-    vision_id: doc.vision_id ?? null,
-    running_vision_id: doc.running_vision_id ?? null,
-    integrations: [],
-    'web-actions': [],
-    numbers: (numbers ?? []).filter(Boolean).map((n: any) => ({ phone_number: n.phone_number, provider: 'plivo' })),
-    sessions: (sessions ?? []).filter(Boolean).map(liveSession),
-    deliveries: [],
-  }
-  for (const [k, v] of Object.entries(overlay)) {
-    ;(flow as Record<string, unknown>)[k] = v
-    if (k !== 'deliveries') flow.mock.push(k)
-  }
-  return flow
-}
-
-/** A flow this account may see: one of its own, or (for live accounts) a configured backend flow. */
+/** A flow this user may see (own, or any for an admin), as the dashboard shows it. */
 async function getFlowDoc(me: AuthUser, key: string): Promise<FlowDoc> {
-  const store = await load(me)
-  const own = store.flows[key]
-  // Stored recording URLs are raw R2 links; sign them on the way out, never in the store.
-  if (own) return { ...own, source: 'mock', mock: ['*'], sessions: own.sessions.map((x) => ({ ...x, recordingUrl: playableUrl(x.recordingUrl) })) }
-  if (!liveKeys(me).some((l) => l.key === key)) throw new Error('Flow not found')
-  return fromLive(key, await fetchLive(key), store.overlays[key] ?? {})
-}
-const isLiveFor = (me: AuthUser, key: string) => liveKeys(me).some((l) => l.key === key)
-
-async function putLive(me: AuthUser, key: string, body: Record<string, unknown>) {
-  // `runtime` goes to the data server as-is: the body is already in its document shape.
-  await (await accountClient(me)).flows.update(key, { runtime: body })
+  const loaded = await loadFlow(me, key)
+  if (!loaded) throw new Error('Flow not found')
+  const { doc, access } = loaded
+  // An admin on someone else's flow sees whose it is, as on the Flows list.
+  const owner = access.own ? undefined : (await withDb(() => db.user.findUnique({ where: { id: access.ownerId }, select: { name: true } })))?.name
+  return { ...doc, source: access.own ? 'mock' : 'live', mock: access.own ? ['*'] : [], sessions: doc.sessions.map(signed), ...(owner ? { owner } : {}) }
 }
 
 // ---------------------------------------------------------------- flows
 
 export const listFlows = createServerFn({ method: 'GET' }).handler(async (): Promise<string> => {
-    const me = await currentUser()
-    if (!me) return fail('Please log in again.')
-  const store = (await load(me))
-  const shops = new Map(store.account.integrations.map((x) => [x.id, x.name]))
-  const summary = (f: FlowDoc): FlowSummary => ({
-    key: f.key,
-    name: f.flow_name,
-    createdAt: f.created_at,
-    source: f.source,
-    sessions: f.sessions.length,
-    minutes: f.sessions.reduce((a, s) => a + billedMinutes(s.totalConnectedTime), 0),
-    connections: [
-      ...f.numbers.map((n) => ({ kind: 'number' as const, label: n.phone_number })),
-      ...(f.integrations ?? []).map((id) => ({ kind: 'integration' as const, label: shops.get(id) ?? id })),
-      ...(f['webhook-url'] ? [{ kind: 'webhook' as const, label: 'Webhook' }] : []),
-      ...(f['web-actions']?.length ? [{ kind: 'web' as const, label: 'Website' }] : []),
-    ],
-  })
-  const rows: FlowSummary[] = Object.values(store.flows).map((f) => summary({ ...f, source: 'mock' }))
-  await Promise.all(liveKeys(me).filter(({ key }) => !store.flows[key]).map(async ({ key, env }) => {
-    try {
-      rows.push(summary(fromLive(key, await fetchLive(key), store.overlays[key] ?? {})))
-    } catch (e) {
-      rows.push({ key, name: env.replace(/^VOXIO_FLOW_API_KEY_?/, '').toLowerCase() || 'default', source: 'live', sessions: 0, minutes: 0, connections: [], error: errMsg(e) })
-    }
-  }))
-  // Newest first; flows without a date (live ones that failed to load) go last.
-  rows.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
-  return wire({ ok: true, data: rows })
+  const me = await currentUser()
+  if (!me) return fail('Please log in again.')
+  // Only what the table shows: no workflows, transcripts or deliveries.
+  const extra = await extraKeys(me)
+  const [rows, user] = await Promise.all([
+    withDb(() => db.flow.findMany({
+      where: { OR: [{ userId: me.id }, ...(extra.length ? [{ apiKey: { in: extra } }] : [])] },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, apiKey: true, flowName: true, createdAt: true, userId: true, runtime: true, faces: true,
+        user: { select: { name: true } },
+        agent: { select: { webhookUrl: true } },
+        numbers: { select: { phoneNumber: true }, orderBy: { phoneNumber: 'asc' } },
+        sessions: { select: { totalConnectedTime: true } },
+      },
+    })),
+    withDb(() => db.user.findUnique({ where: { id: me.id }, select: { integrations: true } })),
+  ])
+  // Real sessions and tests counted apart, and the last real one, in one pass over the sessions table.
+  const ids = rows.map((f) => f.id)
+  const counts = ids.length ? await withDb(() => db.$queryRaw<{ flow_id: string; real: number; tests: number; last_real: Date | null }[]>`
+    SELECT flow_id,
+      count(*) FILTER (WHERE coalesce(extra->>'test', 'false') <> 'true')::int AS real,
+      count(*) FILTER (WHERE extra->>'test' = 'true')::int AS tests,
+      max("startTime") FILTER (WHERE coalesce(extra->>'test', 'false') <> 'true') AS last_real
+    FROM sessions WHERE flow_id = ANY(${ids}) GROUP BY flow_id`) : []
+  const byFlow = new Map(counts.map((c) => [c.flow_id, c]))
+  const shops = new Map(((user?.integrations ?? []) as Account['integrations']).map((x) => [x.id, x.name]))
+  const flows: FlowSummary[] = []
+  for (const f of rows) {
+    const runtime = (f.runtime ?? {}) as { deleted_at?: string; integrations?: string[]; 'web-actions'?: unknown[] }
+    if (runtime.deleted_at) continue
+    const c = byFlow.get(f.id)
+    const own = f.userId === me.id
+    const faces = (f.faces ?? {}) as { expressions?: unknown[] }
+    flows.push({
+      key: f.apiKey,
+      name: f.flowName,
+      createdAt: f.createdAt.toISOString(),
+      source: own ? 'mock' : 'live',
+      sessions: c?.real ?? 0,
+      tests: c?.tests ?? 0,
+      lastAt: c?.last_real ? new Date(c.last_real).toISOString() : undefined,
+      minutes: f.sessions.reduce((a, x) => a + billedMinutes(x.totalConnectedTime), 0),
+      kind: faces.expressions?.length ? 'avatar' : f.numbers.length ? 'phone' : 'voice',
+      owner: own ? undefined : f.user.name,
+      connections: [
+        ...f.numbers.map((n) => ({ kind: 'number' as const, label: n.phoneNumber })),
+        ...(runtime.integrations ?? []).map((id) => ({ kind: 'integration' as const, label: shops.get(id) ?? id })),
+        ...(f.agent.webhookUrl ? [{ kind: 'webhook' as const, label: 'Webhook' }] : []),
+        ...(runtime['web-actions']?.length ? [{ kind: 'web' as const, label: 'Website' }] : []),
+      ],
+    })
+  }
+  return wire({ ok: true, data: flows })
 })
 
 export const getFlow = createServerFn({ method: 'GET' })
@@ -175,37 +158,18 @@ export const patchFlow = createServerFn({ method: 'POST' })
 export const readFlowDoc = createServerOnlyFn((me: AuthUser, key: string) => getFlowDoc(me, key))
 
 /**
- * Saves part of a flow the way the dashboard's own Save does: own flows in the
- * store; live flows split between PUT /flow and the overlay. Used by patchFlow
- * and by the Assistant when a change is applied.
+ * Saves part of a flow the way the dashboard's own Save does, for its owner or
+ * an admin. Used by patchFlow and by the Assistant when a change is applied.
  */
 export const applyFlowPatch = createServerOnlyFn(async (me: AuthUser, key: string, input: Record<string, unknown>): Promise<Result<FlowDoc>> => {
-    const patch = { ...input }
-    for (const k of ['key', 'source', 'mock', 'sessions']) delete patch[k]
-    const store = (await load(me))
-
-    if (store.flows[key]) {
-      await mutate(me, (s) => { Object.assign(s.flows[key], patch) })
-      return { ok: true, data: await getFlowDoc(me, key) }
-    }
-    if (!isLiveFor(me, key)) return { ok: false, reason: 'Flow not found.' }
-
-    // Live: split into what PUT /flow takes and what goes to the overlay.
-    const body: Record<string, any> = {}
-    const toOverlay: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(patch)) {
-      if (k === 'workflow') (body.agent ??= {}).workflow = withStart(v as Workflow)
-      else if (k === 'webhook-url') (body.agent ??= {})['webhook-url'] = v
-      else if (k === 'faces') { const f = v as FlowDoc['faces']; body.faces = f.expressions; body.transitions = f.transitions }
-      else if (k === 'tts') body.tts = tidyTts(v as FlowDoc['tts'])
-      else if (LIVE_WRITABLE.has(k)) body[k] = v
-      else toOverlay[k] = v
-    }
-    try {
-      if (Object.keys(body).length) await putLive(me, key, body)
-    } catch (e) { return { ok: false, reason: `Save failed: ${errMsg(e)}` } }
-    if (Object.keys(toOverlay).length) await mutate(me, (s) => { s.overlays[key] = { ...(s.overlays[key] ?? {}), ...toOverlay } })
-    try { return { ok: true, data: await getFlowDoc(me, key) } } catch (e) { return { ok: false, reason: errMsg(e) } }
+  const patch = { ...input }
+  // Server-owned keys, as the database service's PROTECTED_FLOW_KEYS.
+  for (const k of ['key', 'source', 'mock', 'sessions', 'numbers', 'deliveries', 'created_at', 'id', 'api_key', 'user_id', 'owner']) delete patch[k]
+  if (patch.tts) patch.tts = tidyTts(patch.tts as FlowDoc['tts'])
+  try {
+    await mutateFlow(me, key, (f) => { Object.assign(f, patch) })
+    return { ok: true, data: await getFlowDoc(me, key) }
+  } catch (e) { return { ok: false, reason: errMsg(e) === 'Flow not found.' ? 'Flow not found.' : `Save failed: ${errMsg(e)}` } }
 })
 
 export const createFlow = createServerFn({ method: 'POST' })
@@ -223,49 +187,48 @@ export const createFlow = createServerFn({ method: 'POST' })
     if (data.workflow && !imported) return fail('The imported JSON has no workflow in it.')
     const draft = blankFlow('pending', data.name.trim() || 'Untitled flow', withStart(imported ?? structuredClone(tpl.workflow)))
     if (tts) draft.tts = tts
-    // Created on the backend first (with the user's account key), then kept here under its key.
-    let key: string
-    try { key = await createOnBackend(me, settingsOf(draft)) } catch (e) { return fail(createErrorText(e)) }
-    const flow: FlowDoc = { ...draft, key, [ON_BACKEND]: true }
-    await mutate(me, (s) => { s.flows[flow.key] = flow })
+    // Written straight to Neon; the voice servers read the same tables, so it can take calls at once.
+    const flow: FlowDoc = { ...draft, key: flowKey() }
+    try { await createFlowRow(me.id, flow) } catch (e) { return fail(`Couldn’t create the flow: ${errMsg(e)}`) }
     return wire({ ok: true, data: flow.key, note: undefined })
   })
 
 /**
  * Deletes a flow from the dashboard but keeps its history: the key stops
- * working at once (rotated through the SDK; re-keyed here if that fails), the
- * flow is stamped deleted and its numbers are freed. Its sessions and webhook
- * logs stay, shown as "Flow deleted". The SDK's flows.delete would remove them.
+ * working at once (it is replaced, as the database service's key rotation
+ * does), the flow is stamped deleted and its numbers are freed. Its sessions
+ * and webhook logs stay, shown as "Flow deleted". Owner or admin only.
  */
 export const deleteFlow = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
-    if (!(await load(me)).flows[data.key]) return fail('This flow can’t be deleted from here yet.')
-    let dead: string
+    const access = await flowAccess(me, data.key)
+    if (!access || access.deleted) return fail('Flow not found.')
+    const dead = flowKey()
     try {
-      dead = (await (await accountClient(me)).flows.rotateKey(data.key)).flowKey
-    } catch {
-      dead = newKey('flow')
-      await rekeyFlow(me, data.key, dead)
-    }
-    try {
-      await markFlowDeleted(me, dead)
+      await rekeyFlow(access.ownerId, data.key, dead)
+      await markFlowDeleted(access.ownerId, dead)
     } catch (e) {
-      return fail(`The flow’s key was turned off, but it couldn’t be marked deleted: ${errMsg(e)}`)
+      return fail(`The flow couldn’t be deleted: ${errMsg(e)}`)
     }
     return wire({ ok: true, data: null })
   })
 
+/** A new key for a flow its owner (or an admin) may change; numbers follow, the old key dies at once. */
 export const rotateFlowKey = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
-    if (!(await load(me)).flows[data.key]) return fail('Rotating a live key needs the backend endpoint (DASHBOARD_BACKEND_PLAN §3) — numbers point at the old key.')
-    const next = newKey('flow')
-    await mutate(me, (s) => { const f = s.flows[data.key]; delete s.flows[data.key]; f.key = next; f.key_rotated_at = new Date().toISOString(); s.flows[next] = f })
+    const access = await flowAccess(me, data.key)
+    if (!access || access.deleted) return fail('Flow not found.')
+    const next = flowKey()
+    try {
+      await rekeyFlow(access.ownerId, data.key, next)
+      await mutateFlow(me, next, (f) => { f.key_rotated_at = new Date().toISOString() })
+    } catch (e) { return fail(`The key couldn’t be changed: ${errMsg(e)}`) }
     return wire({ ok: true, data: next })
   })
 
@@ -303,11 +266,7 @@ export const sendTestWebhook = createServerFn({ method: 'POST' })
   })
 
 async function addDelivery(me: AuthUser, key: string, d: Delivery) {
-  await mutate(me, (s) => {
-    const target = s.flows[key] ?? (s.overlays[key] ??= {})
-    const list = (target.deliveries as Delivery[] | undefined) ?? []
-    target.deliveries = [d, ...list].slice(0, 200)
-  })
+  await mutateFlow(me, key, (f) => { f.deliveries = [d, ...(f.deliveries ?? [])].slice(0, 200) })
 }
 
 export const redeliver = createServerFn({ method: 'POST' })
@@ -343,12 +302,12 @@ export const placeCall = createServerFn({ method: 'POST' })
     if (!/^\+?\d{8,15}$/.test(to)) return fail('Enter the number with its country code, e.g. +91…')
     const from = data.from || FROM_NUMBER || ''
     const callbot = CALLBOT()
-    const own = !!(await load(me)).flows[data.key]
-    if (!own && !isLiveFor(me, data.key)) return fail('Flow not found.')
-    const live = !own
+    const access = await flowAccess(me, data.key)
+    if (!access || access.deleted) return fail('Flow not found.')
 
-    const userKey = live ? await accountKey(me).catch(() => '') : ''
-    if (live && callbot && userKey && from) {
+    // Every flow is in the voice servers' tables, so callbot can dial any of them.
+    const userKey = await accountKey(me).catch(() => '')
+    if (callbot && userKey && from) {
       try {
         const path = data.when ? '/plivo/outbound/schedule' : '/plivo/outbound'
         const body: Record<string, unknown> = { 'from-number': from, 'to-number': to, customs }
@@ -372,12 +331,51 @@ export const placeCall = createServerFn({ method: 'POST' })
       status: data.when ? `scheduled ${data.when}` : 'completed',
       transcription: [{ role: 'assistant', content: '(not dialled)' }],
     }
-    await mutate(me, (st) => {
-      const target = st.flows[data.key] ?? (st.overlays[data.key] ??= {})
-      target.sessions = [s, ...((target.sessions as Session[]) ?? [])]
-    })
-    const why = !live ? 'This flow isn’t connected to the voice backend' : !callbot ? 'VX_CALLBOT is not set' : !from ? 'No from-number (VOXIO_FROM_NUMBER)' : 'Your account has no API key'
+    await mutateFlow(me, data.key, (f) => { f.sessions = [s, ...f.sessions] })
+    const why = !callbot ? 'VX_CALLBOT is not set' : !from ? 'No from-number (VOXIO_FROM_NUMBER)' : 'Your account has no API key'
     return wire({ ok: true, data: s.sessionId, note: `Not dialled. ${why}.` })
+  })
+
+// ---------------------------------------------------------------- avatars
+
+export type FaceLibrary = { avatars: Account['avatars']; admin: boolean }
+
+/**
+ * The Avatars page: faces with the flows that use them. Mine: the user's own faces and
+ * flows. Everyone's (admins only, as the Flows list): also the faces the pinned flows use.
+ */
+export const getFaceLibrary = createServerFn({ method: 'GET' })
+  .inputValidator((d: { scope?: 'mine' | 'all' }) => d)
+  .handler(async ({ data }): Promise<string> => {
+    const me = await currentUser()
+    if (!me) return fail('Please log in again.')
+    const extra = data.scope === 'all' ? await extraKeys(me) : []
+    const admin = await isAdmin(me)
+    const flows = await withDb(() => db.flow.findMany({
+      where: { OR: [{ userId: me.id }, ...(extra.length ? [{ apiKey: { in: extra } }] : [])] },
+      select: { apiKey: true, flowName: true, faces: true, runtime: true },
+    }))
+    const usedBy = new Map<string, { key: string; name: string }[]>()
+    for (const f of flows) {
+      if ((f.runtime as { deleted_at?: string } | null)?.deleted_at) continue
+      for (const uuid of new Set(faceIdsOf(f.faces))) usedBy.set(uuid, [...(usedBy.get(uuid) ?? []), { key: f.apiKey, name: f.flowName }])
+    }
+    const others = extra.length ? [...usedBy.keys()] : []
+    const rows = await withDb(() => db.face.findMany({
+      where: { OR: [{ userId: me.id }, ...(others.length ? [{ uuid: { in: others } }] : [])] },
+      orderBy: { createdAt: 'desc' },
+      select: { uuid: true, label: true, detector: true, clip: true, media: true, createdAt: true, userId: true, user: { select: { name: true } } },
+    }))
+    const avatars: Account['avatars'] = rows.map((f) => {
+      const clip = f.clip as { frames?: number; fps?: number }
+      const media = f.media as { preview?: string; preview_type?: 'image' | 'video' }
+      return {
+        uuid: f.uuid, label: f.label, detector: f.detector as 'dwpose' | 's3fd', frames: clip.frames ?? 0, fps: clip.fps ?? 25,
+        created_at: f.createdAt.toISOString(), preview: playableUrl(media.preview), previewType: media.preview_type,
+        usedBy: usedBy.get(f.uuid) ?? [], ...(f.userId === me.id ? {} : { owner: f.user.name }),
+      }
+    })
+    return wire({ ok: true, data: { avatars, admin } satisfies FaceLibrary })
   })
 
 // ---------------------------------------------------------------- account
@@ -496,19 +494,29 @@ export type OverviewFlow = { key: string; name: string; source: 'live' | 'mock';
 
 /** Every flow with its sessions, for account-wide usage. Transcripts come as one short string, for search. */
 export const getOverview = createServerFn({ method: 'GET' }).handler(async (): Promise<string> => {
-    const me = await currentUser()
-    if (!me) return fail('Please log in again.')
-  const store = (await load(me))
+  const me = await currentUser()
+  if (!me) return fail('Please log in again.')
+  const extra = await extraKeys(me)
+  // Flows and their sessions only: no workflows, voices or deliveries.
+  const rows = await withDb(() => db.flow.findMany({
+    where: { OR: [{ userId: me.id }, ...(extra.length ? [{ apiKey: { in: extra } }] : [])] },
+    // Only what Home shows and searches: not the recordings, wire logs or actions a session also keeps.
+    select: {
+      apiKey: true, flowName: true, userId: true, runtime: true,
+      sessions: { orderBy: { startTime: 'desc' }, select: { sessionId: true, type: true, startTime: true, endTime: true, totalConnectedTime: true, status: true, from: true, to: true, transcription: true } },
+    },
+  }))
   const text = (t: unknown) => (typeof t === 'string' ? t : Array.isArray(t) ? t.map((x) => (x as { content?: string })?.content ?? '').join(' ') : '').slice(0, 1500)
-  const slim = (ss: Session[]) => ss.map(({ transcription, ...s }) => ({ ...s, transcription: text(transcription) }))
-  const flows: OverviewFlow[] = Object.values(store.flows).map((f) => ({ key: f.key, name: f.flow_name, source: 'mock', sessions: slim(f.sessions) }))
+  const slim = (ss: (typeof rows)[number]['sessions']): Session[] => ss.map((x) => ({
+    sessionId: x.sessionId, type: x.type, startTime: x.startTime.toISOString(), endTime: x.endTime.toISOString(),
+    totalConnectedTime: x.totalConnectedTime, totalAiTime: 0, totalHumanTime: 0, aiTokens: 0, humanTokens: 0,
+    status: x.status ?? undefined, from: x.from ?? undefined, to: x.to ?? undefined, transcription: text(x.transcription),
+  }) as Session)
   // Deleted flows' sessions still count, labelled as such.
-  for (const [key, f] of Object.entries(store.deleted ?? {})) flows.push({ key, name: f.name, source: 'mock', sessions: slim(f.sessions), deleted: true })
-  await Promise.all(liveKeys(me).filter(({ key }) => !store.flows[key]).map(async ({ key }) => {
-    try {
-      const f = fromLive(key, await fetchLive(key), store.overlays[key] ?? {})
-      flows.push({ key, name: f.flow_name, source: 'live', sessions: slim(f.sessions) })
-    } catch { /* listed with its error on the Flows page */ }
+  const flows: OverviewFlow[] = rows.map((f) => ({
+    key: f.apiKey, name: f.flowName, source: f.userId === me.id ? 'mock' : 'live',
+    sessions: slim(f.sessions),
+    ...((f.runtime as { deleted_at?: string } | null)?.deleted_at ? { deleted: true } : {}),
   }))
   return wire({ ok: true, data: flows })
 })
@@ -526,7 +534,8 @@ export const setFlowNumber = createServerFn({ method: 'POST' })
     if (!me) return fail('Please log in again.')
     const store = (await load(me))
     if (data.attach && !(store.account.numbers ?? []).some((n) => n.phone_number === data.number)) return fail('That number isn’t on your account.')
-    if (data.attach && !store.flows[data.key] && !isLiveFor(me, data.key)) return fail('Flow not found.')
+    // The number and the flow must both be this account's, as the database service's POST /number requires.
+    if (data.attach && !store.flows[data.key]) return fail('Flow not found.')
     await mutate(me, (s) => {
       const strip = (list?: { phone_number: string }[]) => (list ?? []).filter((n) => n.phone_number !== data.number)
       for (const f of Object.values(s.flows)) f.numbers = strip(f.numbers)
@@ -555,8 +564,8 @@ export const getNumbers = createServerFn({ method: 'GET' }).handler(async (): Pr
 
 /**
  * Copy a flow: its workflow, voice, behaviour and avatar settings. Sessions,
- * numbers and deliveries belong to the original and aren't copied. The copy is
- * created on the backend (with the user's account key) and gets the key it returns.
+ * numbers and deliveries belong to the original and aren't copied. The copy
+ * gets a new key and belongs to the user who made it.
  */
 export const duplicateFlow = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string }) => d)
@@ -567,8 +576,7 @@ export const duplicateFlow = createServerFn({ method: 'POST' })
     try { src = await getFlowDoc(me, data.key) } catch (e) { return fail(`Couldn’t copy this flow: ${errMsg(e)}`) }
     const copy = structuredClone(src) as FlowDoc
     copy.flow_name = `${src.flow_name} (copy)`
-    try { copy.key = await createOnBackend(me, settingsOf(copy)) } catch (e) { return fail(createErrorText(e)) }
-    ;(copy as Record<string, unknown>)[ON_BACKEND] = true
+    copy.key = flowKey()
     copy.source = 'mock'
     copy.mock = []
     copy.created_at = new Date().toISOString()
@@ -576,7 +584,8 @@ export const duplicateFlow = createServerFn({ method: 'POST' })
     copy.numbers = []
     copy.deliveries = []
     delete (copy as Record<string, unknown>).key_rotated_at
-    await mutate(me, (s) => { s.flows[copy.key] = copy })
+    // The copy is the user's own, whoever owned the original.
+    try { await createFlowRow(me.id, copy) } catch (e) { return fail(`Couldn’t copy this flow: ${errMsg(e)}`) }
     return wire({ ok: true, data: copy.key })
   })
 
@@ -599,22 +608,20 @@ function parseCustoms(raw?: string): Record<string, unknown> | undefined {
 }
 
 async function canSee(me: AuthUser, key: string) {
-  return !!(await load(me)).flows[key] || isLiveFor(me, key)
+  const access = await flowAccess(me, key)
+  return !!access && !access.deleted
 }
 
 /**
- * Whether the voice servers can run this flow for this account: a configured
- * live flow, one of its own flows imported from the backend's Mongo by
- * scripts/migrate-mongo.mjs (those keep their Mongo _id, 24 hex, as their id),
- * or one created or duplicated here, which goes to the backend through the SDK.
+ * Whether the voice servers can run this flow for this user. They read the
+ * same Neon tables, so every flow the user may reach can run. `imported` marks
+ * flows copied from the backend's Mongo by scripts/migrate-mongo.mjs (their id
+ * is the Mongo _id, 24 hex).
  */
 async function onVoiceServers(me: AuthUser, key: string): Promise<{ ok: boolean; imported: boolean }> {
-  if (isLiveFor(me, key)) return { ok: true, imported: false }
-  const row = await withDb(() => db.flow.findFirst({ where: { apiKey: key, userId: me.id }, select: { id: true, runtime: true } }))
-  const imported = !!row && /^[0-9a-f]{24}$/.test(row.id)
-  // Made in the dashboard through the SDK: the backend has it too.
-  const created = !!row && (row.runtime as Record<string, unknown> | null)?.[ON_BACKEND] === true
-  return { ok: imported || created, imported }
+  const access = await flowAccess(me, key)
+  if (!access || access.deleted) return { ok: false, imported: false }
+  return { ok: true, imported: /^[0-9a-f]{24}$/.test(access.flowId) }
 }
 
 export const getTestSetup = createServerFn({ method: 'GET' })
@@ -698,33 +705,15 @@ export const cancelTestCall = createServerFn({ method: 'POST' })
     } catch (e) { return fail(sdkErrorText(e)) }
   })
 
-/**
- * Keep a finished test in the flow's sessions, marked as a test. Flows in our
- * own tables store it; live flows are recorded by the voice server itself
- * (recording: true), and their overlay isn't persisted, so nothing is written.
- */
-/** A session's recording and full transcript from the voice server, for the replay dialog. */
+/** A session's recording and transcript, for the replay dialog. */
 export const getSessionRecording = createServerFn({ method: 'GET' })
   .inputValidator((d: { key: string; id: string }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
+    // The voice server archives into the same sessions table, so this is the stored row.
     const rec = await sessionRecordOf(me, data.key, data.id)
-    const own = (await load(me)).flows[data.key]
-    if (!rec) {
-      // The voice server doesn't have it; a stored URL may still need signing.
-      const stored = own?.sessions.find((y) => y.sessionId === data.id)?.recordingUrl
-      return stored ? wire({ ok: true, data: { recordingUrl: playableUrl(stored), transcript: [] } }) : fail('No recording yet.')
-    }
-    if (own && (rec.recordingUrl || rec.transcript.length)) {
-      // Keep it, so the next open doesn't have to ask again.
-      await mutate(me, (st) => {
-        const x = st.flows[data.key]?.sessions.find((y) => y.sessionId === data.id)
-        if (!x) return
-        if (rec.recordingUrl) x.recordingUrl = rec.recordingUrl
-        if (!hasData(x.transcription) && rec.transcript.length >= (Array.isArray(x.transcription) ? x.transcription.length : 0)) x.transcription = rec.transcript.slice(0, 500)
-      })
-    }
+    if (!rec || (!rec.recordingUrl && !rec.transcript.length)) return fail('No recording yet.')
     // The bucket is private: hand out signed links, keep the raw URLs stored.
     return wire({ ok: true, data: { ...rec, recordingUrl: playableUrl(rec.recordingUrl), cameraUrl: playableUrl(rec.cameraUrl) } })
   })
@@ -732,17 +721,14 @@ export const getSessionRecording = createServerFn({ method: 'GET' })
 /** True when a saved transcript has the agent's extra data lines, which the voice server's copy lacks. */
 const hasData = (t: unknown) => Array.isArray(t) && t.some((x) => (x as { data?: boolean } | null)?.data)
 
+/** Keep a finished test in the flow's sessions, marked as a test. */
 export const saveTestSession = createServerFn({ method: 'POST' })
   .inputValidator((d: { key: string; session: string }) => d)
   .handler(async ({ data }): Promise<string> => {
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
     const input = JSON.parse(data.session) as { sessionId: string; type: string; startTime: string; seconds: number; status: string; transcript: TestTurn[]; to?: string; actions?: Session['actions']; wire?: Session['wire'] }
-    const own = !!(await load(me)).flows[data.key]
-    if (!own) {
-      if (!isLiveFor(me, data.key)) return fail('Flow not found.')
-      return wire({ ok: true, data: null, note: 'Kept by the voice server.' })
-    }
+    if (!(await canSee(me, data.key))) return fail('Flow not found.')
     const seconds = Math.max(0, Math.round(input.seconds || 0))
     const s: Session = {
       sessionId: input.sessionId, type: input.type, startTime: input.startTime,
@@ -759,9 +745,7 @@ export const saveTestSession = createServerFn({ method: 'POST' })
     // Use the server's transcript only when it has at least as many turns as ours, and never over
     // one carrying the agent's extra data (movements, expressions, diagnosis): the server's has only words.
     if (rec && !hasData(input.transcript) && rec.transcript.length >= input.transcript.length) s.transcription = rec.transcript.slice(0, 500)
-    await mutate(me, (st) => {
-      const f = st.flows[data.key]
-      if (!f) return
+    await mutateFlow(me, data.key, (f) => {
       // The voice server usually archives the session into this same table first, with only
       // the spoken words. Add what only the test saw to that row instead of dropping it.
       const row = f.sessions.find((x) => x.sessionId === s.sessionId)

@@ -1,11 +1,10 @@
 // Export and import a workflow as JSON. Export: copy it or download a .json file.
-// Import: paste JSON or upload a file; it replaces the canvas (Undo brings it back).
+// Import: drop or pick a file, or paste JSON; it replaces the canvas (Undo brings it back).
 
 import { useRef, useState } from 'react'
 import { DownloadIcon, UploadIcon } from 'lucide-react'
 import { extractWorkflow, type Workflow } from '#/lib/workflow/convert'
 import { Dialog } from '#/components/dashboard/ui'
-import { SegmentTabs } from '#/components/dashboard/kit/SegmentTabs'
 import { toast } from '#/components/ui/halo-toast'
 import Icon from '#/components/dashboard/Icon'
 import './workflow.css'
@@ -94,15 +93,14 @@ export function MultiImportDialog({ onCreate, onClose, onDone }: {
   /** Called once after the run, when at least one flow was made. */
   onDone: (made: number) => void
 }) {
-  const [tab, setTab] = useState<'paste' | 'upload'>('paste')
+  const [pasting, setPasting] = useState(false)
   const [text, setText] = useState('')
   const [rows, setRows] = useState<Row[]>([])
   const [err, setErr] = useState<string | null>(null)
-  const [over, setOver] = useState(false)
   const [running, setRunning] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
 
   const fromText = (raw: string) => {
+    setText(raw)
     setErr(null)
     if (!raw.trim()) return setRows([])
     try {
@@ -111,12 +109,12 @@ export function MultiImportDialog({ onCreate, onClose, onDone }: {
       setRows(found.map((f) => ({ ...f, on: true })))
     } catch (e) { setRows([]); setErr(e instanceof SyntaxError ? `Not valid JSON: ${e.message}` : (e as Error).message) }
   }
-  const fromFiles = async (files: FileList | null) => {
-    if (!files?.length) return
+  const fromFiles = async (files: File[]) => {
+    if (!files.length) return
     setErr(null)
     const next: Row[] = []
     const bad: string[] = []
-    for (const f of Array.from(files)) {
+    for (const f of files) {
       if (f.size > 5_000_000) { bad.push(`${f.name} (over 5 MB)`); continue }
       try {
         const found = extractMany(JSON.parse(await f.text()), f.name.replace(/\.json$/i, ''))
@@ -132,6 +130,8 @@ export function MultiImportDialog({ onCreate, onClose, onDone }: {
   const set = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
   const run = async () => {
+    // Never a greyed-out button: say what is missing.
+    if (!chosen.length) return setErr(rows.length ? 'Tick at least one flow to create.' : 'Add a file or paste JSON first.')
     setRunning(true)
     let made = 0
     for (let i = 0; i < rows.length; i++) {
@@ -151,44 +151,30 @@ export function MultiImportDialog({ onCreate, onClose, onDone }: {
 
   const left = rows.filter((r) => r.state === 'error').length
   return (
-    <Dialog title="Import flows" sub="Each workflow becomes a new flow. Paste one JSON (a list or a single workflow) or upload several files." onClose={running ? () => {} : onClose} wide>
-      <div className="wf-xfer">
-        <SegmentTabs label="Import from" value={tab} onChange={(v) => { setTab(v); setErr(null) }}
-          options={[{ value: 'paste', label: 'Paste JSON' }, { value: 'upload', label: 'Upload files' }]} />
-        {tab === 'paste' ? (
-          <textarea className="db-in wf-xfer-area is-short" spellCheck={false} autoFocus placeholder='[ { "title": "…", "workflow": { "nodes": { … } } }, … ]'
-            value={text} disabled={running} onChange={(e) => { setText(e.target.value); fromText(e.target.value) }} />
-        ) : (
-          <button type="button" className={`wf-drop${over ? ' is-over' : ''}`} disabled={running} onClick={() => input.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)}
-            onDrop={(e) => { e.preventDefault(); setOver(false); fromFiles(e.dataTransfer.files) }}>
-            <UploadIcon size={22} />
-            <b>Drop .json files here</b>
-            <small>or click to choose several</small>
-            <input ref={input} type="file" accept=".json,application/json" multiple hidden onChange={(e) => { fromFiles(e.target.files); e.target.value = '' }} />
-          </button>
-        )}
-        {err && <div className="wf-jsonerr">{err}</div>}
-        {rows.length > 0 && (
-          <ul className="wf-multi">
+    <Dialog title="Import flows" sub="Each workflow in the files becomes a new flow." onClose={running ? () => {} : onClose}>
+      <div className="wf-xfer is-import">
+        <DropBox multiple pasting={pasting} onPasting={(on) => { setPasting(on); setErr(null) }} text={text} onText={fromText} onFiles={fromFiles} disabled={running} />
+        {/* A fixed slot under the box: the list scrolls inside it, so the dialog keeps its size. */}
+        <div className="wf-queue">
+          <p className="wf-queue-head">{rows.length ? `${rows.length} flow${rows.length === 1 ? '' : 's'} found` : 'No files yet'}</p>
+          {err && <p className="wf-queue-err" role="alert">{err}</p>}
+          <ul className="wf-queue-list">
             {rows.map((r, i) => (
-              <li key={i} className={`wf-multi-row${r.state ? ` is-${r.state}` : ''}`}>
+              <li key={i} className={`wf-queue-row${r.state ? ` is-${r.state}` : ''}`}>
                 <input type="checkbox" checked={r.on} disabled={running || r.state === 'done'} aria-label={`Import ${r.name}`} onChange={(e) => set(i, { on: e.target.checked })} />
-                <input className="db-in wf-multi-name" value={r.name} disabled={running || r.state === 'done'} aria-label="Flow name" onChange={(e) => set(i, { name: e.target.value })} />
-                <span className="wf-multi-meta">
-                  {Object.keys(r.workflow.nodes ?? {}).length} steps{r.tts ? ` · ${r.tts.service}${r.tts.model ? ` ${r.tts.model}` : ''}` : ''}
-                </span>
-                <span className="wf-multi-state">
-                  {r.state === 'busy' ? 'Creating…' : r.state === 'done' ? <><Icon name="check" size={14} /> Created</> : r.state === 'error' ? r.note : ''}
+                <input className="db-in wf-queue-name" value={r.name} disabled={running || r.state === 'done'} aria-label="Flow name" onChange={(e) => set(i, { name: e.target.value })} />
+                <span className="wf-queue-meta">{Object.keys(r.workflow.nodes ?? {}).length} steps{r.tts ? ` · ${r.tts.service}` : ''}</span>
+                <span className="wf-queue-state">
+                  {r.state === 'busy' ? 'Creating…' : r.state === 'done' ? <><Icon name="check" size={16} /> Created</> : r.state === 'error' ? r.note : <><Icon name="check" size={16} /> Ready</>}
                 </span>
               </li>
             ))}
           </ul>
-        )}
-        <div className="wf-xfer-acts is-end">
-          <button className="db-btn" disabled={running} onClick={onClose}>{rows.some((r) => r.state === 'done') ? 'Close' : 'Cancel'}</button>
-          <button className="db-btn db-primary" disabled={running || !chosen.length} onClick={run}>
-            {running ? 'Creating…' : left && chosen.length === left ? `Retry ${left}` : `Create ${chosen.length} flow${chosen.length === 1 ? '' : 's'}`}
+        </div>
+        <div className="db-btngroup db-dialog-split is-two" role="group">
+          <button type="button" className="db-gbtn" disabled={running} onClick={onClose}>{rows.some((r) => r.state === 'done') ? 'Close' : 'Cancel'}</button>
+          <button type="button" className="db-gbtn is-lead" disabled={running} onClick={run}>
+            {running ? 'Creating…' : left && chosen.length === left ? `Retry ${left}` : chosen.length ? `Create ${chosen.length} flow${chosen.length === 1 ? '' : 's'}` : 'Create flows'}
           </button>
         </div>
       </div>
@@ -203,61 +189,108 @@ export function ImportDialog({ onImport, onClose, sub = 'Replaces the canvas. No
   /** Toast text after importing; empty for none. */
   done?: string
 }) {
-  const [tab, setTab] = useState<'paste' | 'upload'>('paste')
+  const [pasting, setPasting] = useState(false)
   const [text, setText] = useState('')
   const [file, setFile] = useState<string | null>(null)
+  const [found, setFound] = useState<Workflow | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [over, setOver] = useState(false)
-  const input = useRef<HTMLInputElement>(null)
 
   const parse = (raw: string) => {
     try {
       const wf = extractWorkflow(JSON.parse(raw))
       if (!wf) throw new Error('No workflow found: the JSON needs a "nodes" object.')
+      setErr(null)
       return wf
     } catch (e) { setErr(e instanceof SyntaxError ? `Not valid JSON: ${e.message}` : (e as Error).message); return null }
   }
-  const finish = (raw: string) => {
-    const wf = parse(raw)
-    if (!wf) return
-    onImport(wf)
-    if (done) toast.success('Workflow imported', done)
-    onClose()
+  const fromText = (raw: string) => {
+    setText(raw)
+    setFile(null)
+    setFound(raw.trim() ? parse(raw) : null)
+    if (!raw.trim()) setErr(null)
   }
-  const read = async (f: File | undefined) => {
+  const fromFiles = async (files: File[]) => {
+    const f = files[0]
     if (!f) return
-    setErr(null)
-    if (f.size > 5_000_000) { setErr('That file is over 5 MB.'); return }
+    if (f.size > 5_000_000) { setErr(`${f.name} is over 5 MB.`); return }
     const raw = await f.text()
     setFile(f.name)
     setText(raw)
-    parse(raw)
+    setFound(parse(raw))
   }
+  const clear = () => { setFile(null); setText(''); setFound(null); setErr(null) }
+  const finish = () => {
+    // Never a greyed-out button: say what is missing.
+    if (!found) return setErr(err ?? (pasting ? 'Paste a workflow first.' : 'Add a file first.'))
+    onImport(found)
+    if (done) toast.success('Workflow imported', done)
+    onClose()
+  }
+  const steps = found ? Object.keys(found.nodes ?? {}).length : 0
 
   return (
-    <Dialog title="Import workflow" sub={sub} onClose={onClose} wide>
-      <div className="wf-xfer">
-        <SegmentTabs label="Import from" value={tab} onChange={(v) => { setTab(v); setErr(null) }}
-          options={[{ value: 'paste', label: 'Paste JSON' }, { value: 'upload', label: 'Upload file' }]} />
-        {tab === 'paste' ? (
-          <textarea className="db-in wf-xfer-area" spellCheck={false} autoFocus placeholder='{ "nodes": { … } }'
-            value={text} onChange={(e) => { setText(e.target.value); setErr(null) }} />
-        ) : (
-          <button type="button" className={`wf-drop${over ? ' is-over' : ''}${file ? ' has-file' : ''}`} onClick={() => input.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)}
-            onDrop={(e) => { e.preventDefault(); setOver(false); read(e.dataTransfer.files[0]) }}>
-            <UploadIcon size={22} />
-            <b>{file ?? 'Drop a .json file here'}</b>
-            <small>{file ? 'Click to pick another' : 'or click to choose one'}</small>
-            <input ref={input} type="file" accept=".json,application/json" hidden onChange={(e) => { read(e.target.files?.[0]); e.target.value = '' }} />
-          </button>
-        )}
-        {err && <div className="wf-jsonerr">{err}</div>}
-        <div className="wf-xfer-acts is-end">
-          <button className="db-btn" onClick={onClose}>Cancel</button>
-          <button className="db-btn db-primary" disabled={!text.trim() || (tab === 'upload' && !file)} onClick={() => finish(text)}>Import</button>
+    <Dialog title="Import a flow" sub={sub} onClose={onClose}>
+      <div className="wf-xfer is-import">
+        <DropBox pasting={pasting} onPasting={(on) => { setPasting(on); clear() }} text={text} onText={fromText} onFiles={fromFiles} />
+        {/* One row, always there: what was picked and whether it reads, or why not. */}
+        <div className={`wf-filerow${err ? ' is-error' : found ? ' is-ready' : ''}`} role={err ? 'alert' : undefined}>
+          <span className="wf-filerow-name">{err ?? (found ? (file ?? 'Pasted JSON') : pasting ? 'Nothing pasted yet' : 'No file chosen yet')}</span>
+          {found && !err && <span className="wf-filerow-state"><Icon name="check" size={16} /> {steps} step{steps === 1 ? '' : 's'}</span>}
+          {(found || err) && file && (
+            <button type="button" className="db-iconbtn" onClick={clear} aria-label={`Remove ${file}`} title="Remove"><Icon name="trash" size={18} /></button>
+          )}
+        </div>
+        <div className="db-btngroup db-dialog-split is-two" role="group">
+          <button type="button" className="db-gbtn" onClick={onClose}>Cancel</button>
+          <button type="button" className="db-gbtn is-lead" onClick={finish}>Import</button>
         </div>
       </div>
     </Dialog>
+  )
+}
+
+/**
+ * The drop area, after internal-shortlisting's Upload resumes dialog: line
+ * tabs across the top (Upload | Paste JSON), then one dashed box with an icon,
+ * a title and one line of help. Both tabs show a box of the same height, so
+ * switching is instant and nothing on the screen moves.
+ */
+function DropBox({ multiple, pasting, onPasting, text, onText, onFiles, disabled }: {
+  multiple?: boolean
+  pasting: boolean
+  onPasting: (on: boolean) => void
+  text: string
+  onText: (raw: string) => void
+  onFiles: (files: File[]) => void
+  disabled?: boolean
+}) {
+  const [over, setOver] = useState(false)
+  const input = useRef<HTMLInputElement>(null)
+  return (
+    <div className="wf-dropwrap">
+      <div className="wf-linetabs" role="tablist" aria-label="Import from">
+        <button type="button" role="tab" aria-selected={!pasting} className="wf-linetab" disabled={disabled} onClick={() => onPasting(false)}>
+          <UploadIcon size={20} />Upload
+        </button>
+        <button type="button" role="tab" aria-selected={pasting} className="wf-linetab" disabled={disabled} onClick={() => onPasting(true)}>
+          <Icon name="code" size={20} />Paste JSON
+        </button>
+      </div>
+      {pasting ? (
+        <textarea className="db-in wf-dropbox wf-droparea" spellCheck={false} autoFocus disabled={disabled}
+          placeholder={multiple ? '[ { "title": "…", "workflow": { "nodes": { … } } }, … ]' : '{ "nodes": { … } }'}
+          value={text} onChange={(e) => onText(e.target.value)} />
+      ) : (
+        <button type="button" className={`wf-dropbox wf-drop2${over ? ' is-over' : ''}`} disabled={disabled} onClick={() => input.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)}
+          onDrop={(e) => { e.preventDefault(); setOver(false); onFiles(Array.from(e.dataTransfer.files)) }}>
+          <UploadIcon size={40} className="wf-drop2-icon" />
+          <b>{over ? 'Drop it here' : multiple ? 'Add flow files' : 'Add a flow file'}</b>
+          <span>{multiple ? 'Drop .json files here, or click to pick them.' : 'Drop a .json file here, or click to pick one.'}</span>
+          <input ref={input} type="file" accept=".json,application/json" multiple={multiple} hidden
+            onChange={(e) => { onFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />
+        </button>
+      )}
+    </div>
   )
 }

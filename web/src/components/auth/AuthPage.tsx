@@ -30,6 +30,20 @@ export function AuthLayout({ title, sub, children, foot }: { title: string; sub:
   )
 }
 
+/**
+ * Connected fields, the input twin of a button group: cells 2px apart, small inner corners
+ * and round outer ends, each label inside its cell. A cell's error only tints it; the
+ * message sits under the whole group so the unit stays whole.
+ */
+export function AuthGroup({ error, children }: { error?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="au-groupwrap">
+      <div className="au-group" role="group">{children}</div>
+      {error && <em className="au-grouperr" role="alert">{error}</em>}
+    </div>
+  )
+}
+
 export function AuthField({ label, error, ...input }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
   const [shown, setShown] = useState(false)
   const isPw = input.type === 'password'

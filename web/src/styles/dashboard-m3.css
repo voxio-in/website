@@ -791,7 +791,7 @@
 
 /* ---------- Voice and Behaviour: bigger headings, grouped choices, field cells ---------- */
 .db .db-bigform .db-voicesec-title .db-h2, .db .db-bigform .db-setcard-head .db-h2 { font-size: 24px; line-height: 32px; font-weight: 600; }
-.db .db-bigform .db-voicesec-title > span { font-size: 15px; }
+.db .db-bigform .db-voicesec-title > span { font-size: 16px; line-height: 22px; }
 .db .db-bigform .db-voicesec-actions.db-btngroup { gap: 2px; flex-wrap: nowrap; }
 .db .db-bigform .db-pagehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
@@ -804,8 +804,8 @@
 .db .db-provgroup .db-provtile:first-child { border-radius: 20px 6px 6px 20px; }
 .db .db-provgroup .db-provtile:last-child { border-radius: 6px 20px 20px 6px; }
 .db .db-provgroup .db-provtile:hover { background: var(--cell-hi); }
-.db .db-provgroup .db-provtile b { font-size: 16px; }
-.db .db-provgroup .db-provtile span { font-size: 13.5px; color: var(--db-muted); }
+.db .db-provgroup .db-provtile b { font-size: 18px; line-height: 24px; }
+.db .db-provgroup .db-provtile span { font-size: 16px; line-height: 22px; color: var(--db-muted); }
 .db .db-provgroup .db-provtile.is-on { background: var(--cell-sel); color: var(--db-accent-text); }
 .db .db-provgroup .db-provtile.is-on span { color: var(--db-muted); }
 @media (max-width: 720px) {
@@ -827,9 +827,9 @@
 .db .db-fcell[data-corner~="bl"] { border-bottom-left-radius: 20px; }
 .db .db-fcell[data-corner~="br"] { border-bottom-right-radius: 20px; }
 .db .db-fcell.is-inline { flex-direction: row; align-items: center; justify-content: space-between; }
-.db .db-fcell > .db-flabel { font-size: 13.5px; font-weight: 500; color: var(--db-muted); }
+.db .db-fcell > .db-flabel { font-size: 16px; font-weight: 500; color: var(--db-muted); }
 .db .db-fcell .db-dd-btn, .db .db-fcell .db-in, .db .db-fcell .db-tags {
-  border: 0; box-shadow: none; background: transparent; padding-left: 0; padding-right: 0; min-height: 32px; font-size: 16px;
+  border: 0; box-shadow: none; background: transparent; padding-left: 0; padding-right: 0; min-height: 32px; font-size: 18px;
 }
 .db .db-fcell .db-dd-btn { width: 100%; justify-content: space-between; }
 .db .db-fcell .db-in:focus, .db .db-fcell .db-dd-btn:focus-visible { outline: none; }
@@ -837,7 +837,7 @@
 /* More settings: the whole row opens and closes it. */
 .db .db-more-row {
   display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 16px; padding: 0 16px;
-  border: 0; border-radius: 24px; background: transparent; color: var(--db-text); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer;
+  border: 0; border-radius: 24px; background: transparent; color: var(--db-text); font-size: 18px; font-weight: 500; text-align: left; cursor: pointer;
   transition: background-color 0.15s linear;
 }
 .db .db-more-row:hover { background: var(--cell); }
@@ -864,3 +864,250 @@
 .db[data-theme="light"] { --cell: rgb(var(--ink) / 0.035); --cell-hi: rgb(var(--ink) / 0.06); --cell-sel: color-mix(in srgb, var(--db-accent) 14%, white); }
 .db .db-gbtn.is-sel { background: var(--cell-sel); color: var(--db-accent-text); }
 .db .db-gbtn.is-on { background: var(--cell-sel); color: var(--db-accent-text); }
+
+/* ---------- Flows list (internal-shortlisting's table structure) ----------
+   Type scale: cells 18px, headers, meta and chips 16px. The Actions column is
+   pinned to the right with a solid fill, so a wide table scrolls under it. */
+.db .db-tbox .db-flows thead th { font-size: 16px; }
+.db .db-tbox .db-flows tbody td { font-size: 18px; }
+.db .db-flows .db-namecell-meta { font-size: 16px; }
+.db .db-flows .db-num { font-variant-numeric: tabular-nums; }
+.db .db-flows .db-pinned { position: sticky; right: 0; z-index: 1; background: var(--db-bg); text-align: right; }
+.db .db-flows thead .db-pinned { padding-right: 20px; }
+.db .db-flows tbody tr:hover .db-pinned { background: color-mix(in srgb, rgb(var(--ink)) 4%, var(--db-bg)); }
+
+/* Status: one chip; the reason is in its tooltip. */
+.db .db-flows .db-state { font-size: 16px; height: 28px; white-space: nowrap; }
+.db .db-state-live { color: var(--db-accent); background: color-mix(in srgb, var(--db-accent) 14%, transparent); }
+.db .db-state-quiet { color: var(--db-muted); background: rgb(var(--ink) / 0.06); }
+.db .db-state-tested { color: var(--db-warn); background: color-mix(in srgb, var(--db-warn) 14%, transparent); }
+.db .db-state-new { color: var(--db-muted); box-shadow: 0 0 0 1px var(--hair) inset; }
+
+/* Columns menu: a checkbox per optional column. */
+.db-menu-item.db-menu-check { cursor: pointer; gap: 10px; }
+.db-menu-item.db-menu-check input { width: 18px; height: 18px; accent-color: var(--db-accent); }
+
+/* ---------- New flow dialog ----------
+   Start from is one connected group: cells 2px apart, small inner corners,
+   round outer ends; the chosen one is tonal with a check. Names 18px, the
+   rest 16px. The footer is one joined pair across the full width: Cancel 40%,
+   Create flow 60%. */
+/* Labels are normal text on the scale: 18px. */
+.db .db-dialog .db-newname > .db-flabel, .db .db-dialog .db-tpllabel { font-size: 18px; line-height: 24px; font-weight: 500; color: var(--db-text); }
+.db .db-newname .db-in { font-size: 18px; }
+.db .db-newname.has-err .db-in { box-shadow: 0 0 0 2px var(--db-err) inset; }
+.db .db-fielderr { font-style: normal; font-size: 16px; color: var(--db-err); }
+.db .db-tpllabel { margin-top: 8px; }
+/* A connected grid: two columns, 2px apart; only the grid's four outer corners are round. */
+.db .db-tplgroup { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.db .db-tplcell {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 14px 18px; text-align: left;
+  font-family: inherit; color: var(--db-text); background: rgb(var(--ink) / 0.05); border: 0; border-radius: 8px; cursor: pointer;
+  transition: background-color 0.15s;
+}
+.db .db-tplgroup > .db-tplcell:first-child { border-top-left-radius: 20px; }
+.db .db-tplgroup > .db-tplcell:nth-child(2) { border-top-right-radius: 20px; }
+.db .db-tplgroup > .db-tplcell:nth-last-child(2):nth-child(odd) { border-bottom-left-radius: 20px; }
+.db .db-tplgroup > .db-tplcell:last-child { border-bottom-right-radius: 20px; }
+/* An odd count: the last cell spans the row and takes both bottom corners. */
+.db .db-tplgroup > .db-tplcell:last-child:nth-child(odd) { grid-column: 1 / -1; border-bottom-left-radius: 20px; }
+@media (max-width: 560px) {
+  .db .db-tplgroup { grid-template-columns: 1fr; }
+  .db .db-tplgroup > .db-tplcell { border-radius: 8px; }
+  .db .db-tplgroup > .db-tplcell:first-child { border-radius: 20px 20px 8px 8px; }
+  .db .db-tplgroup > .db-tplcell:last-child { border-radius: 8px 8px 20px 20px; }
+}
+.db .db-tplcell:hover { background: rgb(var(--ink) / 0.09); }
+.db .db-tplcell:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; position: relative; z-index: 1; }
+.db .db-tplcell.is-on { background: var(--m3-tonal); }
+.db .db-tplcell.is-on > svg { color: var(--db-accent); flex-shrink: 0; }
+.db .db-tplcell-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.db .db-tplcell-text b { display: inline-flex; align-items: center; gap: 8px; font-size: 18px; line-height: 24px; font-weight: 600; }
+.db .db-tplcell-text span { font-size: 16px; line-height: 22px; font-weight: 400; color: var(--db-muted); }
+.db .db-dialog-split { display: flex; width: 100%; margin-top: 16px; }
+.db .db-dialog-split .db-gbtn { height: 48px; font-size: 18px; justify-content: center; }
+/* Import a flow 25%, Cancel 25%, Create flow 50% (two 2px gaps shared out). */
+.db .db-dialog-split .db-gbtn { flex: 0 0 calc(25% - 1px); }
+.db .db-dialog-split .db-gbtn:last-child { flex: 0 0 calc(50% - 2px); }
+.db .db-dialog-split .db-gbtn.is-on { background: var(--m3-tonal); }
+.db .db-importnote { margin: 8px 0 0; font-size: 16px; color: var(--db-muted); }
+.db .db-dialog-split .db-gbtn:first-child { border-radius: 24px 8px 8px 24px; }
+.db .db-dialog-split .db-gbtn:last-child { border-radius: 8px 24px 24px 8px; }
+
+/* Every dialog title is the page-title size (36px), as on internal-shortlisting. */
+.db .db-dialog-head .db-h2 { font-size: 36px; line-height: 44px; font-weight: 600; letter-spacing: -0.02em; }
+/* Two-button footer: Cancel 40%, the finishing action 60%. */
+.db .db-dialog-split.is-two .db-gbtn:first-child { flex: 0 0 calc(40% - 1px); }
+.db .db-dialog-split.is-two .db-gbtn:last-child { flex: 0 0 calc(60% - 1px); }
+
+/* ---------- Voice tab ---------- */
+.db .db-voicepage .db-pagehead-side { display: flex; align-items: center; gap: 8px; }
+.db .db-voicepage .db-voicesec-actions .db-gbtn { font-size: 16px; height: 44px; }
+.db .db-voicepage .db-more-n { font-size: 16px; }
+/* A provider tile: name, the reason to pick it, what it is, where the audio goes. */
+.db .db-provtile-best { font-style: normal; font-size: 16px; font-weight: 600; color: var(--db-accent-text); }
+.db .db-provtile-region { font-size: 16px; color: var(--db-muted); }
+.db .db-provgroup .db-provtile { gap: 4px; }
+/* The voice dropdown with its Play sample button, side by side in one cell. */
+.db .db-fcell-with { display: flex; align-items: center; gap: 12px; }
+.db .db-fcell-with > :first-child { flex: 1; min-width: 0; }
+.db .db-playsample {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; flex-shrink: 0;
+  border: 0; border-radius: 18px; background: var(--m3-tonal); color: var(--db-text); font: inherit; font-size: 16px; font-weight: 500; cursor: pointer;
+}
+.db .db-playsample:hover { background: color-mix(in srgb, var(--db-accent) 30%, transparent); }
+.db .db-playsample:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; }
+.db .db-voicepage .db-notice { font-size: 16px; }
+
+/* ---------- Audio player: volume, keyboard seek, compact sample ---------- */
+.db .db-wave:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 4px; border-radius: 8px; }
+.db .db-player-err { flex: 1; font-size: 16px; color: var(--db-err); }
+.db .db-player-vol { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.db .db-player-vol input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 88px; height: 4px; border-radius: 2px; cursor: pointer;
+  background: linear-gradient(to right, var(--db-accent-text) var(--fill, 100%), rgb(var(--ink) / 0.18) var(--fill, 100%));
+}
+.db .db-player-vol input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--db-accent-text); border: 0; }
+.db .db-player-vol input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--db-accent-text); border: 0; }
+.db .db-player-vol input[type="range"]:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 4px; }
+.db .db-player.is-compact .db-wave { height: 40px; }
+.db .db-player.is-compact .db-player-time { font-size: 16px; }
+
+/* The sample player, in place under the voice settings. */
+.db .db-sampleplayer { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding: 14px 18px; border-radius: 20px; background: var(--cell); }
+.db .db-sampleplayer-label { font-size: 16px; font-weight: 500; color: var(--db-muted); }
+.db .db-playsample.is-on { background: var(--cell-sel, var(--m3-tonal)); }
+@media (max-width: 560px) { .db .db-player-vol input[type="range"] { display: none; } }
+/* Inside the sample panel the panel is the box: no second frame, a smaller play button. */
+.db .db-player.is-compact { padding: 0; gap: 14px; background: none; box-shadow: none; }
+.db .db-player.is-compact .db-playbtn { width: 44px; height: 44px; box-shadow: none; }
+
+/* ---------- Flows: what needs you, and each row's next step ----------
+   Quiet rows above the table, one per kind of work. The step text sits at the
+   row's end, where the eye lands, and the whole row filters the table. */
+.db .db-needsyou { display: flex; flex-direction: column; gap: 2px; }
+.db .db-needsyou-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 52px; padding: 10px 20px;
+  border: 0; border-radius: 8px; background: var(--cell); color: var(--db-text); font: inherit; font-size: 18px; text-align: left; cursor: pointer;
+  transition: background-color 0.15s;
+}
+.db .db-needsyou-row:first-child { border-top-left-radius: 20px; border-top-right-radius: 20px; }
+.db .db-needsyou-row:last-child { border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+.db .db-needsyou-row:hover { background: var(--cell-hi); }
+.db .db-needsyou-row:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; }
+.db .db-needsyou-step { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 16px; font-weight: 600; color: var(--db-accent-text); }
+.db .db-needsyou-step svg { transform: scaleX(-1); }
+/* The next step is read, not guessed: always labelled, unlike the icon-only buttons beside it. */
+.db .db-actcell .db-btngroup.is-icons .db-gbtn.db-nextstep { padding: 0 14px 0 10px; gap: 6px; font-size: 16px; color: var(--db-text); }
+@media (max-width: 560px) { .db .db-needsyou-row { flex-direction: column; align-items: flex-start; gap: 4px; } }
+
+/* ---------- Flow overview: status, the one next step, build rows, sessions, Activity ----------
+   Type scale 36 / 18 / 16: the name is the page title, everything read is 18px, meta 16px. */
+.db .db-overview { gap: 24px; }
+.db .db-overview .db-flowtitle-main { display: flex; flex-direction: column; gap: 10px; }
+.db .db-ov-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; font-size: 16px; color: var(--db-muted); }
+.db .db-ov-meta .db-state { font-size: 16px; height: 28px; }
+.db .db-ov-tools .db-gbtn { height: 44px; font-size: 16px; }
+/* The next step: the only filled thing on the page. */
+.db .db-ov-next .db-wfcard-text { display: flex; flex-direction: column; gap: 4px; }
+.db .db-wfcard.is-d.db-ov-next .db-wfcard-text b { font-size: 24px; line-height: 32px; }
+.db .db-wfcard.is-d.db-ov-next .db-wfcard-text > span { font-size: 18px; line-height: 26px; color: var(--db-muted); }
+.db .db-wfcard.is-d.db-ov-next .db-dbtn { font-size: 18px; }
+.db .db-ov-rowtext { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.db .db-ov-rowtext > svg { color: var(--db-muted); flex-shrink: 0; }
+.db .db-ov-rowtext > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db .db-ov-build .db-needsyou-row { text-decoration: none; }
+/* Sessions on the 18 / 16 scale, with what was said as the row's meaning. */
+.db .db-overview .db-tsection-title { font-size: 24px; line-height: 32px; }
+.db .db-overview .db-sesstable td { font-size: 18px; }
+.db .db-overview .db-sesstable .db-whencell { white-space: nowrap; }
+.db .db-overview .db-sesstable .db-saidcell { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--db-muted); font-size: 16px; }
+.db .db-overview .db-testchip, .db .db-overview .db-status { font-size: 16px; }
+.db .db-overview .db-testchip { height: 28px; }
+.db .db-overview .db-replaybtn { height: 36px; font-size: 16px; padding: 0 14px 0 12px; }
+@media (max-width: 760px) { .db .db-overview .db-sesstable .db-saidcell { display: none; } }
+/* The sessions toolbar on the 16px floor: search, its count and the filter chips. */
+.db .db-overview .db-tsearch input, .db .db-overview .db-fchip-btn { font-size: 16px; }
+.db .db-overview .db-tsearch { font-size: 16px; }
+/* Activity: the chart, then its numbers for the same range. */
+.db .db-ov-activity { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------- Avatars: faces first, grouped by the flow that uses them ----------
+   Type 18 / 16. Cards: the face (a button that plays it), the name, where else it is
+   used, and a ⋯ menu that is always visible (touch has no hover). */
+.db .db-avatars .db-pagehead { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.db .db-avatars .db-pagehead-side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.db .db-avatars-lead { margin: 0 0 4px; font-size: 18px; line-height: 26px; color: var(--db-muted); }
+.db .db-avatars-search { align-self: flex-start; height: 44px; }
+.db .db-avatars-search input { width: 280px; font-size: 16px; }
+.db .db-avatars-none { font-size: 16px; }
+.db .db-facegroup { display: flex; flex-direction: column; gap: 12px; }
+.db .db-facegroup-title { display: flex; align-items: baseline; gap: 12px; margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
+.db .db-facegroup-title a { display: inline-flex; align-items: center; gap: 6px; color: var(--db-text); text-decoration: none; }
+.db .db-facegroup-title a:hover { color: var(--db-accent-text); }
+.db .db-facegroup-title a svg { color: var(--db-muted); }
+.db .db-facegroup-title .db-muted { font-size: 16px; font-weight: 400; }
+.db .db-avatars .db-facecard-media { position: relative; width: 100%; padding: 0; border: 0; cursor: pointer; font: inherit; }
+.db .db-avatars .db-facecard-media:disabled { cursor: default; }
+.db .db-avatars .db-facecard-media:focus-visible { outline: 2px solid var(--db-accent); outline-offset: -2px; }
+.db .db-avatars .db-facecard-media:hover .db-lookrow-play { opacity: 1; }
+.db .db-avatars .db-facecard-body b { font-size: 18px; }
+.db .db-avatars .db-facecard-body .db-muted { font-size: 16px; }
+.db .db-avatars .db-facecard-actions { opacity: 1; }
+.db .db-menu-item { gap: 10px; font-size: 16px; }
+.db .db-menu-item.is-danger { color: var(--db-err); }
+.db .db-menu-note { color: var(--db-muted); cursor: default; }
+.db .db-menu-note:hover { background: none; }
+.db .db-confirm-text { margin: 0 0 8px; font-size: 18px; }
+.db .db-confirm-text.db-muted { font-size: 16px; margin-top: 8px; }
+.db .db-confirm-list { margin: 0; padding-left: 22px; font-size: 18px; line-height: 28px; }
+.db .db-confirm-list a { color: var(--db-accent-text); }
+/* Tips and the upload on the same scale. */
+.db .db-avatars .db-tips-title, .db .db-avatars .db-advice b { font-size: 18px; }
+.db .db-avatars .db-advice span span { font-size: 16px; }
+
+/* The shared face upload (kit/FaceUpload): plain rows on Avatars, rows with "When to use it" on a flow. */
+.db .db-lookpick.is-plain { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.db .db-lookpick-state, .db .db-lookpick-working, .db .db-look-cap { font-size: 16px; }
+.db .db-lookpick .db-in { font-size: 18px; }
+.db .db-addlook-more > summary { cursor: pointer; font-size: 16px; color: var(--db-muted); width: fit-content; }
+.db .db-addlook-more[open] > summary { margin-bottom: 10px; }
+.db .db-addlook-more .db-lookpick-track { display: flex; align-items: center; gap: 12px; }
+.db .db-addlook-actions { justify-content: flex-end; }
+.db .db-addlook-actions .db-btn { height: 44px; font-size: 16px; }
+
+/* ---------- Behaviour: sections by what the caller notices ----------
+   Labels 18px, help, notes and chips 16px. A setting that does nothing with the
+   current choice shows why in place of its control. */
+.db .db-setcard-sub { margin: 4px 0 0; font-size: 16px; line-height: 22px; color: var(--db-muted); }
+.db .db-behaviour .db-knob-row > .db-flabel, .db .db-behaviour .db-subfields .db-flabel { font-size: 18px; }
+.db .db-behaviour .db-fhelp, .db .db-behaviour .db-knob-row .db-chip { font-size: 16px; }
+.db .db-behaviour .db-knob-row .db-chip { height: 26px; padding: 0 8px; }
+.db .db-behaviour .m3-seg { margin-top: 4px; }
+.db .db-behaviour .m3-seg-btn { font-size: 16px; }
+.db .db-pace-text { margin: 4px 0 0; font-size: 18px; line-height: 26px; }
+.db .db-knob-row.is-idle > .db-flabel { color: var(--db-muted); }
+.db .db-knob-why { font-size: 16px; color: var(--db-muted); }
+/* Behaviour's controls on the same scale as their labels: values 18px, units 16px. */
+.db .db-behaviour .db-stepper input, .db .db-behaviour .db-slider-val, .db .db-behaviour .db-dd-btn,
+.db .db-behaviour .db-subfields .db-in, .db .db-behaviour .db-stepper > button { font-size: 18px; }
+.db .db-behaviour .db-stepper label span, .db .db-behaviour .db-slider-val small { font-size: 16px; }
+.db .db-behaviour .db-stepper { min-height: 48px; }
+.db .db-behaviour .db-dd-btn { min-height: 48px; }
+.db .db-behaviour .db-knob-row { padding-block: 14px; }
+/* Fine-tune: a full-width row that reads as something to open, like the Avatar tab's add rows. */
+.db .db-finetune {
+  display: flex; align-items: center; gap: 16px; width: 100%; margin-top: 12px; padding: 16px 20px; text-align: left;
+  border: 0; border-radius: 20px; background: var(--cell); color: var(--db-text); font: inherit; cursor: pointer;
+  transition: background-color 0.15s, border-radius 0.2s var(--m3-ease);
+}
+.db .db-finetune:hover { background: var(--cell-hi); }
+.db .db-finetune:focus-visible { outline: 2px solid var(--db-accent); outline-offset: 2px; }
+.db .db-finetune.is-open { border-radius: 20px 20px 8px 8px; }
+.db .db-finetune > svg:first-child { color: var(--db-accent-text); flex-shrink: 0; }
+.db .db-finetune > span { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.db .db-finetune b { font-size: 18px; font-weight: 600; }
+.db .db-finetune small { font-size: 16px; color: var(--db-muted); }
+.db .db-finetune-chev { color: var(--db-muted); flex-shrink: 0; transition: transform 0.2s var(--m3-ease); }
+.db .db-finetune.is-open .db-finetune-chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .db .db-finetune, .db .db-finetune-chev { transition: none; } }
