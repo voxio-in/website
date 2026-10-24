@@ -13,7 +13,7 @@
 
 .EXAMPLE
     .\start.ps1
-    Dev server on :3001.
+    Dev server on :3000.
 
 .EXAMPLE
     .\start.ps1 -Prod -Port 8080
@@ -33,7 +33,7 @@ param(
     [switch] $Build,
 
     # Port to listen on.
-    [int] $Port = 3001,
+    [int] $Port = 3000,
 
     # npm install before anything else.
     [switch] $Install,
@@ -144,7 +144,7 @@ try {
         Write-Host "Serving the build on http://localhost:$Port" -ForegroundColor Green
         Write-Host "Health: http://localhost:$Port/api/health" -ForegroundColor DarkGray
         Write-Host ''
-        Invoke-Step 'Starting' "npx vite preview --port $Port"
+        Invoke-Step 'Starting' "npx vite preview --host 127.0.0.1 --port $Port"
     }
     else {
         Write-Host ''

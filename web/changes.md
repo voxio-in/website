@@ -18,6 +18,14 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-25 — Back to port 3000
+
+**What changed**
+The default port is 3000 again in the npm scripts, `start.sh`, `start.ps1` and the README, to match nginx (`setup.sh` proxies voxio.in to 127.0.0.1:3000). Production still listens on 127.0.0.1 only.
+
+**Files**
+package.json, start.sh, start.ps1, README.md
+
 ## 2026-10-25 — The site runs on port 3001 by default
 
 **What changed**
@@ -25,6 +33,9 @@ The default port is 3001 everywhere it was 3000: the npm scripts (`dev`, `start`
 
 **State now**
 `pm2 restart website` reruns the process's saved command, so it picks this up if that command is one of the npm scripts or start scripts. If the pm2 process was started with its own port, or nginx proxies to :3000, those need changing on the server.
+
+- **Production listens on 127.0.0.1** (`npm start`, `npm run serve`, the start scripts' `--prod`). `vite preview` on "localhost" can bind to IPv6 only, and nginx proxies to `127.0.0.1`.
+- **On the server, nginx still proxies voxio.in to :3000** (`setup.sh`), which gives a 502 now that the site is on :3001. Its config must point at 3001.
 
 **Files**
 package.json, start.sh, start.ps1, README.md

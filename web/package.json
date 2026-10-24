@@ -6,9 +6,9 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3001",
+    "dev": "vite dev --port 3000",
     "build": "vite build",
-    "start": "vite preview --port 3001",
+    "start": "vite preview --host 127.0.0.1 --port 3000",
     "preview": "vite preview",
     "generate-routes": "tsr generate",
     "typecheck": "tsc --noEmit",
@@ -16,7 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "calls": "node --env-file=.env scripts/calls.mjs",
-    "serve": "npm run build && vite preview --port 3001"
+    "serve": "npm run build && vite preview --host 127.0.0.1 --port 3000"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",
