@@ -10,6 +10,7 @@ import { AiGlow, Toggle } from '#/components/dashboard/ui'
 import { GrowArea } from './GrowArea'
 import { INTERRUPT_OPTIONS, MODELS, PROVIDERS, SPECIAL_OUTPUTS, friendlyVar, prettyName, speaksAi, type Field } from '#/lib/workflow/registry'
 import { useModels } from '#/lib/workflow/useModels'
+import { ago } from '#/lib/dashboard/flowStatus'
 import { SegmentTabs } from '#/components/dashboard/kit/SegmentTabs'
 import { toast } from '#/components/ui/halo-toast'
 
@@ -210,11 +211,22 @@ const RETURN_FIELDS = {
 /** AI thinks: the answers people understand as switches; anything else stays in Developer settings. */
 /** One picker for provider and model together: "GPT-OSS 120B · Groq". OpenRouter's whole live catalogue is in it; type to search. */
 function ModelPicker({ service, model, onPatch }: { service: string; model: string; onPatch: Props['onPatch'] }) {
-  const models = useModels()
+  const { models, count, fetchedAt, error, refreshing, refresh } = useModels()
   const all = PROVIDERS.flatMap((p) => (models[p.value] ?? []).map((m) => ({ ...m, value: `${p.value}::${m.value}`, hint: `${m.hint ? `${m.hint} · ` : ''}${p.label}` })))
   const cur = `${service}::${model}`
   const opts = model && !all.some((o) => o.value === cur) ? [{ value: cur, label: model, hint: service }, ...all] : all
-  return <Dropdown value={cur} options={opts} aria-label="Model"
+  const footer = (
+    <>
+      <span>
+        {refreshing ? 'Fetching the latest models from OpenRouter…'
+          : error ? `Couldn’t refresh: ${error}`
+          : count ? `${count} OpenRouter models · updated ${fetchedAt ? ago(fetchedAt) : 'just now'}`
+          : 'OpenRouter’s full list isn’t loaded yet'}
+      </span>
+      <button type="button" disabled={refreshing} onClick={refresh}><Icon name="rotate" size={15} />Refresh</button>
+    </>
+  )
+  return <Dropdown value={cur} options={opts} aria-label="Model" footer={footer}
     onChange={(v) => { const [svc, ...m] = v.split('::'); onPatch({ service: svc, model: m.join('::') }) }} />
 }
 

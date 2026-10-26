@@ -184,7 +184,11 @@ function ReplayDialog({ s: given, flowKey, showData, onClose }: { s: Session; fl
   }, [given, flowKey])
   const c = channel(s.type)
   const kind = channelOf(s.type)
-  const turns = showData ? transcript(s) : transcript(s).filter((t) => !t.data)
+  // Starts from the flow's setting; the Data button flips it while this replay is open.
+  const [dataOn, setDataOn] = useState(showData)
+  const allTurns = transcript(s)
+  const hasData = allTurns.some((t) => t.data)
+  const turns = dataOn ? allTurns : allTurns.filter((t) => !t.data)
   const steps = s.webActions ?? []
   // Who the agent talked to, named for the channel.
   const them = kind === 'phone' ? 'Caller' : 'User'
@@ -199,8 +203,16 @@ function ReplayDialog({ s: given, flowKey, showData, onClose }: { s: Session; fl
     setCopied(true)
     setTimeout(() => setCopied(false), 1200)
   }
-  const tools = wireLog.length > 0 && (
-    <button type="button" className={`db-btn db-btn-icon${raw ? ' is-on' : ''}`} aria-pressed={raw} onClick={() => setRaw(!raw)}><Icon name="code" size={18} />Raw</button>
+  const tools = (hasData || wireLog.length > 0) && (
+    <>
+      {hasData && (
+        <button type="button" className={`db-btn db-btn-icon${dataOn ? ' is-on' : ''}`} aria-pressed={dataOn} onClick={() => setDataOn(!dataOn)}
+          title="Show or hide the agent's extra data in this replay. To change it for the flow, use Behaviour.">
+          <Icon name="list" size={18} />{dataOn ? 'Hide data' : 'Show data'}
+        </button>
+      )}
+      {wireLog.length > 0 && <button type="button" className={`db-btn db-btn-icon${raw ? ' is-on' : ''}`} aria-pressed={raw} onClick={() => setRaw(!raw)}><Icon name="code" size={18} />Raw</button>}
+    </>
   )
   const media = (s.avatarVideoUrl ?? s.recordingUrl) && !(kind === 'browser' && steps.length)
     ? <Recording src={(s.avatarVideoUrl ?? s.recordingUrl)!} camera={s.clientVideoUrl} />

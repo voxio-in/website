@@ -35,11 +35,13 @@ function useRect(el: React.RefObject<HTMLElement | null>, active: boolean) {
 
 // ------------------------------------------------------------ dropdown
 
-export function Dropdown({ value, options, onChange, placeholder = 'Choose…', info, 'aria-label': aria }: {
+export function Dropdown({ value, options, onChange, placeholder = 'Choose…', info, footer, 'aria-label': aria }: {
   value: string | undefined
   options: Option[]
   onChange: (v: string) => void
   placeholder?: string
+  /** Shown under the list while it's open, e.g. where the options came from and a way to reload them. */
+  footer?: React.ReactNode
   /** Optional per-option notes, keyed by value (in addition to `option.info`). */
   info?: Record<string, string>
   'aria-label'?: string
@@ -127,6 +129,7 @@ export function Dropdown({ value, options, onChange, placeholder = 'Choose…', 
               ))}
               {!list.length && <div className="db-dd-empty">No matches</div>}
             </div>
+            {footer && <div className="db-dd-foot" onMouseDown={(e) => e.preventDefault()}>{footer}</div>}
           </div>
           {hasNotes && note && (
             <div className="db-dd-note" style={noteStyle} role="note">

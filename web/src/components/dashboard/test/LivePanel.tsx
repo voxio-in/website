@@ -101,7 +101,11 @@ export default function LivePanel({
   /** Typed input; returns false if it could not be sent. */
   onSend?: (text: string) => boolean
 }) {
-  const lines = showData ? allLines : allLines.filter((l) => !l.data)
+  // Starts from the flow's setting; the Data button flips it for this test only.
+  const [dataOn, setDataOn] = useState(showData)
+  useEffect(() => setDataOn(showData), [showData])
+  const hasData = allLines.some((l) => l.data)
+  const lines = dataOn ? allLines : allLines.filter((l) => !l.data)
   const theme = useContext(ThemeCtx)
   // Speaking, listening and thinking flip on short pauses; show a change only once it has held 200 ms.
   const state = useSteady(rawState)
@@ -270,6 +274,12 @@ export default function LivePanel({
                     </button>
                   ))}
                 </span>
+              )}
+              {hasData && (
+                <button type="button" className={`db-gbtn${dataOn ? ' is-on' : ''}`} aria-pressed={dataOn} onClick={() => setDataOn(!dataOn)}
+                  title="Show or hide the agent's extra data in this test. To change it for the flow, use Behaviour.">
+                  <Icon name="code" size={18} />{dataOn ? 'Hide data' : 'Show data'}
+                </button>
               )}
               {onAgentVolume && agentVolume !== undefined && live && <InlineVolume value={agentVolume} onChange={onAgentVolume} />}
               {(onMute || onEnd) && live && (

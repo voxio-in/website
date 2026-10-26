@@ -18,10 +18,25 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-27 — Data button in tests and replays; saved OpenRouter list with Refresh
+
+**What changed**
+- The live test panel and the session replay have a **Show data / Hide data** button whenever the conversation has extra data. It starts from the flow's **Show extra data** setting and only lasts while that test or replay is open; the flow setting (Behaviour, saved as soon as it's flipped) is unchanged.
+- The OpenRouter model list is now saved to `.data/openrouter-models.json` and served from there, with no expiry. The model picker has a footer ("468 OpenRouter models · updated 2 hours ago") and a **Refresh** button, which fetches the list live from OpenRouter, saves it again and updates every open picker. If a refresh fails, the saved list stays and the footer says why. `Dropdown` gained an optional `footer`.
+
+**Why**
+People want to show or hide data for one demo without changing the flow, and want the model list stable but refreshable on demand.
+
+**State now**
+The model list lives in a file on the server (`.data/` is gitignored), not in Neon: it's a cache of public data, not account data. On a fresh server the first picker that opens fetches it.
+
+**Files**
+src/components/dashboard/test/LivePanel.tsx, src/components/dashboard/SessionsTable.tsx, src/server/dashboard/openrouter.ts, src/lib/workflow/useModels.ts, src/components/workflow/Fields.tsx, src/components/dashboard/controls.tsx, src/styles/dashboard-controls.css
+
 ## 2026-10-27 — "Show extra data" switch per flow
 
 **What changed**
-Behaviour has a new card, "What the conversation shows", with a **Show extra data** switch. Off hides the "Agent · data" bubbles (frame, score, feedback, anything a step sends besides its words) in the live test panel (browser, chat and phone tests) and in session replays on the flow's Overview. It's saved on the flow (runtime `show-data`, read through `showsData()` in `lib/dashboard/client.ts`), so it holds for every future test and replay and for everyone who opens the flow. On by default.
+Behaviour has a new card, "What the conversation shows", with a **Show extra data** switch. Off hides the "Agent · data" bubbles (frame, score, feedback, anything a step sends besides its words) in the live test panel (browser, chat and phone tests) and in session replays on the flow's Overview. It takes effect the moment it's flipped (saved straight away, not through the Save bar) and is stored on the flow (runtime `show-data`, read through `showsData()` in `lib/dashboard/client.ts`), so it holds for every future test and replay and for everyone who opens the flow. On by default.
 
 **Why**
 People demoing a flow want only the conversation on screen, without the raw JSON.

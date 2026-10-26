@@ -7,7 +7,7 @@ import Icon from '#/components/dashboard/Icon'
 import { CopySettingsMenu } from '#/components/dashboard/kit/CopySettingsMenu'
 import { SegmentTabs } from '#/components/dashboard/kit/SegmentTabs'
 import { Label } from '#/components/dashboard/controls'
-import { SaveBar, Toggle, useDraft } from '#/components/dashboard/ui'
+import { SaveBar, Toggle, useDraft, useFlow } from '#/components/dashboard/ui'
 import { SHOW_DATA, showsData } from '#/lib/dashboard/client'
 import { KNOBS, type Knob } from '#/lib/dashboard/knobs'
 import type { FlowDoc } from '#/lib/dashboard/types'
@@ -45,8 +45,17 @@ const knobsOf = (keys: string[]) => keys.map((k) => byKey.get(k)).filter((k): k 
 
 function Behaviour() {
   const { flowId } = Route.useParams()
-  const keys = [...SECTIONS.flatMap((s) => s.keys), SHOW_DATA]
+  const keys = SECTIONS.flatMap((s) => s.keys)
   const { draft, set, dirty, commit, reset, status } = useDraft(keys as (keyof FlowDoc)[])
+  // "Show extra data" takes effect the moment it's flipped: saved straight away, not through the Save bar.
+  const { flow, save } = useFlow()
+  const [showData, setShowData] = useState(() => showsData(flow))
+  const [dataNote, setDataNote] = useState<string | null>(null)
+  const flipShowData = async (on: boolean) => {
+    setShowData(on)
+    setDataNote(null)
+    try { await save({ [SHOW_DATA]: on }) } catch (e) { setShowData(!on); setDataNote((e as Error).message) }
+  }
   const values = draft as Record<string, unknown>
   const valueOf = (k: string) => values[k] ?? byKey.get(k)?.default
   const pace = PACES.find((p) => Object.entries(p.set).every(([k, v]) => valueOf(k) === v))
@@ -113,9 +122,10 @@ function Behaviour() {
           <div className="db-knobs">
             <div className="db-knob-row">
               <Label info="Anything a step sends besides its words, such as a frame, a score or feedback, shown as “Agent · data”. Turn it off to show only what was said, for example in a demo. The data is still saved, so turning it back on shows it again.">Show extra data</Label>
-              <div className="db-knob-ctl"><Toggle on={showsData(values)} onChange={(on) => onChange(SHOW_DATA, on)} /></div>
+              <div className="db-knob-ctl"><Toggle on={showData} onChange={flipShowData} /></div>
             </div>
           </div>
+          {dataNote && <p className="db-fhelp">Couldn’t save: {dataNote}</p>}
         </section>
       </div>
       <SaveBar dirty={dirty} status={status} onSave={commit} onReset={reset} />
