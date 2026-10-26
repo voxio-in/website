@@ -10,6 +10,7 @@
 import type { ReactNode } from 'react'
 
 import { AGENT_PAGES } from './agent-pages'
+import { CONCEPTS_PAGE, HELP_PAGES, LAUNCH_PAGES, MONITOR_PAGES, QUICKSTART_PHONE, VISION_PAGE } from './guide-pages'
 import { BeforeYouBegin, C, Code, DocLink, H2, H3, NextSteps, Note, Params, Replace, Steps, Table, Tabs } from '#/components/docs/parts'
 
 export const SDK_VERSION = '2.0.0'
@@ -50,7 +51,7 @@ const SECRET_ENV_TABS = [
   { label: 'Windows (PowerShell)', lang: 'powershell', code: '$env:VOXIO_SECRET_KEY = "ACCOUNT_KEY"' },
 ]
 
-export const PAGES: DocPage[] = [
+const WRITTEN: DocPage[] = [
   // ================================================================ Get started
   {
     slug: 'introduction',
@@ -65,21 +66,43 @@ export const PAGES: DocPage[] = [
           window or a phone call.
         </p>
 
+        <H2 id="choose-your-path">Choose your path</H2>
+        <Table
+          head={['You want to', 'Start here', 'Code?']}
+          rows={[
+            ['Have an agent answer or make phone calls', <DocLink to="quickstart-phone">Quickstart: phone agent</DocLink>, 'None'],
+            ['Put a "Talk to us" button on your website', <DocLink to="quickstart">Quickstart: website</DocLink>, 'One line of HTML'],
+            ['Understand the words and the dashboard first', <DocLink to="concepts">Concepts and dashboard map</DocLink>, 'None'],
+            ['Create and manage agents from your own server', <DocLink to="server">Server SDK</DocLink>, 'JavaScript'],
+          ]}
+        />
+
+        <H2 id="how-it-works">How it works</H2>
+        <p>Every Voxio agent goes through the same four stages, and the docs follow the same order:</p>
+        <Steps>
+          <li><strong>Build:</strong> design the conversation, the voice and how it takes turns. See <DocLink to="workflows">Build your agent</DocLink>.</li>
+          <li><strong>Test:</strong> talk to it from the dashboard before anyone else does. See <DocLink to="testing">Testing</DocLink>.</li>
+          <li><strong>Go live:</strong> attach a phone number or add it to your site. See <DocLink to="phone-numbers">Phone numbers</DocLink> and <DocLink to="voice-button">Add to your site</DocLink>.</li>
+          <li><strong>Monitor:</strong> read transcripts, play recordings and get events on your server. See <DocLink to="session-history">Sessions and history</DocLink>.</li>
+        </Steps>
+
         <H2 id="what-you-can-build">What you can build</H2>
         <Table
           head={['To build', 'Use', 'Guide']}
           rows={[
+            ['A phone line that answers itself', 'Numbers & calls', <DocLink to="phone-numbers">Phone numbers and calls</DocLink>],
             ['A "Talk to us" button on a website', <C>{'<voxio-voice-button>'}</C>, <DocLink to="voice-button">Voice button</DocLink>],
             ['A lip-synced face that talks', <C>{'<voxio-avatar>'}</C>, <DocLink to="avatar">Talking avatar</DocLink>],
             ['A chat window', <C>{'<voxio-chat>'}</C>, <DocLink to="chat">Chat</DocLink>],
-            ['Your own call interface', <C>voxioagent/client</C>, <DocLink to="sessions">Headless sessions</DocLink>],
+            ['Your own call interface', <C>voxioagent/client</C>, <DocLink to="sessions">Your own call interface</DocLink>],
             ['An agent that fills in forms and clicks as it talks', 'Web actions', <DocLink to="web-actions">Web actions</DocLink>],
             ['Agents created and changed from your server', <C>voxioagent/server</C>, <DocLink to="flows">Flows</DocLink>],
-            ['Calls to your customers’ phones', 'Calls API', <DocLink to="phone-calls">Phone calls</DocLink>],
+            ['Calls to your customers’ phones', 'Calls API', <DocLink to="phone-calls">Phone calls API</DocLink>],
           ]}
         />
 
         <H2 id="concepts">Concepts</H2>
+        <p>The short version is below. For every term and a map of the dashboard, see <DocLink to="concepts">Concepts and dashboard map</DocLink>.</p>
         <H3 id="flow">Flow</H3>
         <p>
           A <strong>flow</strong> is one agent: its workflow (the conversation it follows), its voice (speech-to-text and
@@ -98,7 +121,7 @@ export const PAGES: DocPage[] = [
           transcript, timings and, when recording is on, a recording.
         </p>
 
-        <H2 id="the-package">The package</H2>
+        <H2 id="the-package">For developers: the package</H2>
         <p>One npm package, <C>voxioagent</C>, has an entry point for each place your code runs:</p>
         <Table
           head={['Import', 'What it is', 'Runs in']}
@@ -112,16 +135,17 @@ export const PAGES: DocPage[] = [
         />
 
         <NextSteps items={[
-          { to: 'quickstart', label: 'Quickstart', what: 'put a working voice button on a page in five minutes.' },
-          { to: 'authentication', label: 'Keys and authentication', what: 'learn which key goes where.' },
-          { to: 'sessions', label: 'Headless sessions', what: 'build your own call interface.' },
+          { to: 'quickstart-phone', label: 'Quickstart: phone agent', what: 'build an agent and call it, no code.' },
+          { to: 'quickstart', label: 'Quickstart: website', what: 'put a working voice button on a page in five minutes.' },
+          { to: 'concepts', label: 'Concepts and dashboard map', what: 'the words Voxio uses and where everything is.' },
         ]} />
       </>
     ),
   },
+  QUICKSTART_PHONE,
   {
     slug: 'quickstart',
-    title: 'Quickstart',
+    title: 'Quickstart: website',
     group: 'Get started',
     summary: 'Create a flow and put a working voice button on a web page in five minutes.',
     body: () => (
@@ -199,15 +223,16 @@ export function Help() {
         <NextSteps items={[
           { to: 'voice-button', label: 'Voice button', what: 'change the button’s label, colours, position and behaviour.' },
           { to: 'avatar', label: 'Talking avatar', what: 'show the agent as a lip-synced face.' },
-          { to: 'sessions', label: 'Headless sessions', what: 'build your own call interface.' },
+          { to: 'sessions', label: 'Your own call interface', what: 'build your own call interface.' },
         ]} />
       </>
     ),
   },
+  CONCEPTS_PAGE,
   {
     slug: 'authentication',
     title: 'Keys and authentication',
-    group: 'Get started',
+    group: 'Developers',
     summary: 'Learn what your account key and your flow keys can do, and where each one is safe to use.',
     body: () => (
       <>
@@ -281,7 +306,7 @@ const { flowKey: newKey } = await voxio.flows.rotateKey("OLD_FLOW_KEY");`}</Code
   {
     slug: 'environments',
     title: 'Servers and environments',
-    group: 'Get started',
+    group: 'Developers',
     summary: 'Choose which Voxio servers your code talks to: the standard deployment or the GPU deployment.',
     body: () => (
       <>
@@ -327,9 +352,15 @@ mountChat({ flowKey, environment: "gpu", endpoints: { chat: "https://chat.voxio.
     ),
   },
 
-  // ================================================================ Add to your site
+
   // ================================================================ Build your agent (lib/docs/agent-pages.tsx)
   ...AGENT_PAGES,
+  VISION_PAGE,
+  ...LAUNCH_PAGES,
+  ...MONITOR_PAGES,
+  ...HELP_PAGES,
+
+  // ================================================================ Add to your site
 
   {
     slug: 'script-tag',
@@ -491,7 +522,7 @@ button.attach(document.querySelector("#help-cta"));`}</Code>
         <p>A flow with a face can appear as a talking avatar. The face is lip-synced to the agent's voice on Voxio's GPU servers.</p>
 
         <BeforeYouBegin items={[
-          <>A flow with a face. Set one on the flow's <strong>Avatar</strong> tab in the dashboard.</>,
+          <>A flow with a face. Set one on the flow's <strong>Avatar</strong> tab: see <DocLink to="avatar-setup">Avatar setup</DocLink>.</>,
           <><C>environment: "gpu"</C> in your code: faces are rendered on the GPU servers.</>,
         ]} />
 
@@ -586,7 +617,7 @@ createSession({
 });`}</Code>
 
         <NextSteps items={[
-          { to: 'sessions', label: 'Headless sessions', what: 'see every session option and event.' },
+          { to: 'sessions', label: 'Your own call interface', what: 'see every session option and event.' },
           { to: 'environments', label: 'Servers and environments', what: 'learn what the GPU environment changes.' },
         ]} />
       </>
@@ -730,7 +761,7 @@ export function Call() {
         </p>
 
         <NextSteps items={[
-          { to: 'sessions', label: 'Headless sessions', what: 'see every session option and event.' },
+          { to: 'sessions', label: 'Your own call interface', what: 'see every session option and event.' },
           { to: 'errors', label: 'Errors', what: 'handle each error code.' },
         ]} />
       </>
@@ -815,8 +846,8 @@ document.querySelector("voxio-voice-button")
   // ================================================================ Build your own
   {
     slug: 'sessions',
-    title: 'Headless sessions',
-    group: 'Build your own',
+    title: 'Your own call interface',
+    group: 'Add to your site',
     summary: 'Run a voice call with your agent and draw the interface yourself, from typed events.',
     body: () => (
       <>
@@ -932,7 +963,7 @@ createSession({
   {
     slug: 'web-actions',
     title: 'Web actions',
-    group: 'Build your own',
+    group: 'Add to your site',
     summary: 'Let the agent fill in forms, click buttons and scroll your page while it talks.',
     body: () => (
       <>
@@ -1000,7 +1031,7 @@ session.on("webAction", async (message, ack) => {
         <Note kind="warn">Always call <C>ack</C>. Without it, the agent waits for the action's timeout before it carries on.</Note>
 
         <NextSteps items={[
-          { to: 'sessions', label: 'Headless sessions', what: 'see every session option and event.' },
+          { to: 'sessions', label: 'Your own call interface', what: 'see every session option and event.' },
           { to: 'flows', label: 'Flows', what: 'manage the workflow that sends the actions.' },
         ]} />
       </>
@@ -1009,7 +1040,7 @@ session.on("webAction", async (message, ack) => {
   {
     slug: 'errors',
     title: 'Errors',
-    group: 'Build your own',
+    group: 'Developers',
     summary: 'Find out what each error means in a browser session and on your server, and what to tell the visitor.',
     body: () => (
       <>
@@ -1058,7 +1089,7 @@ try {
         />
 
         <NextSteps items={[
-          { to: 'sessions', label: 'Headless sessions', what: 'see how reconnects and retries work.' },
+          { to: 'sessions', label: 'Your own call interface', what: 'see how reconnects and retries work.' },
           { to: 'server', label: 'Server SDK', what: 'set timeouts and retries for server calls.' },
         ]} />
       </>
@@ -1069,7 +1100,7 @@ try {
   {
     slug: 'server',
     title: 'Server SDK',
-    group: 'Server',
+    group: 'Developers',
     summary: 'Set up voxioagent/server to manage flows and read sessions from your own backend.',
     body: () => (
       <>
@@ -1127,7 +1158,7 @@ console.log(flow.flow_name);   // → Support`}</Code>
     slug: 'flows',
     parent: 'server',
     title: 'Flows',
-    group: 'Server',
+    group: 'Developers',
     summary: 'Create, read, update and delete your flows from code, and rotate their keys.',
     body: () => (
       <>
@@ -1217,7 +1248,7 @@ const { sessionsDeleted, numbersDetached } = await voxio.flows.delete(flowKey);`
     slug: 'sessions-usage',
     parent: 'server',
     title: 'Sessions and usage',
-    group: 'Server',
+    group: 'Developers',
     summary: 'Read a conversation’s transcript, recording and timings, and a flow’s usage over time.',
     body: () => (
       <>
@@ -1271,9 +1302,8 @@ usage.buckets;                        // one entry per day, with the same fields
   },
   {
     slug: 'webhooks',
-    parent: 'server',
     title: 'Webhooks',
-    group: 'Server',
+    group: 'Monitor',
     summary: 'Receive each conversation on your server as it happens.',
     body: () => (
       <>
@@ -1345,8 +1375,8 @@ app.post("/voxio", express.json({ limit: "2mb" }), (req, res) => {
   {
     slug: 'phone-calls',
     parent: 'server',
-    title: 'Phone calls',
-    group: 'Server',
+    title: 'Phone calls API',
+    group: 'Developers',
     summary: 'Have your agent call a phone number now or at a set time, and answer calls to your numbers.',
     body: () => (
       <>
@@ -1400,16 +1430,22 @@ curl -X POST https://call.voxio.in/plivo/outbound/schedule \\
 
         <NextSteps items={[
           { to: 'webhooks', label: 'Webhooks', what: 'get each call’s transcript on your server.' },
-          { to: 'sessions', label: 'Headless sessions', what: 'see what you can put in customs.', hash: 'pass-values-to-the-workflow' },
+          { to: 'sessions', label: 'Your own call interface', what: 'see what you can put in customs.', hash: 'pass-values-to-the-workflow' },
         ]} />
       </>
     ),
   },
 ]
 
+/** Sidebar groups, in reading order: start, build, test and launch, put it on a site, watch it, then the reference. */
+export const GROUP_ORDER = ['Get started', 'Build your agent', 'Test and go live', 'Add to your site', 'Monitor', 'Developers', 'Help']
+
+/** Every page in sidebar order, so previous/next walk the sidebar. The sort is stable, so children stay after their parent. */
+export const PAGES: DocPage[] = [...WRITTEN].sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group))
+
 export const pageBySlug = (slug: string) => PAGES.find((p) => p.slug === slug)
 
-/** The sidebar: pages grouped in order of first appearance. */
+/** The sidebar: pages grouped in GROUP_ORDER. */
 export const GROUPS: { title: string; pages: DocPage[] }[] = PAGES.reduce<{ title: string; pages: DocPage[] }[]>((out, p) => {
   const g = out.find((x) => x.title === p.group)
   if (g) g.pages.push(p)

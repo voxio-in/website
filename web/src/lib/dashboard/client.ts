@@ -37,6 +37,14 @@ export const fmtMin = (m: number) => `${m.toLocaleString()} min`
 
 // A flow name shows on one row: past NAME_MAX characters it is cut at the last whole word.
 // CSS still ellipsizes, for narrow screens.
+/**
+ * Whether conversations on this flow show the agent's extra data (frame, score,
+ * feedback… anything a step sends besides its words) as "Agent · data" bubbles.
+ * Saved on the flow (runtime `show-data`); on unless turned off.
+ */
+export const SHOW_DATA = 'show-data'
+export const showsData = (flow: Record<string, unknown>) => flow[SHOW_DATA] !== false
+
 export const NAME_MAX = 48
 export function clipName(name: string) {
   if (name.length <= NAME_MAX) return name

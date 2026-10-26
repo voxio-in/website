@@ -9,6 +9,7 @@ import Icon from '#/components/dashboard/Icon'
 import { AiGlow, Toggle } from '#/components/dashboard/ui'
 import { GrowArea } from './GrowArea'
 import { INTERRUPT_OPTIONS, MODELS, PROVIDERS, SPECIAL_OUTPUTS, friendlyVar, prettyName, speaksAi, type Field } from '#/lib/workflow/registry'
+import { useModels } from '#/lib/workflow/useModels'
 import { SegmentTabs } from '#/components/dashboard/kit/SegmentTabs'
 import { toast } from '#/components/ui/halo-toast'
 
@@ -86,14 +87,8 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
           onChange={(service) => onPatch({ service, model: MODELS[service]?.[0]?.value ?? '' })} />
       }
       return <Dropdown value={str(value)} options={field.options ?? []} onChange={onChange} aria-label={field.label} />
-    case 'model': {
-      // One picker for provider and model together: "GPT-OSS 120B · Groq".
-      const all = PROVIDERS.flatMap((p) => (MODELS[p.value] ?? []).map((m) => ({ ...m, value: `${p.value}::${m.value}`, hint: `${m.hint ? `${m.hint} · ` : ''}${p.label}` })))
-      const cur = `${str(params.service)}::${str(value)}`
-      const opts = value && !all.some((o) => o.value === cur) ? [{ value: cur, label: str(value), hint: str(params.service) }, ...all] : all
-      return <Dropdown value={cur} options={opts} aria-label="Model"
-        onChange={(v) => { const [service, ...m] = v.split('::'); onPatch({ service, model: m.join('::') }) }} />
-    }
+    case 'model':
+      return <ModelPicker service={str(params.service)} model={str(value)} onPatch={onPatch} />
     case 'knowledge': {
       const all = value && !knowledge.some((k) => k.value === value) ? [{ value: str(value), label: str(value) }, ...knowledge] : knowledge
       return all.length
@@ -213,6 +208,16 @@ const RETURN_FIELDS = {
 }
 
 /** AI thinks: the answers people understand as switches; anything else stays in Developer settings. */
+/** One picker for provider and model together: "GPT-OSS 120B · Groq". OpenRouter's whole live catalogue is in it; type to search. */
+function ModelPicker({ service, model, onPatch }: { service: string; model: string; onPatch: Props['onPatch'] }) {
+  const models = useModels()
+  const all = PROVIDERS.flatMap((p) => (models[p.value] ?? []).map((m) => ({ ...m, value: `${p.value}::${m.value}`, hint: `${m.hint ? `${m.hint} · ` : ''}${p.label}` })))
+  const cur = `${service}::${model}`
+  const opts = model && !all.some((o) => o.value === cur) ? [{ value: cur, label: model, hint: service }, ...all] : all
+  return <Dropdown value={cur} options={opts} aria-label="Model"
+    onChange={(v) => { const [svc, ...m] = v.split('::'); onPatch({ service: svc, model: m.join('::') }) }} />
+}
+
 function Decides({ value, onChange }: { value: Record<string, unknown>; onChange: (v: unknown) => void }) {
   const others = Object.keys(value).filter((k) => !(k in RETURN_FIELDS)).length
   const flip = (k: keyof typeof RETURN_FIELDS, on: boolean) => onChange(on ? { ...value, [k]: RETURN_FIELDS[k] } : drop(value, k))

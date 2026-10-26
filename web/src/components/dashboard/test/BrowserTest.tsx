@@ -55,8 +55,10 @@ function extraOf(out: unknown): Record<string, unknown> | null {
   return Object.keys(rest).length ? rest : null
 }
 
-export default function BrowserTest({ flowKey, setup, video, camera, customs, participants, log, onLive, onDone }: {
+export default function BrowserTest({ flowKey, setup, video, camera, customs, participants, showData, log, onLive, onDone }: {
   flowKey: string
+  /** Show the agent's extra data bubbles. */
+  showData?: boolean
   setup: TestSetup
   /** Show the agent's avatar. */
   video: boolean
@@ -258,6 +260,7 @@ export default function BrowserTest({ flowKey, setup, video, camera, customs, pa
       </div>
       {(live || lines.length > 0) && (
         <LivePanel
+          showData={showData}
           state={state}
           startedAt={startedAt}
           lines={lines}

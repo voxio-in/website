@@ -17,7 +17,7 @@ import WirePanel from '#/components/dashboard/test/WirePanel'
 import TestSettings, { changedCount, type TestOverrides } from '#/components/dashboard/test/TestSettings'
 import { useWire } from '#/components/dashboard/test/wire'
 import { Dialog, Loading, Notice, Toggle, useFlow } from '#/components/dashboard/ui'
-import { NAME_MAX, clipName, fmtDur, unwire } from '#/lib/dashboard/client'
+import { NAME_MAX, clipName, fmtDur, showsData, unwire } from '#/lib/dashboard/client'
 import { KNOBS } from '#/lib/dashboard/knobs'
 import { rememberTestSession } from '#/lib/dashboard/testSessions'
 import type { Account, TestSetup } from '#/lib/dashboard/types'
@@ -281,9 +281,9 @@ function TestTab() {
                 {open === 'browser' && (voiceBlocked && !live ? (
                   <div className="db-test-go"><button className="db-btn db-primary db-btn-icon db-btn-lg" disabled><Icon name="voice" size={18} />Start talking</button></div>
                 ) : (
-                  <BrowserTest key={sessionKey} flowKey={setup.flowKey} setup={setup} video={avatar} camera={camera} customs={customs} participants={participants} log={wire.log} onLive={setLive} onDone={onDone} />
+                  <BrowserTest key={sessionKey} flowKey={setup.flowKey} setup={setup} video={avatar} camera={camera} customs={customs} participants={participants} showData={showsData(flow)} log={wire.log} onLive={setLive} onDone={onDone} />
                 ))}
-                {open === 'chat' && <ChatTest flowKey={setup.flowKey} chatUrl={setup.chatUrl} log={wire.log} onLive={setLive} onDone={onDone} />}
+                {open === 'chat' && <ChatTest flowKey={setup.flowKey} chatUrl={setup.chatUrl} showData={showsData(flow)} log={wire.log} onLive={setLive} onDone={onDone} />}
                 {open === 'phone' && <PhoneTest flow={flow} setup={setup} customs={customs} blocked={voiceBlocked} log={wire.log} onLive={setLive} onDone={onDone} />}
               </Suspense>
 

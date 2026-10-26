@@ -18,6 +18,48 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-27 — "Show extra data" switch per flow
+
+**What changed**
+Behaviour has a new card, "What the conversation shows", with a **Show extra data** switch. Off hides the "Agent · data" bubbles (frame, score, feedback, anything a step sends besides its words) in the live test panel (browser, chat and phone tests) and in session replays on the flow's Overview. It's saved on the flow (runtime `show-data`, read through `showsData()` in `lib/dashboard/client.ts`), so it holds for every future test and replay and for everyone who opens the flow. On by default.
+
+**Why**
+People demoing a flow want only the conversation on screen, without the raw JSON.
+
+**State now**
+Only the display changes: the data is still received and saved, so switching it back on shows it again. The developer views (the test's code panel and the replay's Raw log) still show everything, since they are opened on purpose. The public site's VoiceRoom doesn't show raw data and is unchanged.
+
+**Files**
+src/routes/dashboard.flows.$flowId.behaviour.tsx, src/lib/dashboard/client.ts, src/components/dashboard/test/LivePanel.tsx, BrowserTest.tsx, ChatTest.tsx, PhoneTest.tsx, src/components/dashboard/SessionsTable.tsx, src/routes/dashboard.flows.$flowId.test.tsx, src/routes/dashboard.flows.$flowId.index.tsx
+
+## 2026-10-27 — Every OpenRouter model in the workflow model picker
+
+**What changed**
+The AI model picker in workflow steps now lists OpenRouter's whole live catalogue (468 models today), fetched from `https://openrouter.ai/api/v1/models`. The three curated OpenRouter picks stay at the top with their notes; the rest follow alphabetically, each with its input price as the hint and, beside the open list, a one-line description, in/out price per million tokens and context size. The picker is searchable, so type to find a model.
+
+**Why**
+Only three OpenRouter models were offered, out of hundreds.
+
+**State now**
+The list is fetched by a server function and cached in memory for an hour; if OpenRouter can't be reached the picker shows the curated models only. The canvas card names a live-only model by its id (e.g. `openai/gpt-6.1-terra`), since its friendly name isn't in the registry. Docs still list the curated models only. Whether every model works with "AI thinks" (structured fields) depends on the model.
+
+**Files**
+src/server/dashboard/openrouter.ts (new), src/lib/workflow/useModels.ts (new), src/components/workflow/Fields.tsx
+
+## 2026-10-26 — Docs reorganised: lifecycle order, no-code path, missing pages
+
+**What changed**
+The docs sidebar now follows the order people actually work in: Get started → Build your agent → Test and go live → Add to your site → Monitor → Developers → Help (`GROUP_ORDER` in `pages.tsx`; `PAGES` is sorted by it, so Previous/Next walk the sidebar). New pages, in `src/lib/docs/guide-pages.tsx`: Quickstart: phone agent (no code), Concepts and dashboard map (glossary, flow status, every dashboard page and flow tab mapped to its doc), Vision, Testing, Phone numbers and calls, Sessions and history, Troubleshooting, FAQ. The Introduction now opens with "Choose your path" and the Build → Test → Go live → Monitor stages. Moves and renames: keys, environments, errors and the Server SDK pages sit under Developers; webhooks under Monitor; headless sessions ("Your own call interface") and web actions under Add to your site, so "Build your agent" and "Build your own" no longer sit side by side; Quickstart is "Quickstart: website", Steps is "Workflow steps", Phone calls is "Phone calls API". The two avatar pages link to each other. Every top-level page has a sidebar icon, and sidebar search matches the whole page text, not just titles and headings.
+
+**Why**
+The docs assumed a developer who already knew the product: no dashboard-only path, no phone quickstart, no testing/numbers/sessions pages, and related pages split across confusingly named groups.
+
+**State now**
+Typecheck and build pass. Not covered yet because the dashboard hides them: Knowledge and Integrations (both commented out of the dashboard nav). Still missing: a per-endpoint REST reference, a changelog, and screenshots.
+
+**Files**
+src/lib/docs/guide-pages.tsx (new), src/lib/docs/pages.tsx, src/lib/docs/agent-pages.tsx, src/routes/docs.tsx
+
 ## 2026-10-25 — Flow overview: Test is always in the header
 
 **What changed**

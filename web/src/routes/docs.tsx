@@ -6,28 +6,34 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from '@tan
 import { useEffect, useMemo, useState } from 'react'
 
 import {
-  AiChat02Icon, Alert02Icon, Analytics01Icon, BookOpen01Icon, Call02Icon, Clock01Icon, CodeIcon, CursorMagicSelection02Icon,
-  Globe02Icon, Key01Icon, Mic01Icon, PaintBoardIcon, ReactIcon, Rocket01Icon, ServerStack01Icon, UserCircleIcon,
-  WebhookIcon, WorkflowSquare01Icon,
+  AiChat02Icon, Alert02Icon, Analytics01Icon, ArrowLeftRightIcon, Book02Icon, BookOpen01Icon, Call02Icon, CallIncoming01Icon,
+  CodeIcon, CursorMagicSelection02Icon, DashboardSquare01Icon, Globe02Icon, HelpCircleIcon, Key01Icon, Layers01Icon, Mic01Icon,
+  PaintBoardIcon, PlayCircleIcon, ReactIcon, Rocket01Icon, ServerStack01Icon, SmartPhone01Icon, UserCircleIcon, UserIcon,
+  ViewIcon, VolumeHighIcon, WebhookIcon, WorkflowSquare01Icon, Wrench01Icon,
 } from '@hugeicons/core-free-icons'
 
 import { BranchedMenu, type BranchedItem } from '#/components/ui/BranchedMenu'
-import { outline } from '#/lib/docs/markdown'
+import { pageMarkdown } from '#/lib/docs/markdown'
 import { GROUPS, SDK_VERSION, type DocPage } from '#/lib/docs/pages'
 
-/** The icon beside each page in the sidebar. */
+/** The icon beside each top-level page in the sidebar. Pages nested under another go without. */
 const PAGE_ICON: Record<string, typeof Rocket01Icon> = {
-  introduction: BookOpen01Icon, quickstart: Rocket01Icon, authentication: Key01Icon, environments: Globe02Icon,
+  introduction: BookOpen01Icon, 'quickstart-phone': SmartPhone01Icon, quickstart: Rocket01Icon, concepts: Book02Icon,
+  workflows: WorkflowSquare01Icon, steps: Layers01Icon, voice: VolumeHighIcon, 'turn-taking': ArrowLeftRightIcon,
+  'avatar-setup': UserIcon, vision: ViewIcon,
+  testing: PlayCircleIcon, 'phone-numbers': CallIncoming01Icon,
   'script-tag': CodeIcon, 'voice-button': Mic01Icon, avatar: UserCircleIcon, chat: AiChat02Icon, react: ReactIcon,
-  customising: PaintBoardIcon, sessions: Clock01Icon, 'web-actions': CursorMagicSelection02Icon, errors: Alert02Icon,
-  server: ServerStack01Icon, flows: WorkflowSquare01Icon, 'sessions-usage': Analytics01Icon, webhooks: WebhookIcon,
-  'phone-calls': Call02Icon,
+  customising: PaintBoardIcon, sessions: DashboardSquare01Icon, 'web-actions': CursorMagicSelection02Icon,
+  'session-history': Analytics01Icon, webhooks: WebhookIcon,
+  authentication: Key01Icon, environments: Globe02Icon, server: ServerStack01Icon, flows: WorkflowSquare01Icon,
+  'sessions-usage': Analytics01Icon, 'phone-calls': Call02Icon, errors: Alert02Icon,
+  troubleshooting: Wrench01Icon, faq: HelpCircleIcon,
 }
 
-/** What the sidebar search matches: title, summary and section headings. */
+/** What the sidebar search matches: the whole page as text, built the first time someone searches. */
 const searchText = new Map<DocPage, string>()
 const haystack = (p: DocPage) => {
-  if (!searchText.has(p)) searchText.set(p, `${p.title} ${p.summary} ${outline(p).map((t) => t.label).join(' ')}`.toLowerCase())
+  if (!searchText.has(p)) searchText.set(p, pageMarkdown(p).toLowerCase())
   return searchText.get(p)!
 }
 

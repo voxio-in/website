@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Dropdown, Label } from '../controls'
 import Icon from '../Icon'
-import { unwire } from '#/lib/dashboard/client'
+import { showsData, unwire } from '#/lib/dashboard/client'
 import type { FlowDoc, TestCall, TestSetup, TestTurn } from '#/lib/dashboard/types'
 import { cancelTestCall, startTestCall, testCallStatus } from '#/server/dashboard/api'
 import LivePanel, { type LiveState } from './LivePanel'
@@ -164,6 +164,7 @@ export default function PhoneTest({ flow, setup, customs, blocked, log, onLive, 
       {call && (
         <LivePanel
           voice
+          showData={showsData(flow)}
           state={liveState(call.status)}
           startedAt={startedAt}
           lines={(call.transcript ?? []).map((t) => ({ role: t.role === 'assistant' ? 'agent' : 'user', text: t.content, final: true }))}

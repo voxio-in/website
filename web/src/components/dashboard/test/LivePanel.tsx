@@ -72,7 +72,7 @@ const stored = <T,>(key: string, fallback: T): T => {
 const keep = (key: string, v: unknown) => { try { localStorage.setItem(key, JSON.stringify(v)) } catch { /* private window */ } }
 
 export default function LivePanel({
-  state: rawState, labels, startedAt, lines, actions, userLevel, agentStream, selfStream, voice, muted, onMute, agentVolume, onAgentVolume, onEnd, endLabel = 'End', onSend,
+  state: rawState, labels, startedAt, lines: allLines, showData = true, actions, userLevel, agentStream, selfStream, voice, muted, onMute, agentVolume, onAgentVolume, onEnd, endLabel = 'End', onSend,
 }: {
   state: LiveState
   /** Replace the words for some states, e.g. "Your turn" in a chat. */
@@ -80,6 +80,8 @@ export default function LivePanel({
   /** When the call connected, for the timer. */
   startedAt: number | null
   lines: Line[]
+  /** False hides the agent's extra data bubbles (the flow's "Show extra data" setting). */
+  showData?: boolean
   actions?: PageAction[]
   /** Microphone level getter, 0–1, sampled every frame by the glow. */
   userLevel?: () => number
@@ -99,6 +101,7 @@ export default function LivePanel({
   /** Typed input; returns false if it could not be sent. */
   onSend?: (text: string) => boolean
 }) {
+  const lines = showData ? allLines : allLines.filter((l) => !l.data)
   const theme = useContext(ThemeCtx)
   // Speaking, listening and thinking flip on short pauses; show a change only once it has held 200 ms.
   const state = useSteady(rawState)

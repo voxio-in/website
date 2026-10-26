@@ -6,7 +6,9 @@ import { KnobList } from '#/components/dashboard/KnobInput'
 import Icon from '#/components/dashboard/Icon'
 import { CopySettingsMenu } from '#/components/dashboard/kit/CopySettingsMenu'
 import { SegmentTabs } from '#/components/dashboard/kit/SegmentTabs'
-import { SaveBar, useDraft } from '#/components/dashboard/ui'
+import { Label } from '#/components/dashboard/controls'
+import { SaveBar, Toggle, useDraft } from '#/components/dashboard/ui'
+import { SHOW_DATA, showsData } from '#/lib/dashboard/client'
 import { KNOBS, type Knob } from '#/lib/dashboard/knobs'
 import type { FlowDoc } from '#/lib/dashboard/types'
 
@@ -43,7 +45,7 @@ const knobsOf = (keys: string[]) => keys.map((k) => byKey.get(k)).filter((k): k 
 
 function Behaviour() {
   const { flowId } = Route.useParams()
-  const keys = SECTIONS.flatMap((s) => s.keys)
+  const keys = [...SECTIONS.flatMap((s) => s.keys), SHOW_DATA]
   const { draft, set, dirty, commit, reset, status } = useDraft(keys as (keyof FlowDoc)[])
   const values = draft as Record<string, unknown>
   const valueOf = (k: string) => values[k] ?? byKey.get(k)?.default
@@ -101,6 +103,20 @@ function Behaviour() {
             ) : <KnobList knobs={knobsOf(sec.keys)} values={values} onChange={onChange} />}
           </section>
         ))}
+        <section className="db-setcard">
+          <div className="db-setcard-head">
+            <div>
+              <h2 className="db-h2">What the conversation shows</h2>
+              <p className="db-setcard-sub">In tests and session replays, for everyone who opens this flow.</p>
+            </div>
+          </div>
+          <div className="db-knobs">
+            <div className="db-knob-row">
+              <Label info="Anything a step sends besides its words, such as a frame, a score or feedback, shown as “Agent · data”. Turn it off to show only what was said, for example in a demo. The data is still saved, so turning it back on shows it again.">Show extra data</Label>
+              <div className="db-knob-ctl"><Toggle on={showsData(values)} onChange={(on) => onChange(SHOW_DATA, on)} /></div>
+            </div>
+          </div>
+        </section>
       </div>
       <SaveBar dirty={dirty} status={status} onSave={commit} onReset={reset} />
     </div>

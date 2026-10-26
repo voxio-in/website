@@ -48,7 +48,9 @@ const CHANNEL = {
 const channel = (t: string) => CHANNEL[channelOf(t)]
 const stateOf = (s: Session) => (!s.status ? 'unknown' : s.status === 'completed' ? 'completed' : 'other')
 
-export default function SessionsTable({ sessions, empty = 'No sessions yet.', highlight, flowKey }: {
+export default function SessionsTable({ sessions, empty = 'No sessions yet.', highlight, flowKey, showData = true }: {
+  /** False hides the agent's extra data in replays (the flow's "Show extra data" setting). */
+  showData?: boolean
   sessions: Session[]
   /** The flow these belong to; lets the replay fetch a recording from the voice server. */
   flowKey?: string
@@ -133,7 +135,7 @@ export default function SessionsTable({ sessions, empty = 'No sessions yet.', hi
         </tbody>
       </table>
       )}
-      {open && <ReplayDialog s={open} flowKey={flowKey} onClose={() => setOpen(null)} />}
+      {open && <ReplayDialog s={open} flowKey={flowKey} showData={showData} onClose={() => setOpen(null)} />}
     </TableCard>
   )
 }
@@ -155,7 +157,7 @@ function firstWords(s: Session): string {
 
 // ------------------------------------------------------------------ dialog
 
-function ReplayDialog({ s: given, flowKey, onClose }: { s: Session; flowKey?: string; onClose: () => void }) {
+function ReplayDialog({ s: given, flowKey, showData, onClose }: { s: Session; flowKey?: string; showData: boolean; onClose: () => void }) {
   // Web and video sessions are recorded by the voice server; fetch it (and its
   // two-sided transcript) only when the stored session has no recording: the
   // list already carries a signed link, and swapping it would restart the load.
@@ -182,7 +184,7 @@ function ReplayDialog({ s: given, flowKey, onClose }: { s: Session; flowKey?: st
   }, [given, flowKey])
   const c = channel(s.type)
   const kind = channelOf(s.type)
-  const turns = transcript(s)
+  const turns = showData ? transcript(s) : transcript(s).filter((t) => !t.data)
   const steps = s.webActions ?? []
   // Who the agent talked to, named for the channel.
   const them = kind === 'phone' ? 'Caller' : 'User'

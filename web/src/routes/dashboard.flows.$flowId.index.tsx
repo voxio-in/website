@@ -6,7 +6,7 @@ import Icon from '#/components/dashboard/Icon'
 import KeyChip from '#/components/dashboard/KeyChip'
 import SessionsTable from '#/components/dashboard/SessionsTable'
 import { Kpi, Notice, byRange, inRange, totals, useFlow, type Range } from '#/components/dashboard/ui'
-import { NAME_MAX, clipName, fmtDur, unwire } from '#/lib/dashboard/client'
+import { NAME_MAX, clipName, fmtDur, showsData, unwire } from '#/lib/dashboard/client'
 import { LIVE_DAYS, ago, connectionsOf, countSessions, nextStepOf, statusOf, type FlowStatusId, type StatusInput } from '#/lib/dashboard/flowStatus'
 import { isTestSession, testSessionIds } from '#/lib/dashboard/testSessions'
 import type { Session } from '#/lib/dashboard/types'
@@ -105,7 +105,7 @@ function FlowOverview() {
 
       <Activity sessions={real} tests={flow.sessions.filter(isTest)} />
 
-      <SessionsTable sessions={flow.sessions} flowKey={flow.key} highlight={highlight}
+      <SessionsTable sessions={flow.sessions} flowKey={flow.key} showData={showsData(flow)} highlight={highlight}
         empty={input.tests ? 'No sessions yet.' : 'No sessions yet. Try it in Test, and the session shows here.'} />
     </div>
   )

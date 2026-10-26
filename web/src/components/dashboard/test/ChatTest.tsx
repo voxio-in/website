@@ -15,8 +15,10 @@ export type ChatResult = { sessionId: string; type: 'chat'; startTime: string; s
 
 const LABELS = { listening: 'Your turn', thinking: 'Thinking…', speaking: 'Replying…' }
 
-export default function ChatTest({ flowKey, chatUrl, log, onLive, onDone }: {
+export default function ChatTest({ flowKey, chatUrl, showData, log, onLive, onDone }: {
   flowKey: string
+  /** Show the agent's extra data bubbles. */
+  showData?: boolean
   chatUrl: string
   /** Records what is sent and received, for the code view. */
   log: WireLog
@@ -114,7 +116,7 @@ export default function ChatTest({ flowKey, chatUrl, log, onLive, onDone }: {
         {err && <span className="db-err-text">{err}</span>}
       </div>
       {(open || lines.length > 0) && (
-        <LivePanel state={state} labels={LABELS} startedAt={startedAt} lines={lines} onEnd={end} onSend={phase === 'open' ? send : undefined} />
+        <LivePanel showData={showData} state={state} labels={LABELS} startedAt={startedAt} lines={lines} onEnd={end} onSend={phase === 'open' ? send : undefined} />
       )}
     </>
   )

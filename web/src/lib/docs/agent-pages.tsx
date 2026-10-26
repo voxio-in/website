@@ -528,7 +528,7 @@ const STEP_DOCS: StepDoc[] = [
 const stepPages: DocPage[] = [
   {
     slug: 'steps',
-    title: 'Steps',
+    title: 'Workflow steps',
     group: 'Build your agent',
     summary: 'The building blocks of a workflow: what each kind of step does and when to use it.',
     body: () => (
@@ -931,6 +931,7 @@ const avatarPages: DocPage[] = [
     summary: 'Give a flow a talking face: upload faces, choose expressions and transitions, and pick lip-sync settings.',
     body: () => (
       <>
+        <p>This page sets up the face in the dashboard. To show it on your website, see <DocLink to="avatar">Talking avatar</DocLink>.</p>
         <BeforeYouBegin items={[
           'A flow with a working voice.',
           'A short, front-facing, well-lit clip or photo of the face for each expression (neutral at least).',
