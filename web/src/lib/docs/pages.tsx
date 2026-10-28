@@ -1390,7 +1390,7 @@ app.post("/voxio", express.json({ limit: "2mb" }), (req, res) => {
         <H2 id="call-a-number-now">Call a number now</H2>
         <p>Post the two numbers to start the call:</p>
         <Code lang="bash">{`
-curl -X POST https://call.voxio.in/plivo/outbound \\
+curl -X POST https://gpu.call.voxio.in/plivo/outbound \\
   -H "user_api_key: $VOXIO_SECRET_KEY" \\
   -H "flow_api_key: $VOXIO_FLOW_KEY" \\
   -H "content-type: application/json" \\
@@ -1414,7 +1414,7 @@ curl -X POST https://call.voxio.in/plivo/outbound \\
         <H2 id="schedule-a-call">Schedule a call</H2>
         <p>To call later, post to the schedule endpoint with a time:</p>
         <Code lang="bash">{`
-curl -X POST https://call.voxio.in/plivo/outbound/schedule \\
+curl -X POST https://gpu.call.voxio.in/plivo/outbound/schedule \\
   -H "user_api_key: $VOXIO_SECRET_KEY" \\
   -H "flow_api_key: $VOXIO_FLOW_KEY" \\
   -H "content-type: application/json" \\

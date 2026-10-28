@@ -10,6 +10,7 @@
 // The sample-data helpers below seeded the old demo account. Nothing calls
 // them now; that data belongs to an ordinary user.
 
+import { DEFAULT_XML } from '#/lib/dashboard/callXml'
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
 import type { Prisma } from '@prisma/client'
@@ -77,6 +78,7 @@ const userInclude = {
   stt: { where: { isPreset: true }, orderBy: { createdAt: 'asc' } },
   tts: { where: { isPreset: true }, orderBy: { createdAt: 'asc' } },
   numbers: { orderBy: { phoneNumber: 'asc' } },
+  ownedNumbers: { orderBy: { phoneNumber: 'asc' } },
   faces: { orderBy: { createdAt: 'asc' } },
   knowledge: { orderBy: { createdAt: 'asc' }, include: { sources: { orderBy: { addedAt: 'asc' } } } },
 } satisfies Prisma.UserInclude
@@ -121,7 +123,12 @@ function toStore(u: UserRow): Store {
     ({ id: r.id, name: r.name ?? r.service, kind, config: provider(r)!, used_by: [] })
   const account: Account = {
     name: u.name, email: u.email, apiKey: u.apiKey, apiKeyRotatedAt: iso(u.apiKeyRotatedAt),
-    numbers: u.numbers.map((n) => ({ phone_number: n.phoneNumber, label: n.label ?? undefined, added_at: n.createdAt.toISOString() })),
+    // The account's numbers are the ones it OWNS (owned_numbers , set only by the Voxio team) , not the
+    // `numbers` rows : those only record which flow a number is attached to.
+    numbers: u.ownedNumbers.map((o) => {
+      const row = u.numbers.find((n) => n.phoneNumber === o.phoneNumber)
+      return { phone_number: o.phoneNumber, label: row?.label ?? undefined, added_at: (row?.createdAt ?? o.createdAt).toISOString() }
+    }),
     voices: [...u.stt.map(voice('stt')), ...u.tts.map(voice('tts'))],
     knowledge: u.knowledge.map((k) => ({
       id: k.id, name: k.name,
@@ -152,6 +159,8 @@ function toStore(u: UserRow): Store {
 const CACHE_MS = 20_000
 const cache = new Map<string, { at: number; store: Store }>()
 const forget = (userId: string) => cache.delete(userId)
+/** Drop every cached account, after a change that touches several users at once (number ownership). */
+export const forgetAllAccounts = () => cache.clear()
 
 // Pages ask for the account several at a time (loader, preload, sidebar);
 // they share one query instead of each running their own.
@@ -535,6 +544,7 @@ export function blankFlow(key: string, name: string, workflow = structuredClone(
     sessions: [],
     deliveries: [],
     'process-type': 'speech-native',
+    xml: DEFAULT_XML,
     'warmup-agent': true,
     'pre-fire': true,
     'pre-fire-config': { min: 50, max: 5000, current: 100 },

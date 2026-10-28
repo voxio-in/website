@@ -11,6 +11,7 @@ import { ThemeCtx } from '#/components/dashboard/ui'
 import { PolishedToaster } from '#/components/ui/halo-toast'
 import type { FlowDoc, Result } from '#/lib/dashboard/types'
 import { getMe, logOut } from '#/server/auth'
+import { getAmAdmin } from '#/server/dashboard/numbers'
 
 import '#/styles/bklit.css'
 import { Crumbs, type Crumb } from '#/components/dashboard/kit/Crumbs'
@@ -39,7 +40,7 @@ export const Route = createFileRoute('/dashboard')({
   beforeLoad: async ({ location }) => {
     const user = await getMe()
     if (!user) throw redirect({ to: '/login', search: { next: location.href } })
-    return { user }
+    return { user, admin: await getAmAdmin() }
   },
   loader: ({ context }) => context.user,
   staleTime: 60_000,
@@ -59,6 +60,11 @@ const RAIL: { to: string; label: string; icon: IconName; exact?: boolean }[] = [
   // Apps (integrations) is hidden for now; the page still exists.
   // { to: '/dashboard/integrations', label: 'Apps', icon: 'plug' },
   { to: '/dashboard/developers', label: 'Developers', icon: 'code' },
+]
+
+/** Screens for the Voxio team only; the server checks too. */
+const ADMIN_RAIL: typeof RAIL = [
+  { to: '/dashboard/numbers', label: 'Numbers', icon: 'phone' },
 ]
 
 export const FLOW_SECTIONS: { title: string; items: { path: string; label: string; icon: IconName }[] }[] = [
@@ -85,7 +91,7 @@ export const FLOW_SECTIONS: { title: string; items: { path: string; label: strin
 ]
 
 const TITLES: Record<string, string> = {
-  flows: 'Flows', voices: 'Voices', avatars: 'Avatars', knowledge: 'Knowledge',
+  flows: 'Flows', voices: 'Voices', avatars: 'Avatars', knowledge: 'Knowledge', numbers: 'Numbers',
   integrations: 'Apps', developers: 'Developers', settings: 'Settings', assistant: 'Ask Voxio', dashboards: 'Dashboards',
 }
 const SECTION_LABEL = Object.fromEntries(FLOW_SECTIONS.flatMap((s) => s.items.map((i) => [i.path, i.label])))
@@ -113,6 +119,7 @@ function DashboardLayout() {
   const flowKey = flowMatch ? decodeURIComponent(flowMatch[1]) : null
   const inWorkflow = flowMatch?.[2] === 'workflow'
   const flowName = useFlowName()
+  const { admin } = Route.useRouteContext()
 
   // The main sidebar: the user's choice, remembered. Inside a flow it folds to
   // icons on its own so the flow's menu has the room.
@@ -160,7 +167,7 @@ function DashboardLayout() {
           <span className="db-side2-text">Voxio</span>
         </Link>
         <DockArea active={mainCollapsed && !mobile} className="db-side2-items">
-          {RAIL.map((n) => (
+          {(admin ? [...RAIL, ...ADMIN_RAIL] : RAIL).map((n) => (
             <DockSlot key={n.to}>
               <Link to={n.to} className="db-side2-item" data-tip={n.label} activeOptions={{ exact: !!n.exact }} activeProps={{ className: 'is-active' }}>
                 <Icon name={n.icon} size={20} />

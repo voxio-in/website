@@ -89,7 +89,7 @@ const record = await voxio.sessions.get(sessionId, { flowKey });`,
     file: 'terminal',
     lang: 'bash',
     doc: 'phone-calls',
-    code: `curl -X POST https://call.voxio.in/plivo/outbound \
+    code: `curl -X POST https://gpu.call.voxio.in/plivo/outbound \
   -H "user_api_key: $VOXIO_SECRET_KEY" \
   -H "flow_api_key: $VOXIO_FLOW_KEY" \
   -H "content-type: application/json" \

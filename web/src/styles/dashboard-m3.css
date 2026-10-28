@@ -362,7 +362,7 @@
 .db .db-live-vol input[type="range"]::-webkit-slider-thumb { height: 24px; }
 
 /* The stage below the bar: arrangement depends on data-layout. */
-.db .db-live-stage { display: grid; gap: 14px; padding: 0 18px; min-height: 280px; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); }
+.db .db-live-stage { display: grid; gap: 14px; padding: 0 18px 18px; min-height: 280px; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); }
 .db .db-live-stage[data-layout="face-left"], .db .db-live-stage[data-layout="them-chat"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
 .db .db-live-stage[data-layout="face-right"] { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
 .db .db-live-stage[data-layout="face-right"] .db-live-feed { order: 2; }
@@ -418,7 +418,7 @@
 .db .db-tset .db-knob-ctl { flex-basis: 200px; }
 
 /* ---------- live test: arrangements ---------- */
-.db .db-live-stage { display: block; position: relative; padding: 0 18px; min-height: 300px; }
+.db .db-live-stage { display: block; position: relative; padding: 0 18px 18px; min-height: 300px; }
 .db .db-live-stage > .db-live-chat, .db .db-live-stage > .db-live-feed, .db .db-live-stage > .db-live-bigorb { height: 100%; min-height: 300px; }
 .db .db-live-split { display: grid; align-items: stretch; min-height: 300px; height: 100%; }
 .db .db-live-split > * { min-width: 0; min-height: 300px; }

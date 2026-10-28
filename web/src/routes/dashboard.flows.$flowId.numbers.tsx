@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Dropdown, Label } from '#/components/dashboard/controls'
 import Icon from '#/components/dashboard/Icon'
 import { Notice, useFlow } from '#/components/dashboard/ui'
+import { DEFAULT_XML } from '#/lib/dashboard/callXml'
 import { fmtDate, unwire } from '#/lib/dashboard/client'
 import type { OwnedNumber } from '#/lib/dashboard/types'
 import { getNumbers, placeCall, setFlowNumber } from '#/server/dashboard/api'
@@ -24,6 +25,52 @@ function toCallTime(local: string, tz: string) {
   const [d, t] = local.split('T')
   const [y, m, day] = d.split('-')
   return `${day}${m}${y} ${t.replace(':', '')} ${tz}`
+}
+
+
+/** Null when it parses as XML, else the parser's complaint. */
+function xmlError(text: string): string | null {
+  if (!text.trim()) return null
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  const err = doc.querySelector('parsererror')
+  return err ? (err.textContent ?? 'Not valid XML.').split(/\r?\n/)[0] : null
+}
+
+function CallXml() {
+  const { flow, save } = useFlow()
+  const saved = String(flow.xml ?? '')
+  const [text, setText] = useState(saved || DEFAULT_XML)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+  const bad = xmlError(text)
+  const dirty = text.trim() !== saved.trim()
+
+  const store = async (value: string) => {
+    setBusy(true)
+    const err = await save({ xml: value }).then(() => null, (e: Error) => e.message)
+    setBusy(false)
+    setMsg(err ? { kind: 'err', text: err } : { kind: 'ok', text: 'Saved. The next call to this flow’s numbers uses it.' })
+  }
+
+  return (
+    <section className="db-setcard">
+      <div className="db-setcard-head">
+        <div>
+          <h2 className="db-h2">Call XML</h2>
+          <p className="db-setcard-sub">What the carrier is told to do when a call to this flow’s numbers connects: record it, and stream audio to the agent. </p>
+        </div>
+      </div>
+      {!saved && <Notice kind="err">This flow has no call XML saved, so calls to its numbers fail. Check the XML below and save it.</Notice>}
+      {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+      <textarea className="db-in db-mono db-xml" rows={22} spellCheck={false} value={text} onChange={(e) => { setText(e.target.value); setMsg(null) }} aria-label="Call XML" />
+      {bad && <p className="db-xml-err">{bad}</p>}
+      <div className="db-setcard-foot">
+        {text.trim() !== DEFAULT_XML && <button className="db-btn" disabled={busy} onClick={() => { setText(DEFAULT_XML); setMsg(null) }}>Start from the default</button>}
+        {saved && dirty && <button className="db-btn" disabled={busy} onClick={() => { setText(saved); setMsg(null) }}>Discard changes</button>}
+        <button className="db-btn db-primary" disabled={busy || !!bad || !dirty || !text.trim()} onClick={() => store(text.trim())}>{busy ? 'Saving…' : 'Save XML'}</button>
+      </div>
+    </section>
+  )
 }
 
 function Numbers() {
@@ -96,7 +143,8 @@ function Numbers() {
             </div>
           </div>
         )}
-        <p className="db-fhelp db-getnumber"><Icon name="phone" size={15} /> Need a number? Ask the Voxio team and it’ll appear here.</p>
+        {!owned.length && <p className="db-muted">Your account has no phone numbers yet.</p>}
+        <p className="db-fhelp db-getnumber"><Icon name="phone" size={15} /> Numbers are provided by Voxio. Ask the Voxio team for one and it’ll appear here.</p>
       </section>
 
       <section className="db-setcard">
@@ -104,13 +152,15 @@ function Numbers() {
         <div className="db-knobs">
           <div className="db-knob-row">
             <Label>Call</Label>
-            <div className="db-knob-ctl"><input className="db-in" placeholder="+91 98xxxx xxxx" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+            <div className="db-knob-ctl"><input className="db-in" placeholder="98xxx xxxxx" value={to} onChange={(e) => setTo(e.target.value)} /></div>
           </div>
           <div className="db-knob-row">
             <Label info="The number the person sees.">From</Label>
             <div className="db-knob-ctl">
-              <Dropdown value={from} onChange={setFrom} aria-label="From"
-                options={[{ value: '', label: 'Default number' }, ...mine.map((n) => ({ value: n.phone_number, label: n.phone_number }))]} />
+              {mine.length
+                ? <Dropdown value={from || mine[0].phone_number} onChange={setFrom} aria-label="From"
+                    options={mine.map((n) => ({ value: n.phone_number, label: n.phone_number }))} />
+                : <span className="db-muted">Attach a number above first. Calls go out from it.</span>}
             </div>
           </div>
           <div className="db-knob-row">
@@ -133,11 +183,13 @@ function Numbers() {
           )}
         </div>
         <div className="db-setcard-foot">
-          <button className="db-btn db-primary db-btn-icon" disabled={busy || !to || (later && !when)} onClick={call}>
+          <button className="db-btn db-primary db-btn-icon" disabled={busy || !to || !mine.length || (later && !when)} onClick={call}>
             <Icon name="phone" size={17} />{busy ? 'Calling…' : later ? 'Schedule call' : 'Call now'}
           </button>
         </div>
       </section>
+
+      <CallXml />
     </div>
   )
 }

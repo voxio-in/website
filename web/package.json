@@ -55,7 +55,7 @@
     "tailwind-merge": "^3.7.0",
     "thinking-orbs": "^0.3.2",
     "voice-glow": "^0.2.1",
-    "voxioagent": "^2.0.3"
+    "voxioagent": "^2.1.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

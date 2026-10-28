@@ -4,6 +4,7 @@
 // Values travel as JSON strings so server-function serialisation never has to
 // reason about the open-ended document shape.
 
+import { DEFAULT_XML } from '#/lib/dashboard/callXml'
 import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
 import { randomUUID } from 'node:crypto'
 
@@ -17,8 +18,10 @@ import { TEMPLATES } from '#/lib/workflow/templates'
 import { extractWorkflow, withStart } from '#/lib/workflow/convert'
 import { TTS_PROVIDERS, tidyTts } from '#/lib/dashboard/providers'
 import { faceIdsOf } from '#/lib/dashboard/faces'
-import { blankFlow, createFlowRow, flowAccess, flowKey, isAdmin, load, loadFlow, markFlowDeleted, mutate, mutateFlow, newKey, rekeyFlow } from './store.server'
-import { accountKey, sessionRecordOf } from './flows.server'
+import { blankFlow, createFlowRow, flowAccess, flowKey, isAdmin, load, loadFlow, forgetAllAccounts, markFlowDeleted, mutate, mutateFlow, newKey, rekeyFlow } from './store.server'
+import { VoxioServerError } from 'voxioagent/server'
+
+import { accountClient, sessionRecordOf } from './flows.server'
 import { cancelTestCall as sdkCancelCall, getSessionRecord, getTestCall, placeTestCall, sdkErrorText, sdkServerReady } from './test.server'
 import type { AuthUser } from '#/server/session.server'
 
@@ -26,7 +29,6 @@ const USER_API_KEY = process.env.VOXIO_USER_API_KEY
 const FROM_NUMBER = process.env.VOXIO_FROM_NUMBER
 
 const urlOf = (h: string) => (!h ? null : /^(localhost|127\.|\d+\.\d+\.\d+\.\d+)/.test(h) ? `http://${h}` : `https://${h}`)
-const CALLBOT = () => urlOf(SERVERS.callbot)
 
 const wire = <T,>(r: Result<T>) => JSON.stringify(r)
 const fail = (reason: string) => wire({ ok: false, reason })
@@ -298,43 +300,54 @@ export const placeCall = createServerFn({ method: 'POST' })
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
     const customs = JSON.parse(data.customs || '{}')
-    const to = data.to.replace(/[^\d+]/g, '')
-    if (!/^\+?\d{8,15}$/.test(to)) return fail('Enter the number with its country code, e.g. +91…')
-    const from = data.from || FROM_NUMBER || ''
-    const callbot = CALLBOT()
+    const to = withCountryCode(data.to)
+    if (!/^\+\d{8,15}$/.test(to)) return fail('Enter a 10-digit Indian number, or another country’s with its code, e.g. +1…')
     const access = await flowAccess(me, data.key)
     if (!access || access.deleted) return fail('Flow not found.')
 
-    // Every flow is in the voice servers' tables, so callbot can dial any of them.
-    const userKey = await accountKey(me).catch(() => '')
-    if (callbot && userKey && from) {
-      try {
-        const path = data.when ? '/plivo/outbound/schedule' : '/plivo/outbound'
-        const body: Record<string, unknown> = { 'from-number': from, 'to-number': to, customs }
-        if (data.when) body.datetimezone = data.when
-        const res = await fetch(`${callbot}${path}`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', user_api_key: userKey, flow_api_key: data.key },
-          body: JSON.stringify(body),
-        })
-        const text = await res.text()
-        if (!res.ok) return fail(`Callbot returned ${res.status}: ${text.slice(0, 200)}`)
-        return wire({ ok: true, data: text, note: data.when ? `Scheduled for ${data.when}.` : `Dialling ${to}…` })
-      } catch (e) { return fail(`Couldn’t reach callbot: ${errMsg(e)}`) }
+    // Calls go out from a number attached to this flow that the caller owns, as callbot
+    // requires (docs/NUMBER_OWNERSHIP.md). Admins own every number and may use VOXIO_FROM_NUMBER.
+    const admin = await isAdmin(me)
+    const attached = (await withDb(() => db.phoneNumber.findMany({ where: { flowApiKey: data.key }, select: { phoneNumber: true } }))).map((n) => n.phoneNumber)
+    const from = data.from || attached[0] || (admin ? FROM_NUMBER : '') || ''
+    if (!from) return fail('Attach a number to this flow first: calls go out from it.')
+    if (!admin) {
+      const owned = new Set(((await load(me)).account.numbers ?? []).map((n) => n.phone_number))
+      if (!attached.includes(from) || !owned.has(from)) return fail('That number isn’t on your account, or isn’t attached to this flow.')
     }
 
-    // Mock: record a session as if the call happened.
-    const now = new Date()
-    const s: Session = {
-      sessionId: randomUUID(), type: 'phone', startTime: now.toISOString(), endTime: new Date(now.getTime() + 42000).toISOString(),
-      totalConnectedTime: 42, totalAiTime: 24, totalHumanTime: 18, aiTokens: 210, humanTokens: 96, from, to,
-      status: data.when ? `scheduled ${data.when}` : 'completed',
-      transcription: [{ role: 'assistant', content: '(not dialled)' }],
+    try {
+      // The call service answers only once the carrier has taken the call, which can pass the SDK's 15s default.
+      const voxio = await accountClient(me, 60_000)
+      const call = { from, to, customs, flowKey: data.key }
+      if (data.when) {
+        const r = await voxio.calls.schedule({ ...call, at: data.when })
+        return wire({ ok: true, data: r.sessionId, note: `Scheduled for ${data.when}.` })
+      }
+      const r = await voxio.calls.place(call)
+      return wire({ ok: true, data: r.sessionId, note: `Dialling ${to}…` })
+    } catch (e) {
+      return fail(callError(e))
     }
-    await mutateFlow(me, data.key, (f) => { f.sessions = [s, ...f.sessions] })
-    const why = !callbot ? 'VX_CALLBOT is not set' : !from ? 'No from-number (VOXIO_FROM_NUMBER)' : 'Your account has no API key'
-    return wire({ ok: true, data: s.sessionId, note: `Not dialled. ${why}.` })
   })
+
+/**
+ * Indian by default, as the carrier dials a bare number as international:
+ * "77370 54603", "07737054603" and "917737054603" all become "+917737054603".
+ */
+export function withCountryCode(raw: string): string {
+  const n = raw.replace(/[^\d+]/g, '')
+  if (n.startsWith('+')) return n
+  if (/^0?\d{10}$/.test(n)) return `+91${n.slice(-10)}`
+  if (/^91\d{10}$/.test(n)) return `+${n}`
+  return `+${n}`
+}
+
+/** The call or data service's own words (e.g. "This from number is not on your account."), or why it couldn't be reached. */
+function callError(e: unknown): string {
+  if (e instanceof VoxioServerError) return e.code === 'network' ? 'The call service didn’t answer in time. The call may still go through: check Sessions before trying again.' : e.message
+  return errMsg(e)
+}
 
 // ---------------------------------------------------------------- avatars
 
@@ -533,19 +546,30 @@ export const setFlowNumber = createServerFn({ method: 'POST' })
     const me = await currentUser()
     if (!me) return fail('Please log in again.')
     const store = (await load(me))
-    if (data.attach && !(store.account.numbers ?? []).some((n) => n.phone_number === data.number)) return fail('That number isn’t on your account.')
-    // The number and the flow must both be this account's, as the database service's POST /number requires.
-    if (data.attach && !store.flows[data.key]) return fail('Flow not found.')
-    await mutate(me, (s) => {
-      const strip = (list?: { phone_number: string }[]) => (list ?? []).filter((n) => n.phone_number !== data.number)
-      for (const f of Object.values(s.flows)) f.numbers = strip(f.numbers)
-      for (const o of Object.values(s.overlays)) if (o.numbers) o.numbers = strip(o.numbers as { phone_number: string }[])
-      if (data.attach) {
-        const target = s.flows[data.key] ?? (s.overlays[data.key] ??= {})
-        const entry = { phone_number: data.number, added_at: new Date().toISOString() }
-        target.numbers = [...((target.numbers as { phone_number: string }[] | undefined) ?? []), entry]
-      }
-    })
+    // Attaching and detaching both need the number to be owned by this account (admins own every number).
+    const admin = await isAdmin(me)
+    if (!admin && !(store.account.numbers ?? []).some((n) => n.phone_number === data.number)) return fail('That number isn’t on your account.')
+    // The flow must be this account's, as the database service's POST /number requires; admins may use any flow.
+    if (data.attach) {
+      const access = await flowAccess(me, data.key)
+      if (!access || access.deleted || (!access.own && !admin)) return fail('Flow not found.')
+    }
+    // Through the SDK, so the data service applies its own ownership checks too.
+    try {
+      const voxio = await accountClient(me)
+      const now = await withDb(() => db.phoneNumber.findUnique({ where: { phoneNumber: data.number }, select: { flowApiKey: true } }))
+      if (!data.attach) { if (now) await voxio.numbers.delete(data.number) }
+      else if (now?.flowApiKey === data.key) { /* already answering this flow */ }
+      else if (now) await voxio.numbers.move(data.number, data.key)
+      else await voxio.numbers.attach(data.number, data.key)
+      // A flow with no call XML can't answer (the call service fails parsing ""), so give it the default.
+      if (data.attach) await withDb(() => db.flow.updateMany({ where: { apiKey: data.key, xml: '' }, data: { xml: DEFAULT_XML } }))
+    } catch (e) {
+      return fail(callError(e))
+    } finally {
+      // The number may have moved between accounts' flows (an admin's doing), so drop every cached account.
+      forgetAllAccounts()
+    }
     return wire({ ok: true, data: null })
   })
 
@@ -664,7 +688,12 @@ export const startTestCall = createServerFn({ method: 'POST' })
     if (!/^\+\d{8,15}$/.test(to)) return fail('Enter your number with its country code, e.g. +91…')
     // Only a number attached to this flow may ring out for it.
     const flow = await getFlowDoc(me, data.key).catch(() => null)
-    if (!flow?.numbers.some((n) => n.phone_number === data.from)) return fail('Pick one of this flow’s numbers to call from.')
+    // Admins skip both checks : they may call from any number on any flow.
+    if (!flow) return fail('Flow not found.')
+    if (!(await isAdmin(me))) {
+      if (!flow.numbers.some((n) => n.phone_number === data.from)) return fail('Pick one of this flow’s numbers to call from.')
+      if (!((await load(me)).account.numbers ?? []).some((n) => n.phone_number === data.from)) return fail('That number isn’t on your account.')
+    }
     try {
       const call = await placeTestCall({ flow: data.key, from: data.from, to, customs: parseCustoms(data.customs), idempotencyKey: data.idempotencyKey })
       return wire({ ok: true, data: { id: call.id, status: call.status, sessionId: call.sessionId } satisfies TestCall })

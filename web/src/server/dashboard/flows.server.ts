@@ -2,9 +2,10 @@
 // record.
 //
 // Flows and sessions are read and written straight to Neon through Prisma
-// (store.server.ts); the voice servers read the same tables. The SDK is kept
-// only for faces: an upload has to go through the backend's face_detection
-// service, which crops the clip and picks the lip-sync detector.
+// (store.server.ts); the voice servers read the same tables. The SDK is used
+// where the backend must do the work or apply its own checks: face uploads
+// (cropping and the lip-sync detector), attaching numbers and placing or
+// scheduling calls (number ownership, docs/NUMBER_OWNERSHIP.md).
 
 import { Voxio } from 'voxioagent/server'
 
@@ -19,8 +20,8 @@ export async function accountKey(me: AuthUser): Promise<string> {
   return user.apiKey
 }
 
-/** The SDK, acting as the signed-in user. For face uploads only; see the top of this file. */
-export const accountClient = async (me: AuthUser) => new Voxio({ secretKey: await accountKey(me), environment: 'gpu' })
+/** The SDK, acting as the signed-in user. See the top of this file for what it's used for. */
+export const accountClient = async (me: AuthUser, timeoutMs?: number) => new Voxio({ secretKey: await accountKey(me), environment: 'gpu', timeoutMs })
 
 /**
  * A session's recording and transcript, as the voice server archived it into

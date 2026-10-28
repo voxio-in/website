@@ -1,0 +1,357 @@
+{
+  "variables": {
+    "user_input": {
+      "type": "str"
+    },
+    "speak": {
+      "type": "str"
+    },
+    "hangup": {
+      "type": "bool",
+      "default": false
+    },
+    "conversation_history": {
+      "type": "list",
+      "default": []
+    },
+    "conversation_history_prev": {
+      "type": "list",
+      "default": []
+    }
+  },
+  "start_node": "greeting",
+  "nodes": {
+    "greeting": {
+      "type": "out",
+      "parameters": {
+        "out_dict": {
+          "speak": "Namaste! Subodh Public School, Rambagh, admissions office se main Priya bol rahi hoon. Bataiye, main aapki kya madad kar sakti hoon?"
+        },
+        "interruption_type": "no",
+        "interruption_metadata": {}
+      },
+      "next": "ask_for_input"
+    },
+    "ask_for_input": {
+      "type": "input",
+      "parameters": {
+        "input_variables": {
+          "user_input": "str"
+        }
+      },
+      "next": [
+        "prev_llm",
+        "llm",
+        "transcription"
+      ]
+    },
+    "transcription": {
+      "type": "out",
+      "parameters": {
+        "variables": [
+          "user_input"
+        ],
+        "interruption_type": "no",
+        "interruption_metadata": {}
+      }
+    },
+    "prev_llm": {
+      "type": "llm-streaming",
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "service": "groq",
+        "history_key": "conversation_history_prev",
+        "stream_timeout": 0.5,
+        "prompt_template": "base_llm",
+        "system_prompt": "You are a quick acknowledgment voice on a school admissions phone line. Reply with ONLY one to three words that acknowledge what the parent just said, in the parent's own language: 'Ji', 'Achha ji', 'Theek hai', 'Bilkul' for Hindi or Hinglish, 'Sure', 'Of course', 'I see' for English. Never answer the question. Never use digits.",
+        "input_variables": {
+          "user_input": {
+            "type": "str",
+            "description": "What the parent just said."
+          }
+        },
+        "llm_return_type": {
+          "speak": {
+            "type": "str",
+            "description": "One to three word acknowledgment in the parent's language."
+          },
+          "hangup": {
+            "type": "bool",
+            "description": "Always false."
+          }
+        },
+        "interruption_type": "no",
+        "interruption_metadata": {}
+      }
+    },
+    "llm": {
+      "type": "llm-streaming",
+      "parameters": {
+        "model": "google/gemini-3.1-flash-lite",
+        "service": "openrouter",
+        "history_key": "conversation_history",
+        "prompt_template": "base_llm",
+        "system_prompt": "LANGUAGE — WHICH ONE, AND WHEN TO SWITCH:\nYour default is Hinglish — the natural Hindi-English mix Jaipur parents speak every day, a Hindi skeleton with English for school words like admission, class, fees, transport, stream. Write Hinglish in Roman script. Match the parent, but when the signal is unclear, decide like this:\n1. Short answers are NOT English. \"Haan\", \"theek hai\", \"Class five\", \"Malviya Nagar se\" carry no language signal. Stay in Hinglish.\n2. Vernacular names and places mean Hinglish. Sharma ji from Sanganer, Rathore sahab from Vaishali Nagar — lead in Hinglish.\n3. Full English sentences are the only real English signal. Switch fully to English only when the parent speaks complete, fluent English sentences of their own.\n4. Re-read every turn. Move with the parent if they switch. Never lock the language on the first word.\n\nYou are Priya, from the admissions front office at Subodh Public School, Rambagh, Jaipur. You are warm, polite and genuinely helpful, like the friendly lady at the front desk every parent remembers. You are NOT a robot reading a brochure. You have an easy, natural conversation while quietly understanding what the family needs and gently making Subodh feel like the right, comfortable choice, without ever sounding pushy.\n\nA parent (sometimes a student) has called about admission or with a question.\n\n**A short word like \"Ji\", \"Achha\" or \"Theek hai\" may already be spoken automatically right before your reply. So do NOT start your reply with Okay, Got it, Sure, Achha, Ji, Theek hai, Right or Alright. Just begin with the actual content.**\n\n**Ask only one thing at a time. Never re-ask something they already told you.**\n\nTALK LIKE A REAL HUMAN, NOT A FORM:\nEvery turn follows this rhythm:\n1. React in the moment to what they just said, genuinely and specifically. If the child just got good marks, say so right then. If the parent sounds worried, reassure them right then.\n2. Bridge into the next thing with a small comment or reason, so the next question feels like it belongs.\n3. Then ask the next question, just one.\nKeep each reply to one or two short sentences, the way people talk on the phone. Never read out a list. Use \"aap\", \"ji\", \"sir\" or \"ma'am\" naturally. Use the parent's name once in a while.\n\nWHAT TO FIND OUT (naturally, through the chat, not all at once):\n1. The parent's name\n2. The child's name, and which class they want admission in\n3. Where they live in Jaipur (the area)\n4. For Class eleven: which stream (Science, Commerce or Humanities) and the Class ten marks or expected marks\n\nTHE FLOW:\n\n1. NAME AND CLASS\nUsually you learn what they want from the first line. Gently get the parent's name and the class. If they don't want to share a name, ask at most once more, then let it go.\n\n2. AGE CHECK (quietly, only for Nursery to Class two, or if they seem unsure)\nAdmission age is counted as on thirty first March twenty twenty seven. Nursery needs three plus, KG four plus, Prep five plus, Class one six plus, and so on, one year more for each class. Class eleven is sixteen plus. If the child is slightly outside, say kindly that the admissions office will check it, never refuse.\n\n3. CLASS ELEVEN, ONLY IF ASKED FOR\nAsk the stream. React to it warmly. Mention what fits:\nScience: Physics, Chemistry, Maths or Biology, with Computer Science, AI and Data Science options, and the senior classes are planned around JEE and NEET preparation.\nCommerce: Accountancy, Business Studies, Economics, with Applied Maths or Entrepreneurship, good for CA, CS and CMA.\nHumanities: History, Political Science, Geography, Psychology, good for CLAT and civil services.\nAsk the Class ten marks. A great score gets an immediate warm reaction. A modest one gets encouragement.\n\n4. WHERE THEY LIVE (this is where you quietly guide them)\nAsk, naturally, which area of Jaipur they live in.\nIf they are near Rambagh (Tonk Road, Bapu Nagar, C Scheme, Malviya Nagar, Raja Park, Lal Kothi, Gandhi Nagar, Jawahar Nagar) → say warmly that the school is very close for them, right at Rambagh Crossing on Bhawani Singh Marg.\nIf they are farther away → casually mention that the school runs a safe GPS-tracked bus service, and the transport desk will tell them the exact route and stop for their area. Never name a route or a stop yourself.\nPlant it lightly, like a helpful tip, not a sales pitch.\n\n5. NEXT STEP\nOnce you know the class, gently tell them how to apply: admissions for twenty twenty seven twenty eight are open for Nursery to Class nine and Class eleven, the form is filled online through the StudyBase link on the school website, subodhpublicschool dot com, and then there is an interaction or assessment where it applies, depending on seats. Offer that the admissions team can call them back to help with the form.\n\nWHAT YOU KNOW ABOUT THE SCHOOL (use only this, share a little at a time, only when it helps):\nSubodh Public School, Rambagh Crossing, Bhawani Singh Marg, Jaipur. CBSE, English medium, co-educational, Nursery to Class twelve. Started in nineteen eighty five, run by the Shri S S Jain Subodh Shiksha Samiti, the same Samiti that runs Subodh College. Over forty years old, about two thousand seven hundred students and around a hundred and twenty five teachers. Principal: Dr Sanjay Parashar.\nCampus: big campus with ninety one classrooms, smart classrooms, Physics, Chemistry, Biology, Maths and Geography labs, two computer labs, an AI lab, a German language lab and an Atal Tinkering Lab. Indoor sports complex with an indoor stadium, chess, taekwondo and martial arts. Cafeteria, CCTV across the campus, GPS-tracked buses.\nBeyond studies: Model United Nations, leadership programmes, Olympiads in middle school, international exposure programmes with Germany and France. Languages include Hindi, Sanskrit, German and French.\nResults: Class ten has been one hundred percent for years, ninety nine point six percent last year. Class twelve is around ninety eight percent every year.\nUpcoming: Annual Sports Meet on thirtieth October, Annual Day on sixteenth December.\n\nFEES, TWENTY TWENTY SIX TWENTY SEVEN (share only when asked, round and simple, one class group at a time):\nOne time at joining: registration six hundred rupees, admission fee four thousand rupees, and caution money five thousand rupees which is refundable.\nYearly fee, tuition plus development:\nNursery, KG, Prep: about sixty seven thousand rupees a year, paid in three instalments, at admission, August and December.\nClass one to eight: about eighty three thousand six hundred rupees a year, three instalments.\nClass nine and ten: about one lakh five thousand six hundred rupees a year, two instalments, at admission and October.\nClass eleven and twelve: the same, about one lakh five thousand six hundred, and about one lakh thirteen thousand five hundred with the Computer option.\nFees are paid online through the StudyBase app. If they ask for the exact first instalment or anything detailed, the fees coordinator will share the full fee chart.\n\nWHAT YOU DO NOT KNOW — NEVER INVENT IT:\nSchool timings, bus routes, stops and bus fees, uniform details and cost, the exact documents list, admission last dates, test or interaction dates, seats left in a class, RTE or sibling quotas, and teachers' names beyond the principal. For any of these, say honestly that the admissions office will confirm it, and offer a callback, or share the number: the client relation officer, nine four one three, four four four, zero nine nine, between nine and twelve thirty in the morning, or the school office, zero one four one, two five six eight, four seven seven, Monday to Saturday, eight to two.\n\nWHAT YOU NEVER DO:\nNever promise a seat, a fee discount, a waiver or a decision. Those are for the principal and the admissions committee. Never compare other schools badly. Never say you are an AI unless the parent sincerely asks, and then say it simply and carry on helping.\n\nIF THEY ASK ABOUT SOMETHING ELSE:\nDiscipline or safety: CCTV across the campus, GPS buses, a counsellor and wellness teacher for the children.\nClass twelve or Class ten mid-way admission: the admissions office will check if it is possible.\nThe other Subodh school near the airport in Sanganer is a separate school with its own admissions; you handle Rambagh.\nIf they're unsure or just exploring: be kind, invite them to visit the campus, and let them go without pressure.\n\nWRAP UP:\nThe parent ends the call. You never decide the call is over. After the key things are covered, keep being helpful, answer whatever they ask, stay warm. Do not say \"if there's nothing else\" or signal the end.\nThe only moment you set hangup TRUE is when the parent clearly signals they are done: \"theek hai thank you\", \"bas itna hi\", \"bye\", \"okay thanks\", or anything that means they are leaving. Then close warmly in that same reply, thank them for considering Subodh, and set hangup TRUE.\n\nNUMBER RULE — VERY IMPORTANT:\nNever write digits. Always write numbers as words, the way you say them out loud. Write \"four thousand rupees\", not \"4000\". Write \"Class eleven\", not \"Class 11\". Say phone numbers digit by digit in words, in small groups.\n\nNO special characters in responses — no dashes, bullets, arrows, brackets or pipes. Plain text and commas only.\n\nAsk one question at a time. Share more than you ask. Make the parent feel looked after.",
+        "input_variables": {
+          "user_input": {
+            "type": "str",
+            "description": "What the parent just said."
+          }
+        },
+        "llm_return_type": {
+          "speak": {
+            "type": "str",
+            "description": "Priya's spoken reply, in the parent's language (Hinglish in Roman script by default, or English). One or two short sentences, numbers as words, no special characters, and it continues naturally after the quick acknowledgment."
+          },
+          "hangup": {
+            "type": "bool",
+            "description": "True only when the parent has clearly said they are done and this reply is the warm goodbye. Otherwise false."
+          }
+        },
+        "interruption_type": "full",
+        "interruption_metadata": {
+          "min-interruption-delay": 15,
+          "min-interruption-debounce": 2,
+          "ignore-words": [
+            "yes",
+            "yes.",
+            "yes,",
+            "Yes",
+            "Yes.",
+            "Yes,",
+            "yeah",
+            "yeah.",
+            "yeah,",
+            "Yeah",
+            "Yeah.",
+            "Yeah,",
+            "okay",
+            "okay.",
+            "okay,",
+            "Okay",
+            "Okay.",
+            "Okay,",
+            "ok",
+            "ok.",
+            "ok,",
+            "Ok",
+            "Ok.",
+            "Ok,",
+            "mm-hmm",
+            "mm-hmm.",
+            "mm-hmm,",
+            "Mm-hmm",
+            "Mm-hmm.",
+            "Mm-hmm,",
+            "uh-huh",
+            "uh-huh.",
+            "uh-huh,",
+            "Uh-huh",
+            "Uh-huh.",
+            "Uh-huh,",
+            "right",
+            "right.",
+            "right,",
+            "Right",
+            "Right.",
+            "Right,",
+            "i see",
+            "i see.",
+            "i see,",
+            "I see",
+            "I see.",
+            "I see,",
+            "got it",
+            "got it.",
+            "got it,",
+            "Got it",
+            "Got it.",
+            "Got it,",
+            "sure",
+            "sure.",
+            "sure,",
+            "Sure",
+            "Sure.",
+            "Sure,",
+            "alright",
+            "alright.",
+            "alright,",
+            "Alright",
+            "Alright.",
+            "Alright,",
+            "all right",
+            "all right.",
+            "all right,",
+            "All right",
+            "All right.",
+            "All right,",
+            "mhm",
+            "mhm.",
+            "mhm,",
+            "Mhm",
+            "Mhm.",
+            "Mhm,",
+            "haan",
+            "haan.",
+            "haan,",
+            "Haan",
+            "Haan.",
+            "Haan,",
+            "han",
+            "han.",
+            "han,",
+            "Han",
+            "Han.",
+            "Han,",
+            "ji",
+            "ji.",
+            "ji,",
+            "Ji",
+            "Ji.",
+            "Ji,",
+            "haan ji",
+            "haan ji.",
+            "haan ji,",
+            "Haan ji",
+            "Haan ji.",
+            "Haan ji,",
+            "ji haan",
+            "ji haan.",
+            "ji haan,",
+            "Ji haan",
+            "Ji haan.",
+            "Ji haan,",
+            "accha",
+            "accha.",
+            "accha,",
+            "Accha",
+            "Accha.",
+            "Accha,",
+            "achha",
+            "achha.",
+            "achha,",
+            "Achha",
+            "Achha.",
+            "Achha,",
+            "acha",
+            "acha.",
+            "acha,",
+            "Acha",
+            "Acha.",
+            "Acha,",
+            "theek hai",
+            "theek hai.",
+            "theek hai,",
+            "Theek hai",
+            "Theek hai.",
+            "Theek hai,",
+            "thik hai",
+            "thik hai.",
+            "thik hai,",
+            "Thik hai",
+            "Thik hai.",
+            "Thik hai,",
+            "hmm",
+            "hmm.",
+            "hmm,",
+            "Hmm",
+            "Hmm.",
+            "Hmm,",
+            "ji sir",
+            "ji sir.",
+            "ji sir,",
+            "Ji sir",
+            "Ji sir.",
+            "Ji sir,",
+            "ji ma'am",
+            "ji ma'am.",
+            "ji ma'am,",
+            "Ji ma'am",
+            "Ji ma'am.",
+            "Ji ma'am,",
+            "ok sir",
+            "ok sir.",
+            "ok sir,",
+            "Ok sir",
+            "Ok sir.",
+            "Ok sir,",
+            "okay sir",
+            "okay sir.",
+            "okay sir,",
+            "Okay sir",
+            "Okay sir.",
+            "Okay sir,",
+            "sahi",
+            "sahi.",
+            "sahi,",
+            "Sahi",
+            "Sahi.",
+            "Sahi,",
+            "sahi hai",
+            "sahi hai.",
+            "sahi hai,",
+            "Sahi hai",
+            "Sahi hai.",
+            "Sahi hai,",
+            "bilkul",
+            "bilkul.",
+            "bilkul,",
+            "Bilkul",
+            "Bilkul.",
+            "Bilkul,",
+            "हाँ",
+            "हाँ जी",
+            "जी",
+            "अच्छा",
+            "ठीक है",
+            "हम्म"
+          ]
+        }
+      },
+      "next": [
+        "response",
+        "ask_for_input"
+      ]
+    },
+    "response": {
+      "type": "out",
+      "parameters": {
+        "variables": [
+          "speak",
+          "hangup"
+        ],
+        "interruption_type": "no",
+        "interruption_metadata": {}
+      }
+    }
+  },
+  "ui": {
+    "positions": {
+      "greeting": {
+        "x": -311,
+        "y": 162
+      },
+      "ask_for_input": {
+        "x": 171,
+        "y": 181
+      },
+      "transcription": {
+        "x": 848,
+        "y": 40
+      },
+      "prev_llm": {
+        "x": 848,
+        "y": 250
+      },
+      "llm": {
+        "x": 848,
+        "y": 462
+      },
+      "response": {
+        "x": 1252,
+        "y": 462
+      }
+    },
+    "edgeStyle": "step"
+  }
+}

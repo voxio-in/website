@@ -18,6 +18,30 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-10-27 — Admin Numbers screen; numbers and calls through SDK 2.1.0
+
+**What changed**
+- New admin-only **Numbers** page (`/dashboard/numbers`, in the sidebar for admins only). The Voxio team can see every rented number, who owns it and which flow answers it; add a number (and give it to someone at once); change or clear the owner from a dropdown on each row; remove a number. Changing the owner of an attached number asks first, because it detaches it. Legacy attachments (numbers answering a flow but not on the list) get their own table, with Add to list / Detach.
+- `voxioagent` upgraded to 2.1.0. Place a call and Schedule call use `calls.place` / `calls.schedule`; attaching, moving and detaching use `numbers.attach` / `move` / `delete`.
+- Place a call needs a number attached to the flow and owned by the account (admins may fall back to `VOXIO_FROM_NUMBER`). The From picker lists only attached numbers.
+
+**Why**
+docs/NUMBER_OWNERSHIP.md: ownership is set by the Voxio team only, and callbot now refuses calls from numbers the flow's owner doesn't own.
+
+**State now**
+Type-checks and builds; not run. Ownership is written through Prisma in one transaction, because the SDK has no ownership calls. The layout now looks up the user's role once per load (cached 60s) to show the admin link. The mock "not dialled" call path is removed, so Place a call always talks to the real call service.
+
+**Files**
+src/routes/dashboard.numbers.tsx (new), src/server/dashboard/numbers.ts (new), src/server/dashboard/api.ts, src/server/dashboard/store.server.ts, src/server/dashboard/flows.server.ts, src/routes/dashboard.tsx, src/routes/dashboard.flows.$flowId.numbers.tsx, src/styles/dashboard-pages.css, docs/NUMBER_OWNERSHIP.md, package.json
+
+## 2026-10-27 — Model picker: name and description only
+
+**What changed**
+OpenRouter models in the picker show just the model name, with its description (cut to about 300 characters at a sentence end) in the note beside the open list. Prices and context sizes are gone. The saved list now carries a format number; a list saved in the old shape is fetched again automatically.
+
+**Files**
+src/server/dashboard/openrouter.ts
+
 ## 2026-10-27 — Data button in tests and replays; saved OpenRouter list with Refresh
 
 **What changed**
@@ -2398,3 +2422,13 @@ What the backend needs is written up for the backend work in
 - Flows list: checkboxes + select-all; bulk Export (one JSON list multi-import reads back, with voice) and bulk Delete with confirm. ExportDialog takes optional `data`.
 - Flow Avatar: "Choose from your avatars" picker (multi-select grid from Avatars, search, in-use disabled); uploads here refresh the Avatars list (they were already saved there via /api/faces).
 - Avatars: delete is one click: card dims with a spinner at once, disappears on success (was silent until reload, so people clicked repeatedly).
+
+## 2026-10-27: Call XML editor, SDK 2.1.1
+
+- voxioagent upgraded to 2.1.1.
+- Numbers & calls tab: new "Call XML" card. Edits the flow's `xml` (per flow) through `useFlow().save`. Starts from Voxio's default when the flow has none, checks it parses as XML before saving, and has "Use Voxio's default" (clears it) and "Discard changes".
+- placeCall: SDK timeout raised to 60s (the default 15s gave "Couldn’t reach the call service" while the carrier was still placing the call); the timeout message now says the call may still go through.
+- Call service host is gpu.call.voxio.in everywhere: default call XML (record/status callbacks, stream wss), docs and Developers curl examples, and VX_CALLBOT in .env.
+- placeCall: bare Indian numbers get +91 (10 digits, leading 0, or 91 + 10 digits); without it the carrier dialled them as international and refused (GeoPermissionError).
+- Call XML was never saved for dashboard-made flows: blankFlow had no `xml`, and the call service crashes on "" (ParseError: no element found). Default XML now in `lib/dashboard/callXml.ts`; new flows get it, attaching a number fills it in for a flow that has none, and the editor warns when a flow has none and lets you save the default as-is (Save used to stay disabled until edited). Subodh Public School flow (on +918031321074) given the default XML.
+- Live test: the message box sat on the card's rounded bottom corner (card has no padding, overflow hidden) and was clipped; the stage now has 18px bottom padding.

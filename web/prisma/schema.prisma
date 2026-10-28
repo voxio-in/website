@@ -104,6 +104,7 @@ model User {
   stt          Stt[]
   tts          Tts[]
   numbers      PhoneNumber[]
+  ownedNumbers OwnedNumber[]
   faces        Face[]
   knowledge    KnowledgeBase[]
   dashboards   Dashboard[]
@@ -264,6 +265,21 @@ model PhoneNumber {
   @@index([userApiKey])
   @@index([flowApiKey])
   @@map("numbers")
+}
+
+// Numbers Voxio actually rents from the carrier. `POST /number` only attaches a number listed here ; an
+// assigned number only to that user. Filled by an admin or `database/scripts/sync_owned_numbers_.py`.
+model OwnedNumber {
+  id             String   @id @default(cuid())
+  phoneNumber    String   @unique @map("phone_number")
+  assignedUserId String?  @map("assigned_user_id")
+  assignedUser   User?    @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  provider       String   @default("plivo")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([assignedUserId])
+  @@map("owned_numbers")
 }
 
 // Mongo `faces`: an avatar face clip, keyed by uuid (the Hugging Face filename).
