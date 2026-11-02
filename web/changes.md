@@ -18,6 +18,199 @@ The problem or reason behind it.
 What works, what's still open or half-finished.
 ```
 
+## 2026-11-02 — Live takeover spec agreed
+
+**What changed**
+- `docs/LIVE_TAKEOVER_SPEC.md` rewritten as the agreed design after review with the backend:
+  - Scope is voicebot (browser and avatar calls) plus the agent service; callbot later.
+  - The agent stays isolated: it only gets one generic hook, a reserved `__supervisor__` value added
+    to LLM steps as guidance. Hold, resume and timers live in voicebot.
+  - Whispers are joined in order; a rolled-back turn gives its whisper back; Adopts get ids.
+  - Hold freezes the flow wherever it is; any turn in progress is superseded; the playing reply is
+    cut once the supervisor's speech audio is ready.
+  - Resume continues from the frozen point; the hold transcript goes with the next LLM turn.
+  - Call states (`live`, `holding`, `resuming`) with compare-and-set and command ids.
+  - Access via a supervisor token (flow API key + session id), one supervisor per call.
+  - Safety timeout counts silence on both sides and warns first.
+
+**Why**
+The first draft put audio and hold work in the agent service, which only handles text turns, and
+left races (double resume, rollback eating a whisper) open.
+
+**State now**
+Built in the backend repo, mostly in voicebot (`takeover/`): supervisor token and connection, whisper / hold / resume / status commands on the data channel, relay and direct (full takeover) hold modes, the safety timeout, and archiving. The agent only got the guidance hook, a `supervisor_read` line and a hold setting. Offline tests pass; not yet run on a live call. The SDK and dashboard sides are not built. Open items are in section 6 of the spec.
+
+## 2026-11-02 — History widgets, call timeline, follow-ups, lead export
+
+**What changed**
+- **Spec and engine:** each field has `agent.<name>@turn` and `agent.<name>@secs`, the turn and the time into the call when it was first known (from its history). A funnel query counts calls that got each field and every field before it. New field widgets: `turn_known`, `time_known` and `funnelWidget`. The dashboard tools take `funnel` and `add_funnel`.
+- **Session replay:** a "What it recorded" section shows each field's final value and its changes, with turn and time into the call (`Session.variables`).
+- **Ask Voxio:**
+  - `follow_ups` lists calls by a recorded value, or unfinished calls (the caller spoke last), as a list card with numbers and links.
+  - `lead_export` makes a CSV of calls with their recorded values, offered as a download.
+  - Numbers and files go to the browser only; the model gets counts and examples.
+  - `get_session` now returns recorded values.
+
+**State now**
+The funnel and the time-to-known widgets were checked on in-memory sample calls. `follow_ups` found 27 unfinished calls on It1. Recorded-value features wait for the first calls that carry `variables`.
+
+## 2026-11-02 — Dashboards on recorded fields
+
+**What changed**
+The backend now saves `extra.variables.<name>` on each call (docs/VARIABLE_HISTORY_SPEC.md).
+- **Query engine** (`server/vad/query.server.ts`): reads each value as the field `agent.<name>`, so it works in counts, breakdowns, splits, filters and table columns. A widget shows "waiting" only while no call in the period has the field. Durations of older calls fall back to end − start.
+- **Field widgets** (`fieldWidget` in `spec.ts`): breakdown, over_time, share (yes/no), known (% of calls with a value), average (numbers), cross (by a second field) and table.
+- **Ask Voxio:**
+  - `create_dashboard` takes `fields` and `edit_dashboard` takes `add_fields`, both checked against what the flow records.
+  - New `recorded_fields` tool: the flow's recorded fields, each with its kind, allowed values, and a count of calls with values.
+  - The prompt now describes field dashboards instead of saying decided values aren't available.
+
+**State now**
+Built-in widgets still compute. Field widgets were checked on sample calls in memory; nothing was written to the database.
+- No production call has `variables` yet: 0 as of today, and It1 records no fields.
+- An end-to-end check needs a flow with recorded fields and one new call.
+- Next: history widgets (funnel, time to known), the per-call timeline, lead export and follow-ups.
+
+## 2026-11-02 — Ask Voxio: attach files
+
+**What changed**
+A paperclip button in the chat box attaches up to 3 files of up to 10 MB each: PDF, PNG, JPEG, WebP, GIF or Word (.docx). They show as File chips.
+- `files.server.ts` checks the files again on the server.
+- Images and PDFs go to the model as file blocks, in both the OpenRouter and the Anthropic format.
+- Word files are turned into text with `mammoth`, a new dependency.
+- Groq models get the file names only.
+- A file goes with its own message only. Later turns send "[Attached then: name]", and saved chats keep the names as chips (stored as mentions of kind `file`).
+
+`add_facts` now merges new facts with the ones already there. It can also remove facts, replace the whole list, and it refuses duplicates. Before, it replaced the list and would have dropped facts that were already applied.
+
+**State now**
+Tested:
+- A .docx fee list became an `add_facts` card.
+- A PNG notice was read correctly.
+
+The PDF test failed with OpenRouter 402 ("requires at least $0.50 in balance for files"): the account needs credit. Before deploy, check the host's request body size limit.
+
+## 2026-11-02 — Ask Voxio: knowledge gaps
+
+**What changed**
+New `src/server/assistant/knowledge-gaps.server.ts`, in the "improve" group:
+- `kb_gaps`: a Flash Lite reader goes through 40 sampled calls (opening 40 lines) and lists the questions the agent dodged, didn't know, answered vaguely or got wrong. The code groups them by topic, with call counts and quoted questions; the result is cached for a day.
+- `add_facts`: adds a "Facts you can use" section to the AI step's instructions. The section is replaced as a whole each time.
+- `attach_kb`: adds a "Look up knowledge" step before the AI step. It also adds `context` to what the AI reads, a line in the prompt saying to answer from it, and the knowledge base to `flow.kbs`.
+- `draft_kb_doc`: a new chat card, `DraftDocCard`, with the questions and answer boxes. "Save as PDF" uses the browser's print, so Hindi works with no PDF library. Uploads to a knowledge base are PDF-only.
+
+Card tools defined outside `changes.server.ts` now register through `registerWriteTools`. The prompt now says not to name tools to the user.
+
+**State now**
+Paid 3-turn test on It1:
+- `kb_gaps` found fee questions: 2 steps, 14K tokens.
+- `add_facts` made a card with the user's 3 facts: 1 step.
+- `draft_kb_doc` made 4 questions: 3 steps.
+
+`attach_kb` was checked on It1's workflow only (transcription → lookup → AI), because that account has no knowledge base. Next is file uploads in Ask Voxio.
+
+## 2026-11-02 — Ask Voxio: create, copy, record, rehearse, compare
+
+**What changed**
+Worked through `docs/ASSISTANT_TASKS.md`, which is kept up to date as the task list.
+
+New tools:
+- `create_flow` and `clone_flow` create a new-flow card. Apply calls `createFlowRow`; Undo calls `markFlowDeleted`. Changes now have a `newFlow` field for this.
+- `record_fields` adds fields with fixed allowed values to the AI step and to the flow's state.
+- `voice_compare` shows recorded samples as players in the chat. It adds a new `voices` event and chat part.
+- `simulate` (in `simulate.server.ts`) runs pretend callers against the flow's own instructions, then a judge reviews each conversation.
+- `compare_periods` compares calls before and after a date.
+
+The prompt now has an evidence rule, period and sample reporting, and guidance for improving flows.
+
+Fixes:
+- Sarvam voices are tagged female or male.
+- The inactivity settings follow the backend's own rules: `inactivity-type` is static or dynamic, and `message` is a text or a list.
+- `edit_workflow` cards show labels instead of raw keys.
+- Older calls with a zero duration now use end − start.
+
+**State now**
+All of it type-checks and builds. Paid tests on It1 passed for:
+- create_flow, including Apply and Undo against the database
+- simulate followed by a fix
+- voice_compare
+- clone_flow
+- record_fields
+
+Recorded fields go to the webhook but aren't stored per call yet, and the tool tells the model so. Dashboards for those fields, and lead export, wait on that decision.
+
+## 2026-11-02 — Ask Voxio can read a flow's calls (tiered, like code search)
+
+**What changed**
+New `src/server/assistant/insights.server.ts` with three tools in the core group, cheapest first (modelled on Claude Code's grep-then-read and Clio's facet counting):
+- `flow_profile`: server-computed map of a flow's real calls. It covers counts, length, the spread of turns, the lines calls end on, the words callers use, the script mix, what the workflow records and what is saved per call. No AI; about 1.8K characters.
+- `find_in_calls`: grep over transcripts with several spellings, matching lines only. Identical lines are shown once with a count, and `part` can be the start or end of each call. No AI.
+- `get_session` (already there) reads one call or a range of turns.
+- `analyze_calls`: Flash Lite reads a spread-out sample (default 60 calls, in batches of 10, opening and ending only) and pulls out topic, outcome, problem and the kinds of details callers give. The code counts them; only the totals and example call links reach the chat. Cached for 24 h.
+
+The prompt tells the model to go through these in order and to offer `llm_return_type.<name>` for any value worth recording.
+
+Fix: `test:false` on `search_sessions` and `session_stats` returned **no calls at all**. A JSON-path `NOT` is NULL in SQL for calls without the flag. Tests are now filtered out in code (`onlyReal`).
+
+**State now**
+Tested on It1 (373 calls):
+- The free tiers take 1–2 s each.
+- A full question ("is it working, what should we record") took 3 steps and about 18K input tokens. The answer was right: mixed uses in one flow, about half the calls drop, and nothing is recorded beyond `speak`.
+- After that run, the reader was changed to return kinds of detail rather than values, and to skip calls where the caller never spoke. Those two changes haven't been re-run yet.
+
+Values worth recording still can't reach dashboards until the backend saves them per call (decision open).
+
+Paid re-runs then found the deeper cause of "empty transcript":
+- **Older sessions store each turn as a Python-style string** (`"{'role': 'assistant', 'content': …}"`). Every tool, including the existing `get_session` and `search_sessions` text search, read those turns as empty.
+- The new shared `asTurn()` in `tools.server.ts` parses both forms.
+- After the fix, the reader found the café feedback and table-booking calls that had been hidden, and "empty transcript" disappeared from the problems.
+
+Also, the insight tools now default to **all calls**, not the last 90 days, and every result states its `period`. The model ignored "over all history" and silently got only recent calls.
+
+## 2026-10-30 — Workflow toolbar as icon combinations
+
+**What changed**
+The workflow editor's ⋯ menu is gone. Its tools (template, tidy up, line style, grid, code view, developer mode, import, export) and undo / redo are icons joined in one combination bar; hovering or focusing one opens its label beside it and it tucks away after. Tools that are switched on (curved lines, grid, code view, developer mode) are tinted. Test and Save are joined in a second combination.
+
+**Files**
+src/components/workflow/WorkflowEditor.tsx, src/styles/workflow.css
+
+## 2026-10-30 — Dropdowns that open upwards were invisible
+
+**What changed**
+A dropdown near the bottom of the screen opens its list upwards, but the stylesheet's `top: calc(100% + 6px)` on `.db-dd-pop` still applied alongside the inline `bottom`, so the list was drawn below the screen and only its hover note showed (seen on `input_variables` in workflow developer mode). The upward case now sets `top: auto`; the (i) tooltip clears the opposite edge the same way.
+
+**Files**
+src/components/dashboard/controls.tsx
+
+## 2026-10-30 — Workflow developer mode
+
+**What changed**
+The workflow editor's ⋯ menu has **Turn on developer mode** (remembered in this browser; a "Developer mode" badge shows while it's on). In developer mode a step's settings panel shows the engine's own parameter keys instead of the plain-language fields, in collapsible groups. Say (`out`) is grouped as main (`out_dict`, `variables`, `flags`, `input_variables`), interruption (`interruption_type`, `interruption_metadata`) and remove (`remove`, then `remove_stt` / `remove_stt_name` and `remove_tts` / `remove_tts_name`). Each key keeps a normal control, only labelled by its key: `out_dict` is a speak box, a hangup switch and a list of other pairs; `variables` are chips named by key; `interruption_type` is the usual type picker with its `interruption_metadata` settings; `remove_stt_name` / `remove_tts_name` are dropdowns of the engine's removal presets (agent/assets/regex/removals) shown only while their switch is on, and those switches only while `remove` is on. Unset keys show the engine default and are not written until changed; "reset" drops a key again.
+
+**State now**
+Laid out with the Voice page's tiles (`db-fgroup` / `db-fcell`, round only on the outer edge) under its "More settings" rows: `out_dict` other keys are key | value | × tiles in one row, `remove_stt` / `remove_tts` sit beside their name, `flags` and the removal names are combo boxes (type or pick a preset), `variables` / `input_variables` are dropdowns whose hover note is the variable's own description. interruption: `interruption_type` is a dropdown of the six types (hover shows what each does); `interruption_metadata` shows only the keys that type reads (`duration` in sec, `length` in words, `ignore-words` as tags), and changing the type drops the others. `interruption_metadata` only appears for the four types that read it (duration / length grow in as the type changes). remove: `remove` is a switch; `remove_stt` / `remove_tts` open below it only when it is on, and each name slides in beside its switch only when that switch is on; turning a switch off clears everything under it. Appearing settings open with a short height + fade animation (Reveal) and close the same way. The settings panel has a drag grip on its left edge (width remembered; double-click resets); at 620px or more the sections go two columns, speak and hangup share a row, and at 900px or more `variables`, `flags` and `input_variables` share one row; the sections glide to their new places (a hand-rolled FLIP inside the panel body, not a view transition, which drew over the step title while narrowing). `interruption` and `remove` are not expanders: each is its lead key's control (the interruption_type dropdown, the remove switch) and only turns into an expander, with a chevron fading in, once it turns settings on. Listen (`input`) has a developer layout too: its one key, `input_variables`, is split by where each value comes from on a turn: `user_input` (the caller's speech, every turn), `intervention` (only with the flow's `dominance` setting on, which the dashboard doesn't expose) and values your page sends as typed input (name | type | description | ×, with a warning that a voice call waits on them forever). An entry with a description is saved as `{type, description}`, otherwise as a bare type. A step with one group (Listen, Branch) shows its sections with no `main` expander. AI answers and AI thinks have developer layouts: main (`system_prompt`, `prompt_template` as a combo of the base prompts, `input_variables`, `llm_return_type` with the schema editor, `stream_timeout` for AI answers), `service` beside `model`, interruption (AI answers) or emotion (AI thinks) as led groups, `history_key`, and `summariser` as a switch that opens `summariser_config` (max-turns, max-len, leave-last, service, model, prompt; defaults from agent/summariser_.py). Branch: `input_variables` is one dropdown (only the first name is read), `mappings` rows are value | leads to (the canvas line) | ×, then `default` and no match → next. Switches store only what differs from their default, and turning one off clears everything under it. Note: the call service never calls `filter_text`, so `ignore-words` has no effect on live calls yet. Builds; not run. Only Say has groups so far; every other step shows all its keys under one "parameters" group. Keys a step holds that no group lists go under "other", so nothing is hidden.
+
+**Files**
+src/components/workflow/DevSettings.tsx (new), src/components/workflow/SettingsPanel.tsx, src/components/workflow/WorkflowEditor.tsx, src/components/workflow/workflow.css, src/lib/workflow/registry.ts
+
+## 2026-10-29 — Knowledge bases through SDK 2.2.0
+
+**What changed**
+- `voxioagent` upgraded to 2.2.0. The Knowledge page now really creates, renames, deletes and fills knowledge bases through `knowledgeBases.*`. Files (PDF or CSV only, up to 50 MB) are uploaded to the new `POST /api/knowledge` and sent with `addFile`; "Replace everything in it" uses `mode: 'replace'`. Each base has **Try a question** (`search`, top 5) and a refresh button.
+- After every write the base is read back with `get` and mirrored into Neon (`knowledge_bases`, `knowledge_sources`); the page still reads Neon. Deleting also drops the id from the user's flows.
+- The workflow `rag` node ("Look up knowledge") is shown again and names its base with `kb` (was `collection_name`); old nodes are converted when opened.
+- Removed: the mock `kb.*` account ops, the made-up chunk counts, the Website and Text tabs, per-file remove (the SDK has no call for it), and the Prisma diff that wrote knowledge rows from `mutate`.
+
+**Why**
+The SDK now does knowledge bases; vectors are built by the backend, so writes can't go through Prisma alone.
+
+**State now**
+Type-checks and builds; not run against the live service. The knowledge_base_collections migration must be applied first (db push). Field names in the SDK's source objects (`label`, `chunks`, `status`, dates) and the collection name are read defensively and may need adjusting once real data is seen. No embedding-model picker yet (default `all-minilm-l6-v2`).
+
+**Files**
+src/server/dashboard/knowledge.ts (new), src/server/dashboard/knowledge.server.ts (new), src/routes/api.knowledge.ts (new), src/routes/dashboard.knowledge.tsx, src/server/dashboard/api.ts, src/server/dashboard/store.server.ts, src/lib/dashboard/types.ts, src/lib/workflow/registry.ts, src/lib/workflow/convert.ts, src/lib/workflow/templates.ts, src/lib/workflow/validate.ts, package.json
+
 ## 2026-10-27 — Admin Numbers screen; numbers and calls through SDK 2.1.0
 
 **What changed**
@@ -2432,3 +2625,174 @@ What the backend needs is written up for the backend work in
 - placeCall: bare Indian numbers get +91 (10 digits, leading 0, or 91 + 10 digits); without it the carrier dialled them as international and refused (GeoPermissionError).
 - Call XML was never saved for dashboard-made flows: blankFlow had no `xml`, and the call service crashes on "" (ParseError: no element found). Default XML now in `lib/dashboard/callXml.ts`; new flows get it, attaching a number fills it in for a flow that has none, and the editor warns when a flow has none and lets you save the default as-is (Save used to stay disabled until edited). Subodh Public School flow (on +918031321074) given the default XML.
 - Live test: the message box sat on the card's rounded bottom corner (card has no padding, overflow hidden) and was clipped; the stage now has 18px bottom padding.
+- Subodh pilot: second research pass. Read every linked document except exam material: 71 timetables, calendar, committees, PTA circulars, certificates, admission poster. Found timings, scholarships and concessions, minority status and transport managers. Updated docs/research/subodh-public-school-rambagh.md. New docs/research/subodh-questions-for-school.md lists what the school must still tell us.
+- Subodh agent hardening (docs/workflows): 18-scenario adversarial test harness over the chat API; prompt rebuilt around root causes found from transcripts:
+  - money and dates now in digits (the LLM mis-converted to Hindi words; TTS reads digits);
+  - knowledge is notes, not script (copying English text caused language drift);
+  - name and area asks are count-free (state counting failed);
+  - approved bilingual dodge and not-known lines;
+  - bus routes and SC/ST/category dodged per product decision.
+  Ack model gpt-oss-20b to llama-3.1-8b-instant (it refused injection lines and spent ~400 reasoning tokens to say "Ji"). Flow now on gemini-3.6-flash; push.mts writes the workflow to the flow's agent row.
+- Subodh outage 20:50–21:55 (29 Oct): every turn failed with "upstream". The cause was the quick-acknowledgment step on Groq (llama-3.1-8b-instant), most likely its daily token limit after heavy test runs; OpenRouter was fine. The ack moved to OpenRouter meta-llama/llama-3.1-8b-instruct (ACK_MODEL / ACK_SERVICE in build.mjs) and was pushed live; verified answering again.
+- Workflow editor: "Add emotion" stays visible (with a warning) when it is on but the flow's voice isn't ElevenLabs, so imported workflows can turn it off; before, it was replaced by a note and could not be removed, and other voices read cues like [thoughtful] aloud. Turning a switch off now also removes the settings that depend on it (emotion → emotion style).
+
+## Look up knowledge (rag) step wired to knowledge bases
+
+**What changed**
+- The workflow page loads the account's knowledge bases into the step's picker (name, passage count, file list in the info).
+- Saving connects every knowledge base a rag step uses to the flow (`flow.kbs`), so calls no longer fail at start; the save note names them.
+- Plain settings: Knowledge base, How many passages, Try a question (search with the step's own top_k, filter and fields), plus Search using and Save results as on the More tab.
+- Developer mode for rag: main (kb, input_variables, output_variables) and retrieval (top_k, entities chips, filter_ with presets, timeout).
+- Validation: missing or deleted KB is an error, an empty KB is a warning, timeout has to be in (0, 30], and there is a warning when no later step reads the output.
+- `collection_name` and `url` are internal: `spec.internal` keeps them out of every view, developer mode included.
+
+**Files** registry.ts, validate.ts, Fields.tsx, DevSettings.tsx, WorkflowEditor.tsx, dashboard.flows.$flowId.workflow.tsx, knowledge.ts, agent-pages.tsx, workflow.css
+
+- Knowledge is back in the side rail (it had been commented out in dashboard.tsx).
+- Knowledge dialogs: Cancel and the action are one joined combination; the source date no longer causes a hydration mismatch (React #418).
+- voxioagent 2.2.1: `knowledgeBases.search` was removed from the SDK, so both Try a question features (the Knowledge page dialog and the rag step box) are gone. Uploads still mirror into Neon with `mirrorKb`.
+
+## Knowledge bases move to documents (voxioagent 3.0.0)
+
+**What changed**
+- voxioagent is linked from the local build (`file:../../voice-bot-sdk/packages/voxioagent`, 3.0.0) because 3.0.0 isn't on npm yet.
+- No more mirroring. The backend writes `knowledge_bases` and `knowledge_documents` to Neon itself. After a write, `mirrorKb` only drops the cached account, and the pages read through Prisma (`include: { documents }`). `knowledge_sources` is no longer read.
+- Server: `knowledgeOp` handles create (name, model, settings), rename, settings, delete, retryDocument and deleteDocument. `documentLink` fetches a fresh signed URL each time and never stores it. `/api/knowledge` POST calls addDocument and PUT calls replaceDocument; both are PDF only, up to 50 MB, and pass a 409 message through unchanged.
+- Knowledge page:
+  - The summary reads documents · pages · passages, and the embedding model shows with a lock.
+  - Each document row has a status chip (processing with a spinner, ready, or failed with the error on hover) and open, replace, retry and delete actions. The row notes skipped images.
+  - While anything is processing, the page reloads its data every 3 s.
+  - The Add dialog uploads and closes, with an Advanced section for chunk size, overlap and metadata.
+  - The Create dialog has a model picker ("can't be changed later") and optional chunk settings.
+  - A new Settings dialog edits chunk settings and shows image captioning as "Coming soon".
+  - CSV and replace-everything are gone.
+- The flow Knowledge tab counts documents and warns when a connected base has no ready documents. The rag picker counts ready passages. The assistant's list_knowledge returns documents.
+
+**Files** knowledge.server.ts, knowledge.ts, api.knowledge.ts, dashboard.knowledge.tsx, dashboard.flows.$flowId.knowledge.tsx, dashboard.flows.$flowId.workflow.tsx, store.server.ts, tools.server.ts, types.ts, Icon.tsx (lock), ui.tsx (Toggle disabled), dashboard-pages.css, registry.ts, validate.ts, package.json
+
+## Ask Voxio dashboards: the model picks, the server builds
+
+**Why:** Saved chats used 48K–160K tokens per question, and about a third of the tool calls failed. The root cause is that the model was asked to write our formats (a full VAD spec) without knowing them, so it guessed, failed and retried.
+
+**What changed**
+- `spec.ts`: a fixed `MENU` of 13 ready-made widgets on built-in call data, plus `MENU_DEFAULT`, `arrange()` (numbers four to a row, charts two to a row, tables full width) and `fromMenu()`.
+- New tools: `create_dashboard(flow, title, widgets[])` and `edit_dashboard(id, add[], remove[], title?)`. Widget ids are an enum, so an invalid request can't be made. `list_dashboards` now returns widget ids.
+- Removed: `check_workflow_data`, `get_dashboard`, and the free-form `propose_dashboard`.
+- Prompt: the VAD paragraph is now short, with one example and "call data only for now".
+- A dashboard request no longer pulls in every flow-editing tool through words like "make" or "add".
+- No paid model tests run. Checked locally that menu-built specs validate, don't overlap and fit 12 columns.
+
+**State:** Ask Voxio and Dashboards are still off (`features.ts`).
+- Test run (5 cases, Gemini 3.1 Flash Lite): all 5 gave a valid dashboard card with no failed tool calls, at 5.8K–8.2K input tokens and 2–3 steps. Found: #3 ("calls per day…") has no dashboard keyword, so it spent a step on load_tools; #4 linked the card id as vx:dash/… (a broken link before Apply); #2 said "I have created" before Apply; #2 made an extra list_flows call.
+- Fixes from the test run:
+  - The three dashboard tools always go out, because keywords can't tell "show calls per day" is a dashboard request.
+  - The tool result now states that the dashboard isn't saved and has no id until Apply, so the model no longer links it or calls it created.
+  - The flow argument says no lookup is needed first.
+  - When every call in a step made a dashboard card, the server writes the closing line itself (English or Japanese) and stops, so there's no second model call.
+  - Removed the empty "dashboards" group from load_tools.
+- Rerun of the 5 cases: all 1 step at 2.5K–2.9K input tokens, with no failed calls, no lookups and no false links (before the fixes: 2–3 steps at 5.8K–8.2K).
+
+## Ask Voxio: test a flow inside the chat
+
+**What changed**
+- New tool `test_flow(flow, how: chat|voice)` in `src/server/assistant/tests.server.ts`. It's always sent, and refuses with a plain reason when the workflow is empty. The model receives only "ready", never the flow key.
+- The loop yields a `test` event. When a step only made test or dashboard cards, the server writes the closing line (English or Japanese) and stops. The prompt says to use test_flow to test or try a flow.
+- New `TestCard` (`src/components/assistant/TestCard.tsx`) runs the Test tab's own `ChatTest` or `BrowserTest`: the same Voxio SDK and widget, the same `getTestSetup`, and saved to Sessions through `saveTestSession` with its message log. It has Test again and Open the flow, and is stored with the chat (`ChatPart` test).
+- Styles in assistant.css.
+- Not run: no paid model or test calls.
+
+## Ask Voxio: edit any part of a workflow in one call
+
+**Root cause of the old failures:** each change was its own tool call, and each was checked against the whole workflow on its own. Half-built states (a new step not connected yet, a step pointing at one not made yet) were rejected, and the model retried in a loop.
+
+**What changed**
+- `edit_workflow(flow, changes[])` replaces propose_step_settings, propose_add_step, propose_remove_step and propose_connections. The changes are set, add, place (put or move a step after another), connect and disconnect (with a Branch path), remove (joins its neighbours by default), rename and start. They're applied in order to a draft, so steps added earlier can be used later, and the result is checked once at the end. All changes go on one card.
+- The server holds the knowledge:
+  - Each step type's settings come from the registry, minus internal and wiring keys.
+  - `mappings`, `next` and `default` are refused as settings, with the way to do it instead.
+  - `input_variables` given as a list of names becomes `{name: "str"}`.
+  - A new Branch starts with no placeholder paths.
+  - A change that makes a step wait for a value nothing provides is refused, with the fix named.
+  - Steps left unconnected are listed on the card.
+- The tool description covers how a Branch matches (exactly, so meaning goes through an AI field), and that `out_dict.hangup` ends the call.
+- Loop:
+  - `edit_workflow` is always sent.
+  - The server writes the closing line.
+  - If the same tool returns the same error 3 times, the loop stops and says so.
+- Tests:
+  - Logic, free: 14 cases covering every operation and the error messages.
+  - Model, Gemini 3.1 Flash Lite on It1, nothing applied: greeting text, insert ask-name, remove, rename + model all took 1 step at about 4K tokens. The goodbye branch went from 9 failures and the step limit to 3 steps at 13K, and the final change is correct (AI field `wants_to_end`, Branch on true/false, Say with hang-up).
+
+## Ask Voxio: edit settings in one call (name, webhook, behaviour, voice)
+
+**What changed**
+- `edit_settings(flow, changes[{area, key, value}])` replaces propose_flow_settings and propose_voice. The areas are name, webhook, behaviour (every knob except the Avatar group) and speaking or listening. Each change is checked against the knob's kind and range, or against the provider's own fields and options. Labels work as values ("Orion"), and switching provider fills in that provider's defaults. Object knobs must be set part by part (`inactivity-metadata.max-times`), so parts nobody asked about stay as they are. The card shows one line per part, using labels. propose_looks (avatar) is unchanged and out of scope.
+- `voice_options(kind, want?, service?)`: given a request like "Hindi female", the server searches every speaking provider and returns voices, each with the exact changes to make. Gender is only matched where our provider data records it (Deepgram voices, Google's gender setting). Sarvam voices are marked "gender not listed", and confirmed matches come first.
+- Loop:
+  - Both tools are always sent.
+  - The server writes the closing line.
+  - A missing `flow` argument is filled from the open flow.
+- Tests:
+  - Logic, free: 12 cases on It1's real settings.
+  - Model, Flash Lite, nothing applied:
+    - rename + webhook: 1 step
+    - Soniox Hindi/English: 2 steps
+    - musetalk: correctly declined
+    - Hindi female voice: went from a wrong Google switch in 5 steps to Google Hindi female in 2 steps (9.7K)
+    - inactivity: went from a whole-object overwrite that changed interruption-type to 1 step, part by part
+- Open:
+  - The model also set `inactivity-metadata.inactivity-type` to "message", a value it made up. Allowed part values aren't recorded anywhere.
+  - This flow stores `message-type` where the code's default has `inactivity-type`.
+  - The Sarvam voice list has no gender.
+
+## Product notes
+- Added docs/product.md: what simulated callers test and what they do not (wording for comparisons).
+- record_fields: result note now says values are saved per call (was "NOT yet stored").
+- docs/product.md: competitor research (LiveKit, Vapi, Retell) shipped/planned.
+- docs/LIVE_TAKEOVER_SPEC.md: whisper (plain / Say this / Adopt), hold, resume, safety timeout, record and access.
+
+## Shared dashboards: logins, brand, public
+- Dashboard page has a Share panel: Only me / People I give a login (user id + password, caller numbers shown) / Anyone with the link (caller numbers hidden). Brand: name, logo (PNG/JPEG/WebP under 200 KB), colour, light/dark.
+- New page /v/<slug> (src/routes/v.$slug.tsx): sign-in or the dashboard, with the brand. Read-only; flow keys never sent; rows don't open calls.
+- Server: src/server/vad/share.server.ts (viewer accounts, scrypt passwords, httpOnly session cookie scoped to one dashboard, login rate limit 10/min per IP). api.vad.ts: view, viewLogin/viewLogout, share, addViewer/removeViewer.
+- Schema: dashboards.access/slug/brand, dashboard_viewers, dashboard_viewer_sessions. Migration 20261102090000_dashboard_sharing (user runs it).
+- Logos now stored in R2 (logos/<dashboard>/<hash>.<ext>); brand keeps the key, pages get a playable link.
+- Shared page /v/<slug>: signed-in users get a navbar: Dashboard, Users (add/remove), Settings (Link + sign-in or Link, no sign-in; name, logo, colour, theme). Public pages have a Sign in button for this.
+- "Let people create their own account" (dashboards.signup, default on): sign-in page gets Create account; new users appear in Users. Sign-up never replaces an existing user id.
+- Access names: Only me / Link + sign-in / Link, no sign-in.
+- Sharing settings split into separate toggles: Share this dashboard (owner), Public, Sign up (default off); Users section adds/deletes users.
+- VAD users only read: removed Users/Settings from /v/<slug> and the viewShare/viewAddUser/viewRemoveUser endpoints. Public pages have no sign-in.
+- Owner page in Voxio: navbar Dashboard | Users | Settings (share, public, sign up, look, delete).
+- scripts/vad-share-test.mts: end-to-end sharing test against Neon (real /api/vad handlers). 25/25 pass on It1. Caller-number masking not exercised: no session in Neon has a caller number.
+- Dashboard navbar: Ask Voxio button opens the panel; Ask Voxio is told the open dashboard id ("this dashboard"); applying a change reloads the dashboard (vx-applied event).
+- Turned on ASSISTANT_ON and DASHBOARDS_ON (src/lib/features.ts); sidebar item renamed Dashboards -> VAD.
+- VAD page /v/<slug>: no website navbar/backdrop (SiteChrome skips /v/); own complete styles (font, inputs, buttons, sign-in card).
+
+## VAD pages rebuilt on the dashboard's own parts
+- Side menu for a VAD (like a flow's): Dashboard, Users, Settings, Ask Voxio; sections are ?tab. Sidebar item and crumbs say VAD.
+- Settings: Access card with toggles (Share this VAD, Public, Sign up), link field + Copy/Open icon group that widens on hover; Look card: Name + accent colour group, Light/Dark + logo group; Delete card.
+- Users: User id + Password (show/hide) + Add user as one connected group; users as rows (user id, password dots, last signed in, remove).
+- List page: New VAD as one group (flow + Create).
+- Edit mode: widget panel with Data and Charts (Bar/Line/Area, then what to chart); drag onto the grid or click to add.
+- Fonts: widget titles 16px, tables 16px, notes/legends 14-15px.
+- Charts count days/hours in the viewer's time zone (was UTC, so IST calls after midnight fell on the previous day and didn't match the table); plot height leaves room for legend and axis so bars don't run off the bottom.
+
+- VAD button placement now follows Echobotics: range + channel are one joined toolbar with Edit/Save at its right end (db-ltoolbar); widgets use the chart-card header (18px title, hairline, trash icon button at right).
+- Ask Voxio locked to Gemini 3.1 Flash Lite (models.server.ts modelById fixed; picker removed).
+- VAD fixes from screenshots: Ask Voxio side-menu button reset; Copy/Open full height and equal width; range as toolbar cells; table 17px, titles 19px.
+- Open: Sessions per day chart empty while the query returns 1 (27 Oct) + 11 (28 Oct); rendering issue, not checked in a browser.
+- Fixed empty VAD charts: the aspect-ratio chart grew its own box (feedback loop), pushing the bars below the card. Charts now fill the space left in the card (flex), with no aspect ratio.
+- Ask Voxio: findFlow matches a short key the model padded with invented characters (vk_YievJbFD09), saving the failed step + search.
+- Ask Voxio: chat text +2px (min 13px). Top-bar button / VAD menu item / /dashboard/assistant start a new conversation; Ctrl+K and saved chats reopen old ones.
+- Ask Voxio: steps are one dropdown (chain of step headings, no JSON); step labels show flow names, never keys; links inside bold render as chips; model name removed from the line under answers.
+- Ask Voxio proposal card: lines in a grid (wide rows for before→after); Apply/Discard as one connected group.
+- VAD proposal card: plain sentence of what Apply does, a mini layout preview, button named Create VAD / Save changes.
+- Ask Voxio writes call lengths as 1m 16s (dashboard format), not 76 seconds. Checked Subodh data: 12 calls, 914s total, avg 76s; correct.
+- Ask Voxio: applied/discarded cards fold to their head (Details reopens); fixed stale per-widget lines after a new VAD is applied (isNew = no before). New Canvas (components/assistant/Canvas.tsx): Create VAD / Open VAD opens the live VAD beside the chat.
+- Canvas: full view shrinks the page so the canvas no longer covers the chat; Enlarge (whole window) and Open (VAD page in a new tab) as one icon group.
+- Login slowness measured: Neon (Singapore) ~0.5s per Prisma query warm, ~2.2s first query (cold), TCP RTT 120-400ms; scrypt ~50ms. VAD viewer login runs its two writes together.
+- Ask Voxio: Apply all / Discard all bar under answers with 2+ pending proposals (applies one after another, reports failures).
+- Fixed applied cards reverting to "pending" after reload: updateCard calls for one chat raced (read-modify-write of the same message); now queued per chat.
+- edit_settings: "voice" maps to the provider voice setting when it has none by that name (Deepgram Aura uses model); errors list key (Label). Fixes 14 failed proposals for roche_au_caller.
+- edit_settings: a wrong provider setting returns that provider's full settings + values (same as voice_options), so one retry fixes it.
+- Pool timeout on Apply all: act() now runs one user's Apply/Discard/Undo in order (no concurrent saves, no double apply); Prisma pool_timeout 30s unless DATABASE_URL sets one.

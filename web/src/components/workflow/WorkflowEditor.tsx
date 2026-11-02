@@ -46,9 +46,8 @@ import { GROUPS, NODE_SPECS, prettyName, setKnowledgeNames, specFor } from '#/li
 import { issuesByNode, validate } from '#/lib/workflow/validate'
 import { OFFERED_TEMPLATES } from '#/lib/workflow/templates'
 import { LISTEN, LISTEN_STEPS, MOVES, SILENT_AI, moveById, type Move } from '#/lib/workflow/recipes'
-import { ChevronDownIcon, ChevronsLeftIcon, ChevronsRightIcon, EllipsisIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronsLeftIcon, ChevronsRightIcon } from 'lucide-react'
 import Icon, { type IconName } from '#/components/dashboard/Icon'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/base-ui/popover'
 import { toast } from '#/components/ui/halo-toast'
 import { Dialog, Loading, Notice, ThemeCtx } from '#/components/dashboard/ui'
 import { ScriptView } from './ScriptView'
@@ -63,7 +62,7 @@ type Props = {
   initial: Workflow
   onSave: (wf: Workflow) => Promise<{ ok: boolean; reason?: string }>
   /** Knowledge bases on the account, for the Look up knowledge step. */
-  knowledge?: { value: string; label: string; hint?: string }[]
+  knowledge?: { value: string; label: string; hint?: string; info?: string; passages?: number }[]
   /** Opens the Test tab. Tests run the saved version, so unsaved work is saved first. */
   onTest?: () => void
   /** The flow's voice service, for step settings that work with one voice only. */
@@ -122,6 +121,8 @@ function freeId(base: string, taken: Set<string>) {
 
 /** Where the editor remembers Script or Flow, per browser. */
 const MODE_KEY = 'vx.wf.view'
+/** Developer mode (raw parameter keys in the settings panel), remembered in this browser. */
+const DEV_KEY = 'vx.wf.dev'
 
 // How close (px) a dragged step's middle must come to a connected step's to snap into line.
 const SNAP = 16
@@ -193,7 +194,8 @@ export default function WorkflowEditor(props: Props) {
   )
 }
 
-function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: Props) {
+function Editor(props: Props) {
+  const { title, initial, onSave, knowledge = [], onTest, ttsService } = props
   const first = useMemo(() => fromWorkflow(initial), [initial])
   const extra = useMemo(() => { const { nodes: _n, ui: _u, ...rest } = initial; return rest }, [initial])
   const [nodes, setNodes, onNodesChange] = useNodesState<CardNode>(first.nodes)
@@ -211,6 +213,12 @@ function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: 
     try { saved = localStorage.getItem(MODE_KEY) } catch { /* private window */ }
     if (first.nodes.length && (saved === 'script' || saved === 'canvas')) setModeState(saved)
   }, [first])
+  const [dev, setDevState] = useState(false)
+  const setDev = (on: boolean) => {
+    setDevState(on)
+    try { localStorage.setItem(DEV_KEY, on ? '1' : '0') } catch { /* private window: this visit only */ }
+  }
+  useEffect(() => { try { setDevState(localStorage.getItem(DEV_KEY) === '1') } catch { /* private window */ } }, [])
   const [xfer, setXfer] = useState<'export' | 'import' | 'template' | null>(null)
   // The canvas first fits the opening steps at a readable size, not every step tiny.
   const opening = useMemo(() => [...first.nodes].sort((a, b) => a.position.x - b.position.x).slice(0, 6).map((n) => ({ id: n.id })), [first])
@@ -247,7 +255,8 @@ function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: 
 
   const graph = useMemo(() => ({ ...toGraphOf(nodes, edges), extra, edgeStyle }), [nodes, edges, extra, edgeStyle])
   const edgeLook = useMemo(() => ({ style: edgeStyle, onBendStart: () => commit() }), [edgeStyle, commit])
-  const issues = useMemo(() => validate(graph), [graph])
+  const kbPassages = useMemo(() => (props.knowledge ? new Map(props.knowledge.map((k) => [k.value, k.passages ?? 0])) : undefined), [props.knowledge])
+  const issues = useMemo(() => validate(graph, kbPassages), [graph, kbPassages])
   const byNode = useMemo(() => issuesByNode(issues), [issues])
   const errors = issues.filter((i) => i.level === 'error').length
   const workflow = useMemo(() => toWorkflow(graph), [graph])
@@ -285,15 +294,25 @@ function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: 
 
   // Values the steps produce, for Branch ("decide on") and "pass along".
   const variables = useMemo(() => {
-    const seen = new Map<string, string>()
+    const seen = new Map<string, { type: string; description?: string }>()
     const typeOf = (v: unknown) => (typeof v === 'string' ? v : (v as { type?: string })?.type ?? 'str')
+    // The description written on the variable itself (llm_return_type / input_variables entries), word for word.
+    const descOf = (v: unknown) => {
+      const d = (v as { description?: unknown } | null)?.description
+      return typeof d === 'string' && d.trim() ? d : undefined
+    }
+    const put = (k: string, v: unknown, first: boolean) => {
+      const had = seen.get(k)
+      if (had && !first) { if (!had.description && descOf(v)) had.description = descOf(v); return }
+      seen.set(k, { type: typeOf(v), description: descOf(v) ?? had?.description })
+    }
     for (const n of nodes) {
       const p = n.data.parameters
-      if (n.data.type === 'input') for (const [k, v] of Object.entries((p.input_variables as object) ?? {})) seen.set(k, typeOf(v))
-      for (const [k, v] of Object.entries((p.llm_return_type as object) ?? {})) if (!seen.has(k)) seen.set(k, typeOf(v))
-      for (const k of (p.output_variables as string[] | undefined) ?? []) if (!seen.has(k)) seen.set(k, 'str')
+      if (n.data.type === 'input') for (const [k, v] of Object.entries((p.input_variables as object) ?? {})) put(k, v, true)
+      for (const [k, v] of Object.entries((p.llm_return_type as object) ?? {})) put(k, v, false)
+      for (const k of (p.output_variables as string[] | undefined) ?? []) put(k, 'str', false)
     }
-    return [...seen].map(([value, type]) => ({ value, type }))
+    return [...seen].map(([value, v]) => ({ value, ...v }))
   }, [nodes])
   useMemo(() => setKnowledgeNames(knowledge), [knowledge])
   // Conversation memories in use, for "Shares memory with".
@@ -647,6 +666,7 @@ function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: 
       <header className="wf-bar">
         <div className="wf-title">
           <strong>{title}</strong>
+          {dev && <span className="wf-devbadge">Developer mode</span>}
           <span className={`wf-state${dirty ? ' is-dirty' : ''}`}>{dirty ? 'Unsaved changes' : 'All changes saved'}</span>
         </div>
         {/* Script: the words; Flow: the boxes and lines. */}
@@ -655,36 +675,39 @@ function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: 
           <button role="tab" aria-selected={mode !== 'script'} className={mode !== 'script' ? 'is-on' : ''} onClick={() => setMode('canvas')}>Flow</button>
         </div>
         <div className="wf-tools">
-          <div className="wf-iconset">
-            <button className="db-iconbtn" onClick={undo} disabled={!past.current.length} title="Undo (Ctrl+Z)" aria-label="Undo"><Icon name="back" size={20} className="wf-undo" /></button>
-            <button className="db-iconbtn" onClick={redo} disabled={!future.current.length} title="Redo (Ctrl+Y)" aria-label="Redo"><Icon name="back" size={20} className="wf-redo" /></button>
+          {/* Every tool as an icon in one combination; hovering one opens its label. */}
+          <div className="wf-combo-bar" role="toolbar" aria-label="Workflow tools">
+            <ToolBtn icon="back" iconClass="wf-undo" label="Undo" hint="Ctrl+Z" onClick={undo} disabled={!past.current.length} />
+            <ToolBtn icon="back" iconClass="wf-redo" label="Redo" hint="Ctrl+Y" onClick={redo} disabled={!future.current.length} />
+            <ToolBtn icon="list" label="Start from a template" onClick={() => setXfer('template')} />
+            <ToolBtn icon="sliders" label="Tidy up the boxes" onClick={() => { setMode('canvas'); setTimeout(relayout, 0) }} />
+            <ToolBtn icon="flows" label={edgeStyle === 'step' ? 'Curved lines' : 'Right-angle lines'} on={edgeStyle === 'curve'} onClick={() => setEdgeStyle(edgeStyle === 'step' ? 'curve' : 'step')} />
+            <ToolBtn icon="grid" label={grid ? 'Hide the grid' : 'Show the grid'} on={grid} onClick={() => setGrid(!grid)} />
+            <ToolBtn icon="code" label={mode === 'json' ? 'Back to the boxes' : 'View as code'} on={mode === 'json'} onClick={() => setMode(mode === 'json' ? 'canvas' : 'json')} />
+            <ToolBtn icon="settings" label="Developer mode" on={dev} onClick={() => setDev(!dev)} />
+            <ToolBtn icon="plus" label="Import" onClick={() => setXfer('import')} />
+            <ToolBtn icon="copy" label="Export" onClick={() => setXfer('export')} />
           </div>
           <button className={`wf-health${errors ? ' is-err' : issues.length ? ' is-warn' : ''}`} onClick={() => setShowIssues(!showIssues)} aria-expanded={showIssues}>
             <Icon name={errors ? 'close' : 'check'} size={16} />
             {errors ? `${errors} to fix` : issues.length ? `${issues.length} tip${issues.length > 1 ? 's' : ''}` : 'All good'}
           </button>
-          <MoreMenu items={[
-            { icon: 'list', label: 'Start from a template…', on: () => setXfer('template') },
-            { icon: 'sliders', label: 'Tidy up the boxes', on: () => { setMode('canvas'); setTimeout(relayout, 0) } },
-            { icon: 'flows', label: edgeStyle === 'step' ? 'Use curved lines' : 'Use right-angle lines', on: () => setEdgeStyle(edgeStyle === 'step' ? 'curve' : 'step') },
-            { icon: 'grid', label: grid ? 'Hide the grid' : 'Show the grid', on: () => setGrid(!grid) },
-            { icon: 'code', label: mode === 'json' ? 'Back to the boxes' : 'View as code', on: () => setMode(mode === 'json' ? 'canvas' : 'json') },
-            { icon: 'plus', label: 'Import a workflow…', on: () => setXfer('import') },
-            { icon: 'copy', label: 'Export this workflow…', on: () => setXfer('export') },
-          ]} />
-          {onTest && (
-            <button className="db-btn db-btn-icon" onClick={test} disabled={status.kind === 'saving'}>
-              <Icon name="play" size={18} />{dirty ? 'Save and test' : 'Test'}
+          {/* Test and Save, joined: both run the workflow as it is now. */}
+          <div className="wf-combo-bar is-actions">
+            {onTest && (
+              <button className="wf-combo-act" onClick={test} disabled={status.kind === 'saving'}>
+                <Icon name="play" size={17} />{dirty ? 'Save and test' : 'Test'}
+              </button>
+            )}
+            <button className="wf-combo-act is-primary" onClick={save} disabled={status.kind === 'saving' || (!dirty && status.kind !== 'err')}>
+              {status.kind === 'saving' ? <Loading inline label="Saving…" /> : 'Save'}
             </button>
-          )}
-          <button className="db-btn db-primary" onClick={save} disabled={status.kind === 'saving' || (!dirty && status.kind !== 'err')}>
-            {status.kind === 'saving' ? <Loading inline label="Saving…" /> : 'Save'}
-          </button>
+          </div>
         </div>
       </header>
 
       <EdgeLook.Provider value={edgeLook}>
-      <FieldOptions.Provider value={{ knowledge, variables, routes: selected ? idRoutes.get(selected) : undefined, stepId: selected ?? undefined, memories,
+      <FieldOptions.Provider value={{ dev, knowledge, variables, routes: selected ? idRoutes.get(selected) : undefined, stepId: selected ?? undefined, memories,
         goTo: (t) => { setSelected(t); rf.fitView({ nodes: [{ id: t }], duration: 300, maxZoom: 1.2 }) } }}>
       <CardActions.Provider value={cardActions}>
       <div className="wf-body">
@@ -771,6 +794,7 @@ function Editor({ title, initial, onSave, knowledge = [], onTest, ttsService }: 
             onClose={() => setSelected(null)}
             racing={racing(sel.id)}
             ttsService={ttsService}
+            dev={dev}
           />
         )}
       </div>
@@ -878,25 +902,19 @@ function TemplateDialog({ hasSteps, onPick, onClose }: { hasSteps: boolean; onPi
 }
 
 /** The editor's less-used tools, one level deeper. */
-function MoreMenu({ items }: { items: { icon: IconName; label: string; on: () => void }[] }) {
-  const [open, setOpen] = useState(false)
-  // Open the menu inside the dashboard root so it keeps the dashboard's colours.
-  const [root, setRoot] = useState<HTMLElement | null>(null)
+/**
+ * One tool in the toolbar's combination: an icon whose label opens beside it on hover
+ * or keyboard focus and tucks away after. `on` marks a tool that is currently switched on.
+ */
+function ToolBtn({ icon, iconClass, label, hint, on, disabled, onClick }: {
+  icon: IconName; iconClass?: string; label: string; hint?: string; on?: boolean; disabled?: boolean; onClick: () => void
+}) {
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <span ref={(el) => setRoot((r) => r ?? (el?.closest<HTMLElement>('.db') ?? null))}>
-        <PopoverTrigger asChild>
-          <button type="button" className="db-iconbtn" aria-label="More tools" title="More tools"><EllipsisIcon size={22} /></button>
-        </PopoverTrigger>
-      </span>
-      <PopoverContent align="end" sideOffset={6} className="db-menu" container={root}>
-        {items.map((it) => (
-          <button key={it.label} type="button" className="db-menu-item" onClick={() => { setOpen(false); it.on() }}>
-            <Icon name={it.icon} size={18} />{it.label}
-          </button>
-        ))}
-      </PopoverContent>
-    </Popover>
+    <button type="button" className={`wf-tool${on ? ' is-on' : ''}`} onClick={onClick} disabled={disabled}
+      aria-label={label} aria-pressed={on === undefined ? undefined : on} title={hint ? `${label} (${hint})` : label}>
+      <Icon name={icon} size={19} className={iconClass} />
+      <span className="wf-tool-label" aria-hidden>{label}</span>
+    </button>
   )
 }
 

@@ -143,10 +143,10 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
-/** The marketing site's backdrop and nav: every route but the dashboard; the docs get the nav alone. */
+/** The marketing site's backdrop and nav: every route but the dashboard and shared VADs (/v/…); the docs get the nav alone. */
 function SiteChrome() {
   const pathname = useRouterState({ select: (st) => st.location.pathname })
-  if (pathname.startsWith('/dashboard') || pathname === '/login' || pathname === '/signup') return null
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/v/') || pathname === '/login' || pathname === '/signup') return null
   // The docs keep the nav but not the backdrop: they are read, not browsed.
   if (pathname.startsWith('/docs')) return <Navbar />
   return (

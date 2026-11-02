@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import Icon from '#/components/dashboard/Icon'
 
 import { AreaChart, Area } from '#/components/bklit/area-chart'
 import { BarChart } from '#/components/bklit/bar-chart'
@@ -26,18 +27,18 @@ export function fmt(v: number | null | undefined, f: Format = 'number') {
 }
 
 /** Fetches a widget's numbers; refetches when the range or filters change, and every 60 s. */
-function useWidget(dashboard: string, id: string, range: Range, filters: Where, version: number) {
+function useWidget(dashboard: string, id: string, range: Range, filters: Where, version: number, view?: string) {
   const [data, setData] = useState<WidgetResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     let gone = false
-    const get = () => fetch('/api/vad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ widget: { dashboard, id, range, filters } }) })
+    const get = () => fetch('/api/vad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ widget: { ...(view ? { view } : { dashboard }), id, range, filters, tz: Intl.DateTimeFormat().resolvedOptions().timeZone } }) })
       .then((r) => r.json()).then((r) => { if (!gone) { if (r.ok) { setData(r.data); setErr(null) } else setErr(r.reason) } })
       .catch(() => !gone && setErr('Couldn’t load.'))
     void get()
     const t = setInterval(() => document.visibilityState === 'visible' && void get(), 60_000)
     return () => { gone = true; clearInterval(t) }
-  }, [dashboard, id, range, JSON.stringify(filters), version])
+  }, [dashboard, view, id, range, JSON.stringify(filters), version])
   return { data, err }
 }
 
@@ -55,10 +56,12 @@ function useSize() {
   return { ref, ...size }
 }
 
-export function Widget({ dashboard, widget, range, filters, version, editing, onRemove }: {
+export function Widget({ dashboard, widget, range, filters, version, editing, onRemove, view }: {
   dashboard: string; widget: W; range: Range; filters: Where; version: number; editing: boolean; onRemove?: () => void
+  /** A shared page's slug: numbers come through the viewer's access, not the owner's login. */
+  view?: string
 }) {
-  const { data, err } = useWidget(dashboard, widget.id, range, filters, version)
+  const { data, err } = useWidget(dashboard, widget.id, range, filters, version, view)
   const box = useSize()
   return (
     <div className={`vad-w is-${widget.type}${editing ? ' is-editing' : ''}`}>
@@ -69,7 +72,7 @@ export function Widget({ dashboard, widget, range, filters, version, editing, on
             {widget.title && <b>{widget.title}</b>}
             {'subtitle' in widget && widget.subtitle && <small>{widget.subtitle}</small>}
           </span>
-          {editing && onRemove && <button type="button" className="vad-w-x" onClick={onRemove} aria-label="Remove widget" title="Remove">×</button>}
+          {editing && onRemove && <button type="button" className="db-iconbtn vad-w-x" onClick={onRemove} aria-label="Remove widget" title="Remove"><Icon name="trash" size={17} /></button>}
         </header>
       )}
       <div className="vad-w-body" ref={box.ref}>
@@ -113,7 +116,6 @@ function Spark({ values }: { values: number[] }) {
 function Chart({ w, d, width, height }: { w: Extract<W, { type: 'chart' }>; d: Extract<WidgetResult, { kind: 'series' }>; width: number; height: number }) {
   const rows = d.labels.map((l, i) => ({ label: l, ...(d.time ? { date: new Date(l.length === 7 ? `${l}-01` : l) } : {}), ...Object.fromEntries(d.series.map((s) => [s.key, s.values[i]])) }))
   const tip = (p: Record<string, unknown>) => d.series.map((s, i) => ({ color: COLORS[i], label: s.key === 'value' ? w.title : s.key, value: fmt(Number(p[s.key]), w.format) }))
-  const aspect = `${Math.max(1, width)} / ${Math.max(1, height - (d.series.length > 1 && width >= 360 ? 26 : 0))}`
   if (!rows.length) return <p className="vad-w-note">No sessions in this range.</p>
   return (
     <div className="vad-chart">
@@ -121,14 +123,14 @@ function Chart({ w, d, width, height }: { w: Extract<W, { type: 'chart' }>; d: E
         <div className="vad-legend">{d.series.map((s, i) => <span key={s.key}><i style={{ background: COLORS[i] }} />{s.key}</span>)}</div>
       )}
       {(w.chart === 'line' || w.chart === 'area') && d.time ? (
-        <AreaChart data={rows} aspectRatio={aspect} animationDuration={400}>
+        <AreaChart className="vad-plot" data={rows} aspectRatio="auto" animationDuration={400}>
           <Grid horizontal />
           {d.series.map((s, i) => <Area key={s.key} dataKey={s.key} fill={COLORS[i]} fillOpacity={w.chart === 'line' ? 0 : 0.35} />)}
           {height > 160 && <XAxis />}
           <ChartTooltip rows={(p) => tip(p as Record<string, unknown>)} />
         </AreaChart>
       ) : (
-        <BarChart data={rows} xDataKey="label" aspectRatio={aspect} stacked={!!w.stacked} orientation={w.horizontal ? 'horizontal' : 'vertical'} animationDuration={500}>
+        <BarChart className="vad-plot" data={rows} xDataKey="label" aspectRatio="auto" stacked={!!w.stacked} orientation={w.horizontal ? 'horizontal' : 'vertical'} animationDuration={500}>
           <Grid horizontal={!w.horizontal} />
           {d.series.map((s, i) => <Bar key={s.key} dataKey={s.key} fill={COLORS[i]} />)}
           {height > 160 && <BarXAxis maxLabels={Math.max(3, Math.floor(width / 70))} />}

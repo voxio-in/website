@@ -126,7 +126,7 @@ export const TEMPLATES: Template[] = [
         greeting: { type: 'out', parameters: say('Hi, ask me anything about our products.'), next: 'ask_for_input' },
         ask_for_input: listen(['lookup', 'transcription']),
         transcription: transcription(),
-        lookup: { type: 'rag', parameters: { input_variables: { user_input: 'str' }, output_variables: ['context'], collection_name: '', top_k: 5, entities: ['text'] }, next: 'llm' },
+        lookup: { type: 'rag', parameters: { input_variables: { user_input: 'str' }, output_variables: ['context'], kb: '', top_k: 5, entities: ['text'] }, next: 'llm' },
         llm: {
           type: 'llm-streaming',
           parameters: llm('Answer only from the context. If it is not there, say you will pass it on.', {

@@ -17,6 +17,8 @@ export type Query = {
   top?: number
   /** Tables: list sessions, or one row per group. */
   rows?: 'sessions' | 'groups'
+  /** Funnel chart: calls that got each field, in order, each step counting only calls that also got all the ones before. */
+  funnel?: string[]
   sort?: string
   limit?: number
 }
@@ -67,7 +69,13 @@ export const BUILTIN_FIELDS = {
 export type BuiltinField = keyof typeof BUILTIN_FIELDS
 
 export const isAgentField = (f: string) => f.startsWith('agent.')
-export const fieldLabel = (f: string) => (isAgentField(f) ? f.slice(6).replace(/_/g, ' ') : BUILTIN_FIELDS[f as BuiltinField]?.label ?? f)
+// agent.<name>@turn / @secs: the turn, or the seconds into the call, when the field first got a value (from its history).
+export const fieldLabel = (f: string) => {
+  if (!isAgentField(f)) return BUILTIN_FIELDS[f as BuiltinField]?.label ?? f
+  const [name, when] = f.slice(6).split('@')
+  const label = name.replace(/_/g, ' ')
+  return when === 'turn' ? `${label}: turn known` : when === 'secs' ? `${label}: time to know` : label
+}
 
 // ------------------------------------------------------------------ sizes (12-column grid)
 
@@ -94,7 +102,7 @@ const BY_TIME = /^startTime:(hour|day|week|month)$/
 
 function checkField(f: unknown, where: string, errors: string[]) {
   // Own keys only: `in` would also accept names like "toString".
-  if (typeof f !== 'string' || !(Object.hasOwn(BUILTIN_FIELDS, f) || /^agent\.[a-zA-Z0-9_]+$/.test(f))) errors.push(`${where}: unknown field “${typeof f === 'string' ? f : typeof f}”.`)
+  if (typeof f !== 'string' || !(Object.hasOwn(BUILTIN_FIELDS, f) || /^agent\.[a-zA-Z0-9_]+(@turn|@secs)?$/.test(f))) errors.push(`${where}: unknown field “${typeof f === 'string' ? f : typeof f}”.`)
 }
 
 function checkQuery(q: Query, where: string, errors: string[], kind: Widget['type']) {
@@ -106,6 +114,10 @@ function checkQuery(q: Query, where: string, errors: string[], kind: Widget['typ
   if (q.by && !BY_TIME.test(q.by)) checkField(q.by, where, errors)
   if (q.split) checkField(q.split, where, errors)
   for (const k of Object.keys(q.where ?? {})) checkField(k, `${where} where`, errors)
+  if (q.funnel !== undefined) {
+    if (!Array.isArray(q.funnel) || q.funnel.length < 2 || q.funnel.length > 8) errors.push(`${where}: a funnel has 2–8 fields.`)
+    else for (const f of q.funnel) { checkField(f, `${where} funnel`, errors); if (!isAgentField(String(f))) errors.push(`${where}: funnel steps are recorded fields (agent.<name>).`) }
+  }
   if (q.top !== undefined && (q.top < 1 || q.top > 50)) errors.push(`${where}: "top" must be 1–50.`)
   if (q.limit !== undefined && (q.limit < 1 || q.limit > 200)) errors.push(`${where}: "limit" must be 1–200.`)
 }
@@ -165,6 +177,96 @@ export function normalize(input: unknown): { ok: true; spec: Spec } | { ok: fals
       widgets: widgets as Widget[], layout,
     },
   }
+}
+
+// ------------------------------------------------------------------ the widget menu
+// Ready-made widgets on built-in fields. Ask Voxio picks from these by id and the
+// server builds the spec, so the model never writes a spec (or gets one wrong).
+
+export const MENU = {
+  calls: { label: 'Number of calls', build: (): Widget => ({ id: 'calls', type: 'kpi', title: 'Calls', query: { metric: 'count' }, spark: true }) },
+  avg_length: { label: 'Average call length', build: (): Widget => ({ id: 'avg_length', type: 'kpi', title: 'Avg length', query: { metric: 'avg', of: 'duration' }, format: 'duration' }) },
+  total_minutes: { label: 'Total talk time', build: (): Widget => ({ id: 'total_minutes', type: 'kpi', title: 'Talk time', query: { metric: 'sum', of: 'duration' }, format: 'duration' }) },
+  completed: { label: 'Share of calls completed', build: (): Widget => ({ id: 'completed', type: 'kpi', title: 'Completed', query: { metric: 'share', where: { status: 'completed' } }, format: 'percent', goodWhen: 'up' }) },
+  callers: { label: 'Number of different callers', build: (): Widget => ({ id: 'callers', type: 'kpi', title: 'Callers', query: { metric: 'distinct', of: 'caller' } }) },
+  avg_turns: { label: 'Average caller turns per call', build: (): Widget => ({ id: 'avg_turns', type: 'kpi', title: 'Avg turns', query: { metric: 'avg', of: 'turns' } }) },
+  calls_per_day: { label: 'Chart: calls per day, by channel', build: (): Widget => ({ id: 'calls_per_day', type: 'chart', chart: 'bar', title: 'Calls per day', query: { metric: 'count', by: 'startTime:day', split: 'channel' }, stacked: true }) },
+  calls_per_week: { label: 'Chart: calls per week', build: (): Widget => ({ id: 'calls_per_week', type: 'chart', chart: 'bar', title: 'Calls per week', query: { metric: 'count', by: 'startTime:week' } }) },
+  calls_by_hour: { label: 'Chart: calls by hour of day', build: (): Widget => ({ id: 'calls_by_hour', type: 'chart', chart: 'bar', title: 'Calls by hour', query: { metric: 'count', by: 'startTime:hour' } }) },
+  length_per_day: { label: 'Chart: average call length per day', build: (): Widget => ({ id: 'length_per_day', type: 'chart', chart: 'line', title: 'Avg length per day', query: { metric: 'avg', of: 'duration', by: 'startTime:day' }, format: 'duration' }) },
+  by_channel: { label: 'Chart: calls by channel (phone, web…)', build: (): Widget => ({ id: 'by_channel', type: 'chart', chart: 'bar', horizontal: true, title: 'Calls by channel', query: { metric: 'count', by: 'channel' } }) },
+  by_status: { label: 'Chart: calls by status (completed, failed…)', build: (): Widget => ({ id: 'by_status', type: 'chart', chart: 'bar', horizontal: true, title: 'Calls by status', query: { metric: 'count', by: 'status' } }) },
+  recent_calls: { label: 'Table: latest calls', build: (): Widget => ({ id: 'recent_calls', type: 'table', title: 'Latest calls', query: { rows: 'sessions', sort: '-startTime', limit: 20 }, columns: ['startTime', 'duration', 'channel', 'caller', 'status'] }) },
+} satisfies Record<string, { label: string; build: () => Widget }>
+export type MenuId = keyof typeof MENU
+export const MENU_IDS = Object.keys(MENU) as MenuId[]
+/** What a dashboard gets when the request doesn't name widgets. */
+export const MENU_DEFAULT: MenuId[] = ['calls', 'avg_length', 'completed', 'callers', 'calls_per_day', 'recent_calls']
+
+/**
+ * Lays widgets out in reading order: numbers four to a row, then charts two to a row
+ * (a chart alone takes the full width), then tables full width.
+ */
+export function arrange(widgets: Widget[]): LayoutItem[] {
+  const out: LayoutItem[] = []
+  let y = 0
+  const kpis = widgets.filter((w) => w.type === 'kpi')
+  const charts = widgets.filter((w) => w.type === 'chart')
+  const rest = widgets.filter((w) => w.type !== 'kpi' && w.type !== 'chart')
+  if (kpis.length) {
+    // Four to a row; fewer share the row (3 → 4 columns each, 2 → 6, 1 → 12).
+    const w = kpis.length >= 4 ? 3 : 12 / kpis.length
+    kpis.forEach((k, n) => out.push({ i: k.id, x: (n % 4) * w, y: y + Math.floor(n / 4) * 2, w, h: 2 }))
+    y += Math.ceil(kpis.length / 4) * 2
+  }
+  charts.forEach((c, n) => {
+    const alone = charts.length % 2 === 1 && n === charts.length - 1
+    out.push({ i: c.id, x: alone ? 0 : (n % 2) * 6, y: y + Math.floor(n / 2) * 5, w: alone ? 12 : 6, h: 5 })
+  })
+  y += Math.ceil(charts.length / 2) * 5
+  for (const t of rest) { const h = sizeOf(t).def[1]; out.push({ i: t.id, x: 0, y, w: 12, h }); y += h }
+  return out
+}
+
+// Widgets on a flow's recorded fields (extra.variables, saved per call by the agent service;
+// docs/VARIABLE_HISTORY_SPEC.md). The server builds them; Ask Voxio only names field + show.
+export const FIELD_SHOWS = ['breakdown', 'over_time', 'share', 'known', 'turn_known', 'time_known', 'average', 'cross', 'table'] as const
+export type FieldShow = (typeof FIELD_SHOWS)[number]
+export const FIELD_SHOW_TEXT = 'breakdown (calls per value, bars), over_time (values per day, stacked), share (yes/no fields: % yes), known (% of calls where it got a value), turn_known (average turn it was first known), time_known (average time into the call it was first known), average (number fields), cross (values split by another field: give "with"), table (latest calls with these fields as columns)'
+
+export function fieldWidget(name: string, show: FieldShow, opts: { with?: string; columns?: string[] } = {}): Widget {
+  const f = `agent.${name}`
+  const label = name.replace(/_/g, ' ')
+  const cap = label.charAt(0).toUpperCase() + label.slice(1)
+  const id = `f_${name}_${show}${show === 'cross' && opts.with ? `_${opts.with}` : ''}`
+  switch (show) {
+    case 'breakdown': return { id, type: 'chart', chart: 'bar', horizontal: true, title: `Calls by ${label}`, query: { metric: 'count', by: f } }
+    case 'over_time': return { id, type: 'chart', chart: 'bar', stacked: true, title: `${cap} per day`, query: { metric: 'count', by: 'startTime:day', split: f } }
+    case 'share': return { id, type: 'kpi', title: cap, query: { metric: 'share', where: { [f]: true } }, format: 'percent' }
+    case 'known': return { id, type: 'kpi', title: `${cap} known`, query: { metric: 'share', where: { [f]: { exists: true } } }, format: 'percent', goodWhen: 'up' }
+    case 'turn_known': return { id, type: 'kpi', title: `${cap}: known by turn`, query: { metric: 'avg', of: `${f}@turn` }, goodWhen: 'down' }
+    case 'time_known': return { id, type: 'kpi', title: `${cap}: time to know`, query: { metric: 'avg', of: `${f}@secs` }, format: 'duration', goodWhen: 'down' }
+    case 'average': return { id, type: 'kpi', title: `Avg ${label}`, query: { metric: 'avg', of: f } }
+    case 'cross': {
+      if (!opts.with) throw new Error(`cross needs "with": the second field.`)
+      return { id, type: 'chart', chart: 'bar', stacked: true, horizontal: true, title: `${cap} by ${opts.with.replace(/_/g, ' ')}`, query: { metric: 'count', by: f, split: `agent.${opts.with}` } }
+    }
+    case 'table': return { id: `f_table_${name}`, type: 'table', title: 'Latest calls', query: { rows: 'sessions', sort: '-startTime', limit: 20 }, columns: ['startTime', 'duration', ...[name, ...(opts.columns ?? [])].map((c) => `agent.${c}`)] }
+  }
+}
+
+/** A funnel over recorded fields, in the order given (e.g. course → date → booked). */
+export function funnelWidget(names: string[]): Widget {
+  return { id: `funnel_${names.join('_')}`.slice(0, 60), type: 'chart', chart: 'bar', horizontal: true, title: 'Funnel', subtitle: names.map((n) => n.replace(/_/g, ' ')).join(' → '), query: { metric: 'count', funnel: names.map((n) => `agent.${n}`) } }
+}
+
+/** A dashboard on one flow from menu ids (unknown ids are dropped; none means the default set). */
+export function fromMenu(title: string, flow: string, ids: string[], extra: Widget[] = []): Spec {
+  const picked = [...new Set(ids)].filter((id): id is MenuId => Object.hasOwn(MENU, id))
+  const widgets = [...(picked.length || extra.length ? picked : MENU_DEFAULT).map((id) => MENU[id].build()), ...extra]
+  const r = normalize({ title, flows: [flow], defaults: { range: '30d', compare: true, test: false }, filters: [{ field: 'channel' }], widgets, layout: arrange(widgets) })
+  if (!r.ok) throw new Error(r.errors.join(' '))
+  return r.spec
 }
 
 /** A blank dashboard on one flow: a few useful widgets on built-in fields. */

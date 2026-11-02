@@ -84,6 +84,16 @@ const asList = (v: unknown): string[] =>
 
 const edgeId = (source: string, handle: string, target: string) => `${source}|${handle}|${target}`
 
+/** A rag node names its knowledge base with `kb` (voxioagent 2.2); older ones used `collection_name`. */
+function upgradeParams(type: string, parameters: Record<string, unknown> | undefined): Record<string, unknown> {
+  const p = { ...(parameters ?? {}) }
+  if (type === 'rag' && p.kb == null && typeof p.collection_name === 'string') {
+    p.kb = p.collection_name
+    delete p.collection_name
+  }
+  return p
+}
+
 export function toGraph(wf: Workflow): Graph {
   const { nodes = {}, ui, ...extra } = wf
   const names = new Set(Object.keys(nodes))
@@ -120,7 +130,7 @@ export function toGraph(wf: Workflow): Graph {
       position: positions[name] ?? null,
       data: {
         type,
-        parameters: { ...(parameters ?? {}) },
+        parameters: upgradeParams(type, parameters),
         extra: rest,
         missing,
         hadParams: parameters !== undefined,

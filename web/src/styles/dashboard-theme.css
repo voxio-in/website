@@ -415,3 +415,10 @@ button.db-row:hover { background: rgb(var(--ink) / 0.03); }
 .db-dialog.is-morph { animation: none; }
 .db-dialog-morph { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
 .db-dialog-backdrop:has(.db-dialog.is-morph) { animation: none; }
+
+/* Dialog actions as one combination: joined tiles, round only on the outer edge. */
+.db-dialog-foot.is-combo { gap: 2px; }
+.db-dialog-foot.is-combo > .db-btn { border-radius: 6px; }
+.db-dialog-foot.is-combo > .db-btn:first-child { border-radius: 20px 6px 6px 20px; }
+.db-dialog-foot.is-combo > .db-btn:last-child { border-radius: 6px 20px 20px 6px; }
+.db-dialog-foot.is-combo > .db-btn:only-child { border-radius: 20px; }

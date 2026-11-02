@@ -4,10 +4,11 @@
 // A model shows up only when its provider's key is set.
 
 import type { ToolDef } from './tools.server'
+import { anthropicParts, openaiParts, type Attachment } from './files.server'
 
 export type Call = { id: string; name: string; input: Record<string, unknown> }
 export type Msg =
-  | { role: 'user'; content: string }
+  | { role: 'user'; content: string; files?: Attachment[] }
   | { role: 'assistant'; text: string; calls: Call[] }
   | { role: 'tool'; id: string; name: string; content: string }
 
@@ -35,8 +36,10 @@ const ALL: ModelInfo[] = [
   { id: 'groq-oss', label: 'GPT-OSS 120B (Groq)', provider: 'groq', model: 'openai/gpt-oss-120b', note: 'Fastest' },
 ]
 
-export const availableModels = () => ALL.filter((m) => KEYS[m.provider])
-export const modelById = (id: string) => availableModels().find((m) => m.id === id) ?? availableModels()[0]
+/** Ask Voxio always runs on Gemini 3.1 Flash Lite; there is no picker. The others stay listed for scripts. */
+const FIXED = ALL.find((m) => m.id === 'or-gemini-lite')!
+export const availableModels = () => (KEYS[FIXED.provider] ? [FIXED] : [])
+export const modelById = (_id?: string) => FIXED
 
 const MAX_OUT = 4096
 
@@ -61,7 +64,7 @@ async function anthropic(m: ModelInfo, system: string, msgs: Msg[], tools: ToolD
   // Consecutive tool results go back as one user message of tool_result blocks.
   const messages: { role: 'user' | 'assistant'; content: unknown }[] = []
   for (const x of msgs) {
-    if (x.role === 'user') messages.push({ role: 'user', content: x.content })
+    if (x.role === 'user') messages.push({ role: 'user', content: x.files?.length ? anthropicParts(x.content, x.files) : x.content })
     else if (x.role === 'assistant') messages.push({ role: 'assistant', content: [...(x.text ? [{ type: 'text', text: x.text }] : []), ...x.calls.map((c) => ({ type: 'tool_use', id: c.id, name: c.name, input: c.input }))] })
     else {
       const block = { type: 'tool_result', tool_use_id: x.id, content: x.content }
@@ -98,7 +101,8 @@ const BASE: Record<'openrouter' | 'groq', string> = {
 async function openaiLike(m: ModelInfo, system: string, msgs: Msg[], tools: ToolDef[], signal?: AbortSignal): Promise<Turn> {
   const messages: Record<string, unknown>[] = [{ role: 'system', content: system }]
   for (const x of msgs) {
-    if (x.role === 'user') messages.push({ role: 'user', content: x.content })
+    // Groq's models read text only: a file there is named, not sent.
+    if (x.role === 'user') messages.push({ role: 'user', content: x.files?.length ? (m.provider === 'groq' ? `${x.content}\n\n[Attached: ${x.files.map((f) => f.name).join(', ')} — this model can't read files; switch to Gemini or Claude]` : openaiParts(x.content, x.files)) : x.content })
     else if (x.role === 'assistant') messages.push({
       role: 'assistant', content: x.text || null,
       ...(x.calls.length ? { tool_calls: x.calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.input) } })) } : {}),

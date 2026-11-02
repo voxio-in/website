@@ -45,6 +45,26 @@ export type FieldKind =
   | 'canend'
   /** Which conversation memory it shares (history_key), from the ones in the workflow. */
   | 'memory'
+  /** Developer mode's out_dict: speak and hangup as their own controls, any other pairs below. */
+  | 'outdict'
+  /** Developer mode's interruption_metadata: the keys the chosen interruption_type reads. */
+  | 'interruptmeta'
+  /** Developer mode's Listen input_variables, by where each value comes from. */
+  | 'listenvars'
+  /** Developer mode's llm_return_type: each field the AI fills, with its type and description. */
+  | 'returntype'
+  /** Developer mode's summariser_config: when and how older turns are summarised. */
+  | 'summarycfg'
+  /** Developer mode's Branch: the one value it decides on. */
+  | 'branchon'
+  /** Developer mode's Branch mappings: each value and where it leads. */
+  | 'branchmaps'
+  /** One name, from the values earlier steps produce (only the first name of the key is read). */
+  | 'onevar'
+  /** One name the step writes its result to (only the first is used). */
+  | 'onename'
+  /** Which stored fields of each passage come back (rag entities). */
+  | 'entities'
 
 export type Field = {
   key: string
@@ -99,7 +119,39 @@ export type NodeSpec = {
   unsupported?: string
   /** Not offered in the picker (still renders if a workflow has one). */
   hidden?: boolean
+  /** Developer mode: the engine's raw keys, grouped. Keys in no group show under "Other". */
+  dev?: DevGroup[]
+  /** Keys kept for the engine's own use that the dashboard never shows, not even in developer mode. */
+  internal?: string[]
 }
+
+/**
+ * One engine parameter as developer mode shows it: labelled by its real key, edited with a normal
+ * control (`kind`, as in Field). `owns` lists other keys the same control writes
+ * (interruption_type with interruption_metadata); `requires` shows it only while that switch is on.
+ */
+export type DevKey = {
+  key: string; default: unknown; kind: FieldKind; owns?: string[]; requires?: string; help?: string
+  /** Presets for a free string, shown as a combo box. */
+  options?: string[]
+  /** A fixed set to pick one from, shown as a dropdown whose hover note is each option's `info`. */
+  choices?: { value: string; label: string; info?: string }[]
+}
+/** A heading of raw keys in developer mode, optionally with sub-groups. */
+export type DevGroup = {
+  id: string; title: string; keys: DevKey[]; groups?: DevGroup[]; help?: string
+  /** Shown as one combination: its keys side by side in one row. */
+  join?: boolean
+  /**
+   * The group is this key's control, not an expander: a switch (remove) or a dropdown
+   * (interruption_type). Only once it turns something on does it become an expander
+   * for the rest of the group.
+   */
+  lead?: string
+}
+
+/** Every key a developer-mode layout lists, sub-groups included. */
+export const devKeysOf = (groups: DevGroup[]): string[] => groups.flatMap((g) => [...g.keys.flatMap((k) => [k.key, ...(k.owns ?? [])]), ...devKeysOf(g.groups ?? [])])
 
 export const PROVIDERS = [
   { value: 'groq', label: 'Groq', hint: 'Fastest' },
@@ -178,6 +230,14 @@ const aiDefaults = {
   interruption_metadata: {},
 }
 
+/** The rag node's: `kb` is the knowledge base id (voxioagent 2.2). */
+const kbLookup: Field[] = [
+  { key: 'kb', label: 'Knowledge base', kind: 'knowledge', help: 'Which knowledge base to search. Add PDFs to it on the Knowledge page. Saving connects it to this flow.' },
+  { key: 'top_k', label: 'How many passages', kind: 'number', help: 'How many of the closest passages the next AI step gets. 3 to 5 suits most answers.' },
+  { key: 'input_variables', label: 'Search using', kind: 'onevar', advanced: true, help: 'What to search for, usually what the caller said. Only the first value is used.' },
+  { key: 'output_variables', label: 'Save results as', kind: 'onename', advanced: true, help: 'The name the next AI step reads the passages by. Add it to that step\'s input.' },
+]
+
 const lookup: Field[] = [
   { key: 'collection_name', label: 'Knowledge base', kind: 'knowledge', help: 'Where to look.' },
   { key: 'input_variables', label: 'Search using', kind: 'schema', advanced: true, help: 'What to search for — usually what the caller said.' },
@@ -194,6 +254,40 @@ const clip = (s: unknown, n = 70) => {
   return t.length > n ? `${t.slice(0, n - 1)}…` : t
 }
 const modelName = (p: Record<string, unknown>) => MODELS[String(p.service)]?.find((m) => m.value === p.model)?.label ?? String(p.model ?? 'AI')
+
+// Developer mode for the AI steps (agent/.../parameters/llm_/llm_.py, nodes/llm_/*.py,
+// summariser_.py). Defaults are LLMParameters'.
+const INTERRUPT_CHOICES = INTERRUPT_OPTIONS.map((o) => ({ value: o.value, label: o.value, info: `${o.label}. ${o.info}` }))
+const aiModel: DevGroup = { id: 'model', title: 'model', join: true, help: 'Which provider runs the AI (service) and which of its models.', keys: [
+  { key: 'service', default: 'groq', kind: 'select', choices: PROVIDERS.map((p) => ({ value: p.value, label: p.value, info: `${p.label}. ${p.hint ?? ''}` })) },
+  { key: 'model', default: undefined, kind: 'model' },
+] }
+// service | model sit in main as one combination, not a group of their own.
+const aiMain = (streaming: boolean): DevGroup => ({ id: 'main', title: 'main', groups: [aiModel], keys: [
+  { key: 'system_prompt', default: '', kind: 'prompt', help: 'The instructions, placed after prompt_template in the system message.' },
+  { key: 'prompt_template', default: 'base_llm', kind: 'select', help: 'Base prompts put before system_prompt (agent/assets/prompts/base). Join several with +, e.g. base_llm+zero_echoing.',
+    options: ['base_llm', 'hinglish_llm', 'sales', 'slot_filling', 'zero_echoing', 'web_navigation'] },
+  { key: 'input_variables', default: {}, kind: 'schema', help: 'Values from the state sent to the AI each turn, one "name : value" line each.' },
+  { key: 'llm_return_type', default: {}, kind: 'returntype', help: streaming
+    ? 'Fields the AI fills each turn. speak is streamed to the caller; the rest go to your webhook and later steps.'
+    : 'Fields the AI fills each turn, written into the state for later steps (a Say speaks speak).' },
+  ...(streaming ? [{ key: 'stream_timeout', default: undefined, kind: 'seconds' as const, help: 'When another AI step starts from the same step: if this one has not finished in this many seconds, the other is used.' }] : []),
+] })
+const aiMemory: DevGroup = { id: 'memory', title: 'memory', keys: [
+  { key: 'history_key', default: '', kind: 'memory', help: 'The state key that holds this step\'s conversation. AI steps with the same history_key share one conversation.' },
+] }
+const aiSummariser: DevGroup = { id: 'summariser', title: 'summariser', lead: 'summariser', keys: [
+  { key: 'summariser', default: true, kind: 'bool', help: 'Summarises older turns of this conversation once it gets long, so replies stay quick.' },
+  { key: 'summariser_config', default: {}, kind: 'summarycfg', requires: 'summariser', help: 'When it summarises and with what. Unset keys use the summariser\'s defaults.' },
+] }
+const aiInterruption: DevGroup = { id: 'interruption', title: 'interruption', lead: 'interruption_type', keys: [
+  { key: 'interruption_type', default: 'full', kind: 'select', help: 'What happens when the caller talks over this reply.', choices: INTERRUPT_CHOICES },
+  { key: 'interruption_metadata', default: {}, kind: 'interruptmeta', help: 'The settings the chosen interruption_type reads.' },
+] }
+const aiEmotion: DevGroup = { id: 'emotion', title: 'emotion', lead: 'emotion', keys: [
+  { key: 'emotion', default: false, kind: 'bool', help: 'Adds the voice-cue prompt so the reply carries cues like [laughs] for the voice to perform.' },
+  { key: 'emotion_tts', default: 'eleven_v3', kind: 'select', requires: 'emotion', options: ['eleven_v3', 'soniox_rt_v2'], help: 'Which cue style (agent/assets/prompts/tagging).' },
+] }
 
 export const NODE_SPECS: NodeSpec[] = [
   {
@@ -212,6 +306,33 @@ export const NODE_SPECS: NodeSpec[] = [
       { key: 'remove_stt', label: 'Remove speaker labels', kind: 'bool', advanced: true, requires: 'remove', help: 'Drops labels like <speaker_1> from what the caller said.' },
     ],
     defaults: { out_dict: { speak: '' }, interruption_type: 'no', interruption_metadata: {} },
+    // Defaults are OutputParameters' (agent/.../parameters/output_/parameters_.py).
+    dev: [
+      { id: 'main', title: 'main', keys: [
+        { key: 'out_dict', default: {}, kind: 'outdict', help: 'A fixed object sent every time this step runs.' },
+        { key: 'variables', default: [], kind: 'vars', help: 'Values from earlier steps added to the output. They replace the same key in out_dict.' },
+        { key: 'flags', default: 'DOTALL', kind: 'select', options: ['DOTALL'], help: 'Regex flags used by the remove settings. The engine supports DOTALL only.' },
+        { key: 'input_variables', default: {}, kind: 'schema', help: 'Accepted, not used by this step.' },
+      ] },
+      // services/general/interruption_manager/im_.py: the type decides; metadata holds what that type reads.
+      { id: 'interruption', title: 'interruption', lead: 'interruption_type', keys: [
+        { key: 'interruption_type', default: 'full', kind: 'select', help: 'What happens when the caller talks over the agent.',
+          choices: INTERRUPT_OPTIONS.map((o) => ({ value: o.value, label: o.value, info: `${o.label}. ${o.info}` })) },
+        { key: 'interruption_metadata', default: {}, kind: 'interruptmeta', help: 'The settings the chosen interruption_type reads: duration, length and ignore-words.' },
+      ] },
+      { id: 'remove', title: 'remove', lead: 'remove', keys: [{ key: 'remove', default: false, kind: 'bool', help: 'Cleans text values taken from variables (never out_dict). Turn it on to use remove_stt and remove_tts.' }], groups: [
+        { id: 'remove_stt', title: 'remove_stt', join: true, help: 'Strips speaker labels like <speaker_1> from what the caller said, using the preset in remove_stt_name.', keys: [
+          { key: 'remove_stt', default: false, kind: 'bool', requires: 'remove' },
+          // agent/assets/regex/removals/stt_/
+          { key: 'remove_stt_name', default: 'soniox/speakers/speaker-label', kind: 'select', options: ['soniox/speakers/speaker-label'], requires: 'remove_stt', help: 'Which removal preset to apply.' },
+        ] },
+        { id: 'remove_tts', title: 'remove_tts', join: true, help: 'Strips voice cues like [laughs] from the text, using the preset in remove_tts_name.', keys: [
+          { key: 'remove_tts', default: false, kind: 'bool', requires: 'remove' },
+          // agent/assets/regex/removals/tts_/
+          { key: 'remove_tts_name', default: 'eleven_v3', kind: 'select', options: ['eleven_v3', 'elevenlabs-multilingual-v3', 'soniox_rt_v2'], requires: 'remove_tts', help: 'Which removal preset to apply.' },
+        ] },
+      ] },
+    ],
     summary: (p) => {
       const speak = (p.out_dict as Record<string, unknown> | undefined)?.speak
       if (typeof speak === 'string' && speak.trim()) return `“${clip(speak)}”`
@@ -227,6 +348,14 @@ export const NODE_SPECS: NodeSpec[] = [
     setupNote: 'Waits for the caller to finish, then passes their words on. Nothing to set here. What it does when the caller goes quiet is on the Behaviour tab.',
     fields: [{ key: 'input_variables', label: 'Save what they say as', kind: 'listen', advanced: true, help: 'The name later steps use to read the caller’s answer. Almost always “What the caller said”.' }],
     defaults: { input_variables: { user_input: 'str' } },
+    // agent/.../nodes/input_/node_.py: waits until every listed name has a fresh value this turn,
+    // and pauses on the first one that is missing.
+    dev: [
+      { id: 'main', title: 'main', keys: [
+        { key: 'input_variables', default: {}, kind: 'listenvars',
+          help: 'What this step waits for. It carries on only when every name here has a fresh value this turn; until then the call pauses on the first one missing.' },
+      ] },
+    ],
     summary: (p) => {
       const names = Object.keys((p.input_variables as object) ?? {})
       return names.length ? `Waits for the caller · saves ${names.map((n) => friendlyVar(n).toLowerCase()).join(', ')}` : 'Waits for the caller to speak'
@@ -253,6 +382,7 @@ export const NODE_SPECS: NodeSpec[] = [
     fields: [...brain, canEnd, interrupt, ...memory,
       { key: 'stream_timeout', label: 'Give up after', kind: 'seconds', advanced: true, section: 'timing', racing: true, help: 'Another AI starts from the same step. If this one takes longer than this, the other is heard.' }],
     defaults: aiDefaults,
+    dev: [aiMain(true), aiInterruption, aiMemory, aiSummariser],
     summary: (p) => (String(p.system_prompt ?? '').trim() ? `${modelName(p)} · ${clip(p.system_prompt, 52)}` : `${modelName(p)} · no instructions yet`),
   },
   {
@@ -261,6 +391,7 @@ export const NODE_SPECS: NodeSpec[] = [
     out: 'single',
     fields: [...brain, decides, ...emotion, ...memory],
     defaults: aiDefaults,
+    dev: [aiMain(false), aiEmotion, aiMemory, aiSummariser],
     summary: (p) => (String(p.system_prompt ?? '').trim() ? `${modelName(p)} · ${clip(p.system_prompt, 52)}` : `${modelName(p)} · no instructions yet`),
   },
   {
@@ -281,6 +412,12 @@ export const NODE_SPECS: NodeSpec[] = [
       { key: 'mappings', label: 'Paths', kind: 'mappings', help: 'One path per answer. Connect each path to the step it leads to.' },
     ],
     defaults: { input_variables: { hangup: 'bool' }, mappings: { true: '', false: '' } },
+    // agent/.../nodes/conditional_/node_.py: reads the first input_variables name, trims and
+    // lowercases its value, and takes the mapping whose key matches; else `default`; else `next`.
+    dev: [{ id: 'main', title: 'main', keys: [
+      { key: 'input_variables', default: {}, kind: 'branchon', help: 'The value it decides on. Only the first name counts; its value is compared trimmed and in lowercase.' },
+      { key: 'mappings', default: {}, kind: 'branchmaps', help: 'One path per value. Keys are matched without regard to case; a key named default catches the rest. Lines on the canvas say where each path leads.' },
+    ] }],
     summary: (p) => {
       const v = Object.keys((p.input_variables as object) ?? {})[0]
       return v ? `Checks ${friendlyVar(v).toLowerCase()}` : 'Choose what to check'
@@ -289,12 +426,27 @@ export const NODE_SPECS: NodeSpec[] = [
   {
     type: 'rag', label: 'Look up knowledge', group: 'Knowledge', icon: 'book', color: '#6fe3a1', hue: 145, glyph: '▤',
     blurb: 'Searches your documents or website and hands what it finds to the next AI step.',
-    // Knowledge is hidden for now: not offered for new steps, existing ones still open.
-    hidden: true,
     out: 'single',
-    fields: lookup,
+    fields: kbLookup,
     defaults: { input_variables: { user_input: 'str' }, output_variables: ['context'], top_k: 5, entities: ['text'] },
-    summary: (p) => (p.collection_name ? `Searches ${knowledgeName(String(p.collection_name))}` : 'Pick a knowledge base'),
+    // collection_name (resolved from kb at session start) and url (the retrieval service) are internal.
+    internal: ['collection_name', 'url'],
+    // agent/.../nodes/rag: searches with the first input_variables value, keeps the `entities` fields
+    // of each hit, and writes {rag_context: "…"} to the first output_variables name.
+    dev: [
+      { id: 'main', title: 'main', keys: [
+        { key: 'kb', default: undefined, kind: 'knowledge', help: 'The knowledge base to search. It must be connected to this flow; saving does that.' },
+        { key: 'input_variables', default: {}, kind: 'onevar', help: 'The search query: the first name here, usually user_input.' },
+        { key: 'output_variables', default: [], kind: 'onename', help: 'Where the result goes, as {rag_context: "passage\\n\\npassage…"}. Default rag_context.' },
+      ] },
+      { id: 'retrieval', title: 'retrieval', keys: [
+        { key: 'top_k', default: undefined, kind: 'number', help: 'How many passages come back. Unset uses the search service\'s default.' },
+        { key: 'entities', default: ['text'], kind: 'entities', help: 'Which stored fields of each passage are kept. text is the passage itself.' },
+        { key: 'filter_', default: undefined, kind: 'select', options: ['document_name == ""'], help: 'A Milvus filter expression that narrows the search, e.g. document_name == "faq.pdf".' },
+        { key: 'timeout', default: undefined, kind: 'seconds', help: 'Seconds to wait for the search, up to 30. On a timeout the step passes no passages on.' },
+      ] },
+    ],
+    summary: (p) => (p.kb ? `Searches ${knowledgeName(String(p.kb))}` : 'Pick a knowledge base'),
   },
   {
     type: 'rag_shopify', label: 'Search catalog', group: 'Shopify', icon: 'search', color: '#9be15d', hue: 95, glyph: '⛁',

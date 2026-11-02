@@ -13,7 +13,12 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 const CLOSED = /kind: Closed|Connection closed|Can't reach database server/i;
 
 function create() {
+  // The database is far away (about 0.5 s a query from India), so a request can wait longer than
+  // Prisma's default 10 s for a free connection when many run at once. Only if the URL doesn't say.
+  const url = process.env.DATABASE_URL
+  const withTimeout = url && !/[?&]pool_timeout=/.test(url) ? `${url}${url.includes('?') ? '&' : '?'}pool_timeout=30` : url
   const client = new PrismaClient({
+    ...(withTimeout ? { datasources: { db: { url: withTimeout } } } : {}),
     log: [
       { emit: "event", level: "error" },
       ...(process.env.NODE_ENV === "development"

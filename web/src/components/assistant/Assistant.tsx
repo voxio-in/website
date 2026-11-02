@@ -10,18 +10,22 @@ import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, u
 import { ThinkingOrb } from 'thinking-orbs'
 import { useRouter } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUpIcon, AtSignIcon, ArrowUpRightIcon, ChevronRightIcon, Maximize2Icon, Minimize2Icon, MoveHorizontalIcon, PlusIcon, SparklesIcon, SquareIcon, XIcon } from 'lucide-react'
+import { ArrowUpIcon, AtSignIcon, ArrowUpRightIcon, ChevronRightIcon, Maximize2Icon, Minimize2Icon, MoveHorizontalIcon, PaperclipIcon, PlusIcon, SparklesIcon, SquareIcon, XIcon } from 'lucide-react'
 
 import { AsciiAssembly } from '#/components/AsciiAssembly'
 import '#/styles/ascii-assembly.css'
 
-import { Dropdown } from '#/components/dashboard/controls'
 import { Markdown, OpenRef } from './Markdown'
+import TestCard, { type TestSpec } from './TestCard'
+import DraftDocCard, { type DraftDoc } from './DraftDocCard'
+import { DownloadCard, FollowUpsCard, type FollowUps } from './LeadCards'
+import { AudioPlayer } from '#/components/dashboard/kit/AudioPlayer'
 
-type Mention = { kind: 'flow' | 'step' | 'session' | 'face' | 'voice' | 'number' | 'knowledge'; id: string; label: string; flow?: string }
+type Mention = { kind: 'flow' | 'step' | 'session' | 'face' | 'voice' | 'number' | 'knowledge' | 'file'; id: string; label: string; flow?: string }
 type Ctx = { page?: string; flow?: { key: string; name: string }; step?: string; session?: string; timezone?: string }
-type Card = { id: string; flow: string; title: string; where?: string[]; page?: string; lines: { what: string; from?: unknown; to?: unknown }[]; status: string }
-type Part = { kind: 'text'; text: string } | { kind: 'tool'; id: string; label: string; input: unknown; result?: unknown; ok?: boolean } | { kind: 'change'; card: Card }
+type VadBox = { x: number; y: number; w: number; h: number; title: string; type: string }
+type Card = { id: string; flow: string; title: string; where?: string[]; page?: string; lines: { what: string; from?: unknown; to?: unknown }[]; status: string; vad?: { isNew: boolean; title: string; boxes: VadBox[] } }
+type Part = { kind: 'text'; text: string } | { kind: 'tool'; id: string; label: string; input: unknown; result?: unknown; ok?: boolean } | { kind: 'change'; card: Card } | { kind: 'test'; test: TestSpec } | { kind: 'voices'; voices: { label: string; url: string }[] } | { kind: 'doc'; doc: DraftDoc } | { kind: 'followups'; followups: FollowUps } | { kind: 'download'; download: { name: string; rows: number; mime?: string; text?: string } }
 type Item =
   | { role: 'user'; text: string; mentions: Mention[] }
   | { role: 'assistant'; parts: Part[]; done?: boolean; error?: string; meta?: string }
@@ -31,7 +35,18 @@ const CHAT = 'vx-assistant-chat'
 /** Fired when the chat list changes (a chat started, renamed or deleted), for the sidebar. */
 export const CHATS_EVENT = 'vx-assistant-chats'
 const MODEL = 'vx-assistant-model'
-const KIND_LABEL: Record<Mention['kind'], string> = { flow: 'Flow', step: 'Step', session: 'Session', face: 'Face', voice: 'Voice', number: 'Number', knowledge: 'Knowledge' }
+const KIND_LABEL: Record<Mention['kind'], string> = { flow: 'Flow', step: 'Step', session: 'Session', face: 'Face', voice: 'Voice', number: 'Number', knowledge: 'Knowledge', file: 'File' }
+// What can be attached (the server checks again): PDF, images, Word.
+const ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.docx,application/pdf,image/png,image/jpeg,image/webp,image/gif,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const MAX_FILES = 3
+const MAX_MB = 10
+type Upload = { name: string; mime: string; data: string }
+const readFile = (f: File) => new Promise<Upload>((ok, fail) => {
+  const rd = new FileReader()
+  rd.onload = () => ok({ name: f.name, mime: f.type || (/\.docx$/i.test(f.name) ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ''), data: String(rd.result).split(',')[1] ?? '' })
+  rd.onerror = () => fail(rd.error)
+  rd.readAsDataURL(f)
+})
 const SUGGEST = ['How are my calls going this week?', 'Explain this flow’s workflow step by step', 'Find calls where the caller sounded unhappy', 'Which settings make replies faster?']
 
 const load = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d } catch { return d } }
@@ -52,6 +67,19 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
   const [model, setModel] = useState('')
   const [text, setText] = useState('')
   const [chips, setChips] = useState<Mention[]>([])
+  const [files, setFiles] = useState<Upload[]>([])
+  const [fileErr, setFileErr] = useState('')
+  const picker = useRef<HTMLInputElement>(null)
+  const attach = async (list: FileList | null) => {
+    setFileErr('')
+    const picked = [...(list ?? [])]
+    if (files.length + picked.length > MAX_FILES) { setFileErr(`Attach up to ${MAX_FILES} files at a time.`); return }
+    const big = picked.find((f) => f.size > MAX_MB * 1024 * 1024)
+    if (big) { setFileErr(`“${big.name}” is over ${MAX_MB} MB.`); return }
+    const bad = picked.find((f) => !/\.(pdf|png|jpe?g|webp|gif|docx)$/i.test(f.name))
+    if (bad) { setFileErr(`“${bad.name}” can’t be attached: PDF, images and Word (.docx) only.`); return }
+    try { const read = await Promise.all(picked.map(readFile)); setFiles((x) => [...x, ...read]) } catch { setFileErr('Couldn’t read that file.') }
+  }
   const [busy, setBusy] = useState(false)
   const abort = useRef<AbortController | null>(null)
   const list = useRef<HTMLDivElement>(null)
@@ -78,8 +106,9 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
   useEffect(() => { setModel(load(MODEL, '')) }, [])
   useEffect(() => {
     if (abort.current) return
-    void loadChat(chatProp ?? load<string | null>(CHAT, null))
-  }, [chatProp, loadChat])
+    // The full view without a chat in its URL is a new conversation; the panel reopens the last one.
+    void loadChat(chatProp ?? (variant === 'page' ? null : load<string | null>(CHAT, null)))
+  }, [chatProp, loadChat, variant])
   // The panel and the full view share the open chat: after a reply in one, the other reloads it.
   useEffect(() => {
     const onSync = (e: Event) => {
@@ -96,6 +125,12 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
     window.dispatchEvent(new CustomEvent('vx-assistant-sync', { detail: { from: variant } }))
     if (variant === 'page' && chatProp) void router0.navigate({ to: '/dashboard/assistant' })
   }
+  // Clicking Ask Voxio (top bar, a VAD's menu) starts a new conversation; old ones stay in the sidebar.
+  useEffect(() => {
+    const onNew = () => { if (!abort.current) newChat() }
+    window.addEventListener('vx-assistant-new', onNew)
+    return () => window.removeEventListener('vx-assistant-new', onNew)
+  })
   useEffect(() => {
     if (!open || models.length) return
     fetch('/api/assistant?models=1').then((r) => r.json()).then((r) => { if (r.ok) setModels(r.data) }).catch(() => {})
@@ -155,22 +190,24 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
 
   // ------------------------------------------------------------ sending
   const send = useCallback(async (said?: string) => {
-    const t = (said ?? text).trim()
+    const sending = said === undefined ? files : []
+    const t = (said ?? text).trim() || (sending.length ? 'Look at the attached file.' : '')
     if (!t || busy) return
-    const mine: Item = { role: 'user', text: t, mentions: chips }
+    const mine: Item = { role: 'user', text: t, mentions: [...chips, ...sending.map((f): Mention => ({ kind: 'file', id: f.name, label: f.name }))] }
     const at = box.current?.getBoundingClientRect()
     if (at) flight.current = { text: t, x: at.left + 14, y: at.top + at.height / 2 }
     const next = [...items, mine, { role: 'assistant', parts: [] } as Item]
     setItems(next)
-    setText(''); setChips([]); setMq(null)
+    setText(''); setChips([]); setMq(null); setFiles([]); setFileErr('')
     setBusy(true)
     // Earlier turns go back as plain text: the model rereads with tools if it needs detail.
+    // A file's contents go with its own message only; later turns just name it.
     const history = [...items, mine].flatMap((it): Record<string, unknown>[] => it.role === 'user'
-      ? [{ role: 'user', content: it.text }]
+      ? [{ role: 'user', content: it !== mine && it.mentions.some((m) => m.kind === 'file') ? `${it.text}\n[Attached then: ${it.mentions.filter((m) => m.kind === 'file').map((m) => m.label).join(', ')}]` : it.text }]
       : [{
           role: 'assistant', calls: [],
           // Its words, plus what became of each change it proposed (the user may have applied it since).
-          text: it.parts.map((p) => p.kind === 'text' ? p.text : p.kind === 'change' ? `[Proposed change “${p.card.title}” on ${p.card.flow}: ${p.card.status}]` : '').filter(Boolean).join('\n') || '(no answer)',
+          text: it.parts.map((p) => p.kind === 'text' ? p.text : p.kind === 'change' ? `[Proposed change “${p.card.title}” on ${p.card.flow}: ${p.card.status}]` : p.kind === 'test' ? `[Test card for “${p.test.name}” (${p.test.how})]` : p.kind === 'voices' ? `[Voices to compare: ${p.voices.map((v) => v.label).join('; ')}]` : p.kind === 'doc' ? `[Fill-in document “${p.doc.title}”, ${p.doc.items.length} questions]` : p.kind === 'followups' ? `[Follow-up list “${p.followups.title}”, ${p.followups.total} calls]` : p.kind === 'download' ? `[CSV ${p.download.name}, ${p.download.rows} rows]` : '').filter(Boolean).join('\n') || '(no answer)',
         }])
     const ctrl = new AbortController()
     abort.current = ctrl
@@ -179,7 +216,7 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
     try {
       const res = await fetch('/api/assistant', {
         method: 'POST', signal: ctrl.signal, headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chat: chatId ?? undefined, model: chosen?.id, history, ctx: { ...ctx, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }, mentions: mine.mentions }),
+        body: JSON.stringify({ files: sending.length ? sending : undefined, chat: chatId ?? undefined, model: chosen?.id, history, ctx: { ...ctx, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }, mentions: mine.mentions }),
       })
       if (!res.ok || !res.body) throw new Error(((await res.json().catch(() => null)) as { reason?: string } | null)?.reason ?? `Error ${res.status}`)
       const reader = res.body.getReader()
@@ -202,7 +239,12 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
           else if (e.type === 'change') patch((a) => (a.parts.some((p) => p.kind === 'change' && p.card.id === e.card.id)
             ? { ...a, parts: a.parts.map((p) => (p.kind === 'change' && p.card.id === e.card.id ? { ...p, card: e.card } : p)) }
             : { ...a, parts: [...a.parts, { kind: 'change', card: e.card }] }))
-          else if (e.type === 'done') patch((a) => ({ ...a, done: true, meta: e.summary ?? `${e.model} · ${e.steps} step${e.steps === 1 ? '' : 's'} · ${(e.usage.input + e.usage.output).toLocaleString()} tokens${e.usage.cached ? ` (${e.usage.cached.toLocaleString()} cached)` : ''}` }))
+          else if (e.type === 'test') patch((a) => ({ ...a, parts: [...a.parts, { kind: 'test', test: e.test }] }))
+          else if (e.type === 'voices') patch((a) => ({ ...a, parts: [...a.parts, { kind: 'voices', voices: e.voices }] }))
+          else if (e.type === 'followups') patch((a) => ({ ...a, parts: [...a.parts, { kind: 'followups', followups: e.followups }] }))
+          else if (e.type === 'download') patch((a) => ({ ...a, parts: [...a.parts, { kind: 'download', download: e.download }] }))
+          else if (e.type === 'doc') patch((a) => ({ ...a, parts: [...a.parts, { kind: 'doc', doc: e.doc }] }))
+          else if (e.type === 'done') patch((a) => ({ ...a, done: true, meta: e.summary ?? `${e.steps} step${e.steps === 1 ? '' : 's'} · ${(e.usage.input + e.usage.output).toLocaleString()} tokens${e.usage.cached ? ` (${e.usage.cached.toLocaleString()} cached)` : ''}` }))
           else if (e.type === 'error') patch((a) => ({ ...a, done: true, error: e.message }))
         }
       }
@@ -215,7 +257,7 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
       // The other view (panel or full view) reloads this chat from the server.
       window.dispatchEvent(new CustomEvent('vx-assistant-sync', { detail: { from: variant } }))
     }
-  }, [text, busy, items, chips, chosen?.id, ctx, chatId, variant])
+  }, [text, busy, items, chips, files, chosen?.id, ctx, chatId, variant])
 
   const onKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mq !== null && found.length) {
@@ -288,13 +330,23 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
               </div>
             ) : (
               <div key={i} className="as-ai">
-                {it.parts.map((p, j) => p.kind === 'text'
+                {it.parts.map((p, j) => p.kind === 'tool'
+                  // Steps in a row are one dropdown; only the first of a run draws it.
+                  ? (it.parts[j - 1]?.kind === 'tool' ? null : <StepsLine key={j} steps={runOf(it.parts, j)} />)
+                  : p.kind === 'text'
                   ? <Markdown key={j} text={p.text} />
                   : p.kind === 'change' ? <ChangeCard key={j} card={p.card} chat={chatId} onCard={(card) => setItems((xs) => xs.map((x) => x.role === 'assistant' ? { ...x, parts: x.parts.map((q) => (q.kind === 'change' && q.card.id === card.id ? { ...q, card } : q)) } : x))} />
-                  : <ToolLine key={j} part={p} />)}
+                  : p.kind === 'test' ? <TestCard key={j} test={p.test} />
+                  : p.kind === 'doc' ? <DraftDocCard key={j} doc={p.doc} />
+                  : p.kind === 'followups' ? <FollowUpsCard key={j} data={p.followups} />
+                  : p.kind === 'download' ? <DownloadCard key={j} file={p.download} />
+                  : p.kind === 'voices' ? <div key={j} className="as-voices">{p.voices.map((v) => <div key={v.url} className="as-voice"><span className="as-voice-label">{v.label}</span><AudioPlayer src={v.url} bars={40} compact autoPlay={false} /></div>)}</div>
+                  : null)}
+                {it.done && <ApplyAll cards={it.parts.flatMap((p) => (p.kind === 'change' ? [p.card] : []))} chat={chatId}
+                  onCard={(card) => setItems((xs) => xs.map((x) => x.role === 'assistant' ? { ...x, parts: x.parts.map((q) => (q.kind === 'change' && q.card.id === card.id ? { ...q, card } : q)) } : x))} />}
                 {!it.done && <span className="as-dots" aria-label="Working"><i /><i /><i /></span>}
                 {it.error && <p className="as-err">{it.error}</p>}
-                {it.meta && <span className="as-meta">{it.meta}</span>}
+                {it.meta && <span className="as-meta">{it.meta.replace(/^[^·]*\([^)]*\) · /, '')}</span>}
               </div>
             ))}
           </div>
@@ -313,6 +365,16 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
                 {!found.some((m) => m.kind === 'session') && <p className="as-mention-hint">To find a session, type part of its ID or the caller’s number.</p>}
               </div>
             )}
+            {files.length > 0 && (
+              <div className="as-chips">
+                {files.map((f, n) => (
+                  <span key={`${f.name}${n}`} className="as-chip"><em>File</em>{f.name}
+                    <button type="button" aria-label={`Remove ${f.name}`} onClick={() => setFiles((x) => x.filter((_, k) => k !== n))}><XIcon size={12} /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {fileErr && <p className="as-note">{fileErr}</p>}
             {chips.length > 0 && (
               <div className="as-chips">
                 {chips.map((m) => (
@@ -327,16 +389,15 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
                 onChange={(e) => onType(e.target.value, e.target.selectionStart)} onKeyDown={onKey} />
               <div className="as-box-bar">
                 <button type="button" className="db-iconbtn" title="Mention" aria-label="Mention" onClick={() => { const v = `${text}${text && !text.endsWith(' ') ? ' ' : ''}@`; setText(v); setMq(''); box.current?.focus() }}><AtSignIcon size={16} /></button>
-                {models.length > 0 && (
-                  <div className="as-model"><Dropdown value={chosen?.id ?? ''} aria-label="Model" options={models.map((m) => ({ value: m.id, label: m.label, hint: m.note }))} onChange={(v) => { setModel(v); save(MODEL, v) }} /></div>
-                )}
+                <button type="button" className="db-iconbtn" title="Attach a PDF, image or Word file" aria-label="Attach a file" disabled={busy || files.length >= MAX_FILES} onClick={() => picker.current?.click()}><PaperclipIcon size={16} /></button>
+                <input ref={picker} type="file" accept={ACCEPT} multiple hidden onChange={(e) => { void attach(e.target.files); e.target.value = '' }} />
                 <span style={{ flex: 1 }} />
                 {busy
                   ? <button type="button" className="as-send is-stop" onClick={() => abort.current?.abort()} aria-label="Stop"><SquareIcon size={14} /></button>
-                  : <button type="button" className="as-send" disabled={!text.trim() || !models.length} onClick={() => void send()} aria-label="Send"><ArrowUpIcon size={18} /></button>}
+                  : <button type="button" className="as-send" disabled={(!text.trim() && !files.length) || !models.length} onClick={() => void send()} aria-label="Send"><ArrowUpIcon size={18} /></button>}
               </div>
             </div>
-            {!models.length && <p className="as-note">No AI model is set up yet: add OPENROUTER_API_KEY, GROQ_API_KEY or ANTHROPIC_API_KEY to the server’s .env and restart it.</p>}
+            {!models.length && <p className="as-note">Ask Voxio isn’t set up yet: add OPENROUTER_API_KEY to the server’s .env and restart it.</p>}
           </div>
         </Shell>
         </OpenRef.Provider>
@@ -345,21 +406,34 @@ export function Assistant({ open, onClose, ctx, variant = 'panel', chat: chatPro
   )
 }
 
-/** One read the model made: a quiet line that opens to show the exact input and result. */
-function ToolLine({ part }: { part: Extract<Part, { kind: 'tool' }> }) {
+type ToolPart = Extract<Part, { kind: 'tool' }>
+/** The run of steps starting at j. */
+const runOf = (parts: Part[], j: number): ToolPart[] => {
+  const out: ToolPart[] = []
+  for (let i = j; i < parts.length && parts[i].kind === 'tool'; i++) out.push(parts[i] as ToolPart)
+  return out
+}
+
+/** The steps behind an answer: one line (the current step while working), opening to a chain of step headings. */
+function StepsLine({ steps }: { steps: ToolPart[] }) {
   const [open, setOpen] = useState(false)
-  const running = part.ok === undefined
+  const running = steps.some((s) => s.ok === undefined)
+  const last = steps[steps.length - 1]
+  const head = running ? `${last.label}…` : `${steps.length} step${steps.length === 1 ? '' : 's'}`
   return (
-    <div className={`as-tool${running ? ' is-running' : ''}${part.ok === false ? ' is-bad' : ''}`}>
+    <div className={`as-tool as-steps${running ? ' is-running' : ''}`}>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <ChevronRightIcon size={14} className="as-tool-chev" />
-        <span>{part.label}{running ? '…' : ''}</span>
+        <ChevronRightIcon size={16} className="as-tool-chev" />
+        <span>{head}</span>
       </button>
       {open && (
-        <div className="as-tool-body">
-          <span>Asked</span><pre>{JSON.stringify(part.input, null, 2)}</pre>
-          {!running && <><span>Got</span><pre>{JSON.stringify(part.result, null, 2)}</pre></>}
-        </div>
+        <ol className="as-chain">
+          {steps.map((s, i) => (
+            <li key={i} className={s.ok === false ? 'is-bad' : s.ok === undefined ? 'is-running' : undefined}>
+              <i aria-hidden />{s.label}{s.ok === false ? ' (failed)' : ''}
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   )
@@ -385,6 +459,54 @@ function SentBubble({ text, flight }: { text: string; flight: React.MutableRefOb
   return <p ref={ref}>{text}</p>
 }
 
+/** Several proposals in one answer: apply or discard them all at once, one after another. */
+function ApplyAll({ cards, chat, onCard }: { cards: Card[]; chat: string | null; onCard: (c: Card) => void }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState<null | 'apply' | 'discard'>(null)
+  const [done, setDone] = useState(0)
+  const [err, setErr] = useState<string | null>(null)
+  const pending = cards.filter((c) => c.status === 'pending')
+  if (pending.length < 2 && !busy) return null
+  const all = async (action: 'apply' | 'discard') => {
+    setBusy(action); setDone(0); setErr(null)
+    let failed = 0
+    for (const c of pending) {
+      const r = await fetch('/api/assistant', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ act: { id: c.id, action, chat: chat ?? undefined } }) })
+        .then((x) => x.json()).catch(() => null) as { ok: boolean; data?: Card } | null
+      if (r?.ok && r.data) onCard(r.data); else failed++
+      setDone((n) => n + 1)
+    }
+    if (failed) setErr(`${failed} of ${pending.length} didn’t go through. They’re still open above.`)
+    if (action === 'apply') { window.dispatchEvent(new Event('vx-applied')); void router.invalidate() }
+    setBusy(null)
+  }
+  return (
+    <div className="as-applyall">
+      <span>{busy ? `${busy === 'apply' ? 'Applying' : 'Discarding'} ${Math.min(done + 1, pending.length)} of ${pending.length}…` : `${pending.length} changes proposed`}</span>
+      <span className="db-btngroup" role="group" aria-label="All proposed changes">
+        <button type="button" className="db-gbtn is-lead" disabled={!!busy} onClick={() => void all('apply')}>{busy === 'apply' ? <><ThinkingOrb state="working" size={20} />Applying…</> : `Apply all ${pending.length}`}</button>
+        <button type="button" className="db-gbtn" disabled={!!busy} onClick={() => void all('discard')}>Discard all</button>
+      </span>
+      {err && <p className="as-err">{err}</p>}
+    </div>
+  )
+}
+
+/** The VAD as it will look: each widget a box at its place on the 12-column grid. */
+function VadPreview({ boxes }: { boxes: VadBox[] }) {
+  const rows = Math.max(1, ...boxes.map((b) => b.y + b.h))
+  return (
+    <div className="as-vad-grid" style={{ gridTemplateRows: `repeat(${rows}, 12px)` }}>
+      {boxes.map((b, i) => (
+        <div key={i} className={`as-vad-box is-${b.type}`} style={{ gridColumn: `${b.x + 1} / span ${b.w}`, gridRow: `${b.y + 1} / span ${b.h}` }}>
+          <em>{b.type === 'kpi' ? 'Number' : b.type === 'chart' ? 'Chart' : b.type === 'table' ? 'Table' : 'Note'}</em>
+          <span>{b.title}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** A proposed change: what would change, before → after, and Apply / Discard (then Undo). */
 function ChangeCard({ card, chat, onCard }: { card: Card; chat: string | null; onCard: (c: Card) => void }) {
   const router = useRouter()
@@ -398,16 +520,25 @@ function ChangeCard({ card, chat, onCard }: { card: Card; chat: string | null; o
       if (!r.ok) setErr(r.reason ?? 'That didn’t work.')
       else {
         onCard(r.data)
+        // A VAD just made or changed opens beside the chat.
+        const dash = action === 'apply' && /^vx:dash\/(.+)$/.exec(String(r.data?.page ?? ''))?.[1]
+        if (dash) window.dispatchEvent(new CustomEvent('vx-canvas', { detail: { id: dash } }))
         // Refresh the page's data without losing your place in the chat or the page.
         const main = document.querySelector<HTMLElement>('.db-main')
         const top = main?.scrollTop ?? 0
-        if (action !== 'discard') void router.invalidate().then(() => { if (main) main.scrollTop = top })
+        // Pages that load outside the router (dashboards) listen for this to reload.
+        if (action !== 'discard') { window.dispatchEvent(new Event('vx-applied')); void router.invalidate().then(() => { if (main) main.scrollTop = top }) }
       }
     } catch { setErr('That didn’t work. Try again.') } finally { setBusy(null) }
   }
   const show = (v: unknown) => (v === undefined || v === null ? '' : typeof v === 'string' ? v : JSON.stringify(v))
+  // Once applied, discarded or undone, the card folds to its head; Details opens it again.
+  const done = ['applied', 'discarded', 'undone'].includes(card.status)
+  const [more, setMore] = useState(false)
+  const body = !done || more
+  const dashId = /^vx:dash\/(.+)$/.exec(card.page ?? '')?.[1]
   return (
-    <div className={`as-change is-${card.status}`}>
+    <div className={`as-change is-${card.status}${done ? ' is-done' : ''}`}>
       {/* What is changing and where: flow › page › part, with a link to that page. */}
       <div className="as-change-head">
         <span className="as-change-kicker">
@@ -416,12 +547,23 @@ function ChangeCard({ card, chat, onCard }: { card: Card; chat: string | null; o
         <b>{card.title}</b>
         <span className="as-change-where">
           {[card.flow, ...(card.where ?? [])].map((w, i) => <span key={i}>{w}</span>)}
-          {card.page && <button type="button" className="as-change-open" onClick={() => open(card.page!)}>Open <ArrowUpRightIcon size={12} /></button>}
+          {card.page && !dashId && <button type="button" className="as-change-open" onClick={() => open(card.page!)}>Open <ArrowUpRightIcon size={12} /></button>}
+          {done && <button type="button" className="as-change-open" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Hide details' : 'Details'}</button>}
         </span>
       </div>
-      <ul className="as-change-lines">
+      {body && card.vad && (
+        <>
+          <p className="as-vad-say">
+            {card.vad.isNew
+              ? <>Apply creates a new VAD called <b>{card.vad.title}</b> for {card.flow}, laid out like this. Your flow and calls don’t change. You can edit or delete it later.</>
+              : <>Apply changes the VAD <b>{card.vad.title}</b> to look like this. Your flow and calls don’t change. Undo puts it back.</>}
+          </p>
+          <VadPreview boxes={card.vad.boxes} />
+        </>
+      )}
+      {body && !card.vad && <ul className="as-change-lines">
         {card.lines.map((l, i) => (
-          <li key={i}>
+          <li key={i} className={show(l.from) || String(show(l.to) ?? '').length > 40 ? 'is-wide' : undefined}>
             <span className="as-change-what">{l.what}</span>
             <span className="as-change-diff">
               {show(l.from) && <del>{show(l.from)}</del>}
@@ -430,15 +572,27 @@ function ChangeCard({ card, chat, onCard }: { card: Card; chat: string | null; o
             </span>
           </li>
         ))}
-      </ul>
+      </ul>}
+      {body && card.vad && !card.vad.isNew && (
+        <ul className="as-change-lines">
+          {card.lines.map((l, i) => <li key={i}><span className="as-change-what">{l.what}</span><span className="as-change-diff">{show(l.from) && <del>{show(l.from)}</del>}{show(l.to) && <ins>{show(l.to)}</ins>}</span></li>)}
+        </ul>
+      )}
       {card.status === 'stale' && <p className="as-change-note">The flow was saved after this was proposed, so it can't be applied as it is. Ask again for a fresh proposal.</p>}
       {err && <p className="as-err">{err}</p>}
       <div className="as-change-actions">
         {card.status === 'pending' && <>
-          <button type="button" className="db-btn db-primary db-btn-sm" disabled={!!busy} onClick={() => void run('apply')}>{busy === 'apply' ? <><ThinkingOrb state="working" size={20} />Applying…</> : 'Apply'}</button>
-          <button type="button" className="db-btn db-btn-sm" disabled={!!busy} onClick={() => void run('discard')}>Discard</button>
+          <span className="db-btngroup" role="group" aria-label="Proposed change">
+            <button type="button" className="db-gbtn is-lead" disabled={!!busy} onClick={() => void run('apply')}>{busy === 'apply' ? <><ThinkingOrb state="working" size={20} />Applying…</> : card.vad ? (card.vad.isNew ? 'Create VAD' : 'Save changes') : 'Apply'}</button>
+            <button type="button" className="db-gbtn" disabled={!!busy} onClick={() => void run('discard')}>Discard</button>
+          </span>
         </>}
-        {card.status === 'applied' && <button type="button" className="db-btn db-btn-sm" disabled={!!busy} onClick={() => void run('undo')}>{busy === 'undo' ? 'Undoing…' : 'Undo'}</button>}
+        {card.status === 'applied' && (
+          <span className="db-btngroup" role="group" aria-label="Applied change">
+            {dashId && <button type="button" className="db-gbtn is-lead" onClick={() => window.dispatchEvent(new CustomEvent('vx-canvas', { detail: { id: dashId } }))}>Open VAD</button>}
+            <button type="button" className="db-gbtn" disabled={!!busy} onClick={() => void run('undo')}>{busy === 'undo' ? 'Undoing…' : 'Undo'}</button>
+          </span>
+        )}
       </div>
     </div>
   )

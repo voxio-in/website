@@ -11,6 +11,11 @@ export type ChatPart =
   | { kind: 'text'; text: string }
   | { kind: 'tool'; id: string; label: string; input: unknown; result?: unknown; ok?: boolean }
   | { kind: 'change'; card: { id: string; status: string; [k: string]: unknown } }
+  | { kind: 'test'; test: { flow: string; name: string; how: 'chat' | 'voice' } }
+  | { kind: 'voices'; voices: { label: string; url: string; changes: unknown[] }[] }
+  | { kind: 'followups'; followups: { title: string; total: number; calls: { call: string; when: string; caller: string; seconds: number; recorded: Record<string, unknown>; last_caller_line: string }[] } }
+  | { kind: 'download'; download: { name: string; rows: number } }
+  | { kind: 'doc'; doc: { title: string; items: { question: string; hint: string }[] } }
 
 export type ChatItem =
   | { role: 'user'; text: string; mentions: unknown[] }
@@ -86,14 +91,31 @@ export function answerFrom() {
       if (same) same.card = e.card
       else a.parts.push({ kind: 'change', card: e.card })
     }
+    else if (e.type === 'test') a.parts.push({ kind: 'test', test: e.test })
+    else if (e.type === 'voices') a.parts.push({ kind: 'voices', voices: e.voices })
+    else if (e.type === 'doc') a.parts.push({ kind: 'doc', doc: e.doc })
+    else if (e.type === 'followups') a.parts.push({ kind: 'followups', followups: e.followups })
+    // The file itself isn't kept in the chat: ask again for a fresh one.
+    else if (e.type === 'download') a.parts.push({ kind: 'download', download: { name: e.download.name, rows: e.download.rows } })
     else if (e.type === 'done') a.meta = e.summary ?? `${e.model} · ${e.steps} step${e.steps === 1 ? '' : 's'} · ${(e.usage.input + e.usage.output).toLocaleString()} tokens${e.usage.cached ? ` (${e.usage.cached.toLocaleString()} cached)` : ''}`
     else if (e.type === 'error') a.error = e.message
   }
   return { answer: a, add }
 }
 
-/** Keeps a change card's saved copy in step after Apply / Discard / Undo. */
-export async function updateCard(userId: string, chatId: string, card: { id: string }) {
+/** Keeps a change card's saved copy in step after Apply / Discard / Undo.
+ *  One chat's updates run one at a time: each reads the message and writes it back, so two at
+ *  once (Apply on several cards of one answer) would each overwrite the other's status. */
+const queue = new Map<string, Promise<unknown>>()
+export function updateCard(userId: string, chatId: string, card: { id: string }) {
+  const prev = queue.get(chatId) ?? Promise.resolve()
+  const next = prev.catch(() => {}).then(() => writeCard(userId, chatId, card))
+  queue.set(chatId, next)
+  void next.finally(() => { if (queue.get(chatId) === next) queue.delete(chatId) }).catch(() => {})
+  return next
+}
+
+async function writeCard(userId: string, chatId: string, card: { id: string }) {
   const msgs = await withDb(() => db.assistantMessage.findMany({
     where: { chatId, role: 'assistant', chat: { userId } }, select: { id: true, parts: true }, orderBy: { seq: 'desc' }, take: 40,
   }))

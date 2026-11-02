@@ -121,6 +121,10 @@ const ICONS = {
     <path className="i-slashd" d="M3 3l18 18" pathLength={1} />
   </>,
   rotate: <g className="i-spin"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></g>,
+  lock: <>
+    <path d="M6 11h12v9H6z" />
+    <path className="i-shackle" d="M9 11V8a3 3 0 0 1 6 0v3" />
+  </>,
   close: <g className="i-turn"><path d="M6 6l12 12M18 6 6 18" /></g>,
   play: <path className="i-go" d="M7 4v16l13-8L7 4Z" />,
   calendar: <>

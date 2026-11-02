@@ -13,6 +13,7 @@ import { toGraph, type Workflow } from '#/lib/workflow/convert'
 import { validate } from '#/lib/workflow/validate'
 import { NODE_SPECS, prettyName, specFor } from '#/lib/workflow/registry'
 import { KNOBS } from '#/lib/dashboard/knobs'
+import { STT_PROVIDERS, TTS_PROVIDERS, activeFields, providerFor } from '#/lib/dashboard/providers'
 import { cap, redact, shortKey } from './redact'
 
 export type ToolDef = {
@@ -33,7 +34,7 @@ const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : undefined)
 /** Links the model puts in answers; the panel turns them into chips that open the page. */
 const ref = { flow: (key: string) => `vx:flow/${shortKey(key).replace(/…$/, '')}`, session: (id: string) => `vx:session/${id}`, step: (key: string, id: string) => `vx:step/${shortKey(key).replace(/…$/, '')}/${id}` }
-const words = (t: unknown) => (typeof t === 'string' ? t : Array.isArray(t) ? t.map((x) => (x as { content?: string })?.content ?? '').join(' ') : '')
+const words = (t: unknown) => (typeof t === 'string' ? t : Array.isArray(t) ? t.map((x) => String(asTurn(x).content ?? '')).join(' ') : '')
 
 /** The user's live flows (deleted ones are hidden), lightest select that serves the caller. */
 async function flowsOf(me: AuthUser) {
@@ -54,6 +55,12 @@ export async function findFlow(me: AuthUser, ref: unknown) {
   const low = r.toLowerCase()
   const exact = all.find((f) => f.apiKey === r) ?? all.find((f) => f.apiKey.startsWith(r)) ?? all.find((f) => f.flowName.toLowerCase() === low)
   if (exact) return exact
+  // Keys are shown short ("vk_YievJbFD…") and models sometimes pad them with made-up characters;
+  // the shown part still names one flow, so match on it instead of failing a whole step.
+  if (/^vk_/.test(r) && r.length > 11) {
+    const shown = all.filter((f) => f.apiKey.startsWith(r.slice(0, 11)))
+    if (shown.length === 1) return shown[0]
+  }
   // Part of a name works when it points at one flow.
   const part = all.filter((f) => f.flowName.toLowerCase().includes(low))
   if (part.length === 1) return part[0]
@@ -127,11 +134,25 @@ function outline(wf: Workflow, key: string) {
   }
 }
 
+/**
+ * One stored turn as {role, content, data}. Older sessions keep each turn as a Python-style
+ * string ("{'role': 'assistant', 'content': '…', 'time': …}"), not an object: read those too,
+ * or those calls look empty to every tool.
+ */
+export function asTurn(x: unknown): { role?: string; content?: unknown; data?: boolean } {
+  if (typeof x !== 'string') return (x ?? {}) as { role?: string; content?: unknown; data?: boolean }
+  const t = x.trim()
+  if (t.startsWith('{"')) { try { return JSON.parse(t) } catch { /* fall through */ } }
+  const role = t.match(/['"]role['"]\s*:\s*['"](\w+)['"]/)?.[1]
+  const content = t.match(/['"]content['"]\s*:\s*(['"])([\s\S]*?)\1\s*(?:,\s*['"]\w+['"]\s*:|\}\s*$)/)?.[2]
+  return role ? { role, content: content?.replace(/\'/g, "'").replace(/\n/g, ' ') ?? '' } : { role: 'user', content: t }
+}
+
 /** A transcript as numbered turns, with the agent's extra data lines kept apart. */
 function turns(t: unknown) {
   const list = Array.isArray(t) ? t : typeof t === 'string' ? t.split('\n').filter(Boolean).map((l) => { const m = l.match(/^(\w+):\s*(.*)$/); return m ? { role: m[1], content: m[2] } : { role: 'user', content: l } }) : []
   return list.map((x, i) => {
-    const r = x as { role?: string; content?: unknown; data?: boolean }
+    const r = asTurn(x)
     const agent = /assist|ai|agent|bot/i.test(String(r.role ?? ''))
     if (r.data) return { n: i + 1, data: String(r.content ?? '') }
     // Web sessions store what the caller said as {"user_input": "…"}: show just the words.
@@ -152,13 +173,56 @@ const sessionWhere = async (me: AuthUser, input: Record<string, unknown>): Promi
   if (str(input.status) === 'completed') where.OR = [{ status: null }, { status: 'completed' }]
   else if (str(input.status)) where.status = str(input.status)
   if (input.test === true) where.extra = { path: ['test'], equals: true }
-  else if (input.test === false) where.NOT = { extra: { path: ['test'], equals: true } }
+  // test:false is applied by onlyReal() after the query: a JSON-path NOT is NULL for calls
+  // without the flag, so in SQL it would drop every real call.
   return where
 }
+
+const onlyReal = <T extends { extra: unknown }>(rows: T[], input: Record<string, unknown>) =>
+  input.test === false ? rows.filter((r) => (r.extra as { test?: boolean } | null)?.test !== true) : rows
 
 // ------------------------------------------------------------------ tools
 
 const FLOW_PARTS = ['settings', 'voice', 'knobs', 'faces', 'numbers', 'webhook', 'knowledge', 'integrations'] as const
+
+/**
+ * Speaking voices that fit a request like "Hindi female", across providers, each as the
+ * exact edit_settings changes to make. Only what our provider data records is matched:
+ * a voice whose gender isn't listed says so instead of being guessed.
+ */
+export function findVoices(want: string) {
+  const words = want.toLowerCase().split(/[^a-zÀ-￿]+/).filter((w) => w.length > 1)
+  const gender = words.includes('female') || words.includes('woman') ? 'female' : words.includes('male') || words.includes('man') ? 'male' : ''
+  const langWords = words.filter((w) => !['female', 'male', 'woman', 'man', 'voice', 'a', 'with', 'in', 'speak', 'speaking'].includes(w))
+  const out: { voice: string; changes: { area: 'speaking'; key: string; value: unknown }[]; note?: string }[] = []
+  const hasWord = (text: string) => langWords.some((w) => text.toLowerCase().includes(w))
+  for (const p of TTS_PROVIDERS) {
+    const fields = activeFields(p, p.defaults)
+    const lf = fields.find((f) => f.key === 'language' && f.kind === 'select')
+    const lang = langWords.length ? lf?.options?.find((o) => hasWord(o.label) || langWords.includes(o.value.toLowerCase().slice(0, 2))) : undefined
+    const vf = fields.find((f) => f.kind === 'select' && ['voice', 'model', 'name'].includes(f.key) && (f.options?.length ?? 0) >= 5)
+    const gf = fields.find((f) => f.key === 'gender')
+    const base = [{ area: 'speaking' as const, key: 'service', value: p.service as unknown }]
+    if (lang) base.push({ area: 'speaking', key: 'language', value: lang.value })
+    if (gf && gender) base.push({ area: 'speaking', key: 'gender', value: gender })
+    if (lang && fields.some((f) => f.key === 'name' && f.kind === 'text')) base.push({ area: 'speaking', key: 'name', value: null })
+    if (vf) {
+      const opts = vf.options ?? []
+      const gendered = opts.some((o) => /female|male/i.test(o.hint ?? ''))
+      const pick = opts.filter((o) => (!langWords.length || lang || hasWord(`${o.label} ${o.hint ?? ''}`)) && (!gender || !gendered || new RegExp(`\\b${gender}\\b`, 'i').test(o.hint ?? '')))
+      if (langWords.length && !lang && !pick.length) continue
+      for (const o of pick.slice(0, 6)) out.push({
+        voice: `${o.label} (${p.label}${lang ? `, ${lang.label}` : ''}${o.hint ? `, ${o.hint}` : ''})`,
+        changes: [...base, { area: 'speaking', key: vf.key, value: o.value }],
+        ...(gender && !gendered ? { note: 'gender not listed for these voices' } : {}),
+      })
+    } else if (!langWords.length || lang) {
+      out.push({ voice: `${p.label}${lang ? `, ${lang.label}` : ''}${gender && gf ? `, ${gender}` : ''}`, changes: base, ...(gender && !gf ? { note: 'gender not listed' } : {}) })
+    }
+  }
+  // Confirmed matches first; ones whose gender isn't listed after.
+  return out.sort((a, b) => Number(!!a.note) - Number(!!b.note)).slice(0, 14)
+}
 
 export const READ_TOOLS: ToolDef[] = [
   {
@@ -313,12 +377,12 @@ export const READ_TOOLS: ToolDef[] = [
   },
   {
     name: 'list_knowledge',
-    description: 'Knowledge bases and their sources (kind, label, status, chunks).',
+    description: 'Knowledge bases and their PDF documents (filename, status, pages, chunks).',
     input: { type: 'object', properties: {} },
     label: () => 'Listed knowledge bases',
     run: async (me) => {
-      const rows = await withDb(() => db.knowledgeBase.findMany({ where: { userId: me.id }, include: { sources: true } }))
-      return rows.map((k) => ({ id: k.id, name: k.name, sources: k.sources.map((s) => ({ kind: s.kind, label: s.label, status: s.status, chunks: s.chunks })) }))
+      const rows = await withDb(() => db.knowledgeBase.findMany({ where: { userId: me.id }, include: { documents: true } }))
+      return rows.map((k) => ({ id: k.id, name: k.name, documents: k.documents.map((d) => ({ filename: d.filename, status: d.status, pages: d.pages, chunks: d.chunks, ...(d.error ? { error: d.error } : {}) })) }))
     },
   },
   {
@@ -343,7 +407,7 @@ export const READ_TOOLS: ToolDef[] = [
         select: { sessionId: true, type: true, startTime: true, totalConnectedTime: true, status: true, from: true, to: true, transcription: true, extra: true, flow: { select: { flowName: true } } },
       }))
       const needle = str(i.text).toLowerCase()
-      const hits = needle ? rows.filter((r) => words(r.transcription).toLowerCase().includes(needle)) : rows
+      const hits = needle ? onlyReal(rows, i).filter((r) => words(r.transcription).toLowerCase().includes(needle)) : onlyReal(rows, i)
       const page = hits.slice(0, limit)
       return {
         sessions: page.map((r) => {
@@ -385,6 +449,9 @@ export const READ_TOOLS: ToolDef[] = [
         out.total_turns = all.length
       }
       if (inc.has('web_actions')) out.web_actions = extra.webActions ?? []
+      // The flow's recorded fields: final value and when each was found or changed.
+      const vars = (r.extra as { variables?: Record<string, { value?: unknown; history?: { value?: unknown; turn?: number }[] }> }).variables
+      if (vars && Object.keys(vars).length) out.recorded = Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, { value: v?.value, changes: (v?.history ?? []).map((h) => `${JSON.stringify(h.value)} at turn ${h.turn ?? '?'}`) }]))
       return out
     },
   },
@@ -398,7 +465,7 @@ export const READ_TOOLS: ToolDef[] = [
     label: (i) => `Counted sessions${i.flow ? ` of ${i.flow}` : ''}${i.by ? ` by ${i.by}` : ''}`,
     run: async (me, i) => {
       const where = await sessionWhere(me, i)
-      const rows = await withDb(() => db.callSession.findMany({ where, select: { type: true, status: true, startTime: true, totalConnectedTime: true, flow: { select: { flowName: true } } } }))
+      const rows = onlyReal(await withDb(() => db.callSession.findMany({ where, select: { type: true, status: true, startTime: true, totalConnectedTime: true, extra: true, flow: { select: { flowName: true } } } })), i)
       const keyOf = (r: (typeof rows)[number]) => {
         switch (i.by) {
           case 'day': return r.startTime.toISOString().slice(0, 10)
@@ -428,6 +495,31 @@ export const READ_TOOLS: ToolDef[] = [
       const f = await findFlow(me, i.flow)
       const rows = await withDb(() => db.webhookDelivery.findMany({ where: { flowId: f.id }, orderBy: { at: 'desc' }, take: Math.min(50, num(i.limit, 20)) }))
       return rows.map((d) => { const r = d as unknown as Record<string, unknown>; return { event: r.event, status: r.status, at: iso(r.at as Date), attempts: r.attempt ?? r.attempts, ms: r.ms } })
+    },
+  },
+  {
+    name: 'voice_options',
+    description: 'What a speaking voice (text-to-speech) or listening setup (speech-to-text) can be set to. To choose a speaking voice, pass want (e.g. "Hindi female"): you get matching voices across providers, each with the exact edit_settings changes to use. With service: that provider\'s settings and allowed values. Without either: the providers.',
+    input: { type: 'object', required: ['kind'], properties: { kind: { type: 'string', enum: ['speaking', 'listening'] }, want: { type: 'string', description: 'Language and/or gender, for speaking voices' }, service: { type: 'string' } } },
+    label: (i) => `Looked up ${i.kind} options${i.service ? ` for ${i.service}` : ''}`,
+    run: async (_me, i) => {
+      const kind = i.kind === 'listening' ? 'stt' : 'tts'
+      if (kind === 'tts' && typeof i.want === 'string' && i.want.trim() && !i.service) {
+        const found = findVoices(i.want)
+        return found.length ? { voices: found } : { voices: [], note: 'No provider lists a voice for that. Say which languages are available with voice_options and a service.' }
+      }
+      if (!i.service) return (kind === 'stt' ? STT_PROVIDERS : TTS_PROVIDERS).map((p) => ({ service: p.service, label: p.label, about: p.blurb }))
+      const p = providerFor(kind, String(i.service))
+      if (!p) throw new Error(`Unknown provider. Providers: ${(kind === 'stt' ? STT_PROVIDERS : TTS_PROVIDERS).map((x) => x.service).join(', ')}`)
+      return {
+        service: p.service, label: p.label,
+        settings: p.fields.map((f) => ({
+          key: f.key, label: f.label, kind: f.kind, default: f.default,
+          ...(f.min !== undefined ? { min: f.min, max: f.max } : {}),
+          ...(f.options ? { values: f.options.map((o) => (o.hint ? `${o.value} (${o.label}, ${o.hint})` : o.value === o.label ? o.value : `${o.value} (${o.label})`)) } : {}),
+          ...(f.when ? { only_when: `${f.when.key} matches ${String(f.when.test).slice(0, 60)}` } : {}),
+        })),
+      }
     },
   },
   {

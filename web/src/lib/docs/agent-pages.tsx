@@ -24,6 +24,8 @@ const FIELD_TYPE: Record<Field['kind'], string> = {
   knowledge: 'string', json: 'object', speak: 'string', interrupt: 'string', seconds: 'number (seconds)', vars: 'string[]',
   decideon: '{ name: type }', listen: '{ name: type }', hangup: 'out_dict.hangup: boolean', percent: 'number (0 to 1)', saymode: 'out_dict.speak or variables', aihangup: 'string[]',
   decides: '{ speak, hangup }', canend: '{ hangup }', memory: 'string',
+  outdict: 'object', interruptmeta: 'object', listenvars: '{ name: type }', returntype: '{ name: { type, description } }', summarycfg: 'object',
+  branchon: '{ name: type }', branchmaps: '{ value: step }', onevar: '{ name: type }', onename: 'string[]', entities: 'string[]',
 }
 
 const fmt = (v: unknown) => (v === undefined ? '—' : typeof v === 'string' ? `"${v}"` : JSON.stringify(v))

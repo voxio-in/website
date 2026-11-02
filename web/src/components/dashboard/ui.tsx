@@ -158,9 +158,9 @@ export function Field({ label, help, children, wide }: { label: React.ReactNode;
   )
 }
 
-export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
+export function Toggle({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
   return (
-    <button type="button" role="switch" aria-checked={on} className={`db-toggle${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
+    <button type="button" role="switch" aria-checked={on} className={`db-toggle${on ? ' is-on' : ''}`} disabled={disabled} onClick={() => onChange(!on)}>
       <span className="db-knob" />
       {label && <span>{label}</span>}
     </button>

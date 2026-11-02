@@ -18,7 +18,7 @@ import { toast } from '#/components/ui/halo-toast'
 export const FieldOptions = createContext<{
   knowledge: { value: string; label: string; hint?: string }[]
   /** Values earlier steps produce, for Branch and "Pass along". */
-  variables: { value: string; type: string }[]
+  variables: { value: string; type: string; description?: string }[]
   /** For the open step: where each of its outputs leads (handle → step names), and a way to jump there. */
   routes?: Record<string, string[]>
   goTo?: (id: string) => void
@@ -26,6 +26,8 @@ export const FieldOptions = createContext<{
   stepId?: string
   /** Conversation memories the workflow's AI steps use (history_key values). */
   memories?: string[]
+  /** Developer mode: values show by their key, not their friendly name. */
+  dev?: boolean
 }>({ knowledge: [], variables: [] })
 
 type Props = {
@@ -47,7 +49,7 @@ const TYPES = [
 ]
 
 export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
-  const { knowledge, variables } = useContext(FieldOptions)
+  const { knowledge, variables, dev } = useContext(FieldOptions)
   switch (field.kind) {
     case 'text':
       return <input className="db-in" placeholder={field.placeholder} value={str(value)} onChange={(e) => onChange(e.target.value || undefined)} />
@@ -127,6 +129,35 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
     case 'mappings':
       return <Mappings value={obj(value)} onChange={onChange} yesNo={typeOfDecision(params, variables) === 'bool'} />
 
+    case 'onevar': {
+      const cur = Object.keys(obj(value))[0] ?? ''
+      const opts = variables.filter((v) => v.type !== 'list' && v.type !== 'dict')
+        .map((v) => ({ value: v.value, label: dev ? v.value : friendlyVar(v.value), hint: dev ? v.type : undefined, info: v.description }))
+      if (cur && !opts.some((o) => o.value === cur)) opts.unshift({ value: cur, label: dev ? cur : friendlyVar(cur), hint: undefined, info: undefined })
+      return <Dropdown value={cur} options={opts} placeholder="Choose a value" aria-label={field.label}
+        onChange={(k) => onChange({ [k]: variables.find((v) => v.value === k)?.type ?? 'str' })} />
+    }
+    case 'onename': {
+      const cur = Array.isArray(value) ? String(value[0] ?? '') : ''
+      return <input className="db-in" spellCheck={false} placeholder="rag_context" value={cur}
+        onChange={(e) => onChange(e.target.value.trim() ? [e.target.value.replace(/\s+/g, '_')] : undefined)} />
+    }
+    case 'entities': {
+      const on = new Set(Array.isArray(value) ? value.map(String) : ['text'])
+      // Fields every passage stores (rag/document_): the passage, its file, and the file's kind.
+      const known = ['text', 'document_name', 'type_', 'sub_type']
+      const all = [...known, ...[...on].filter((x) => !known.includes(x))]
+      return (
+        <div className="wf-chips">
+          {all.map((f) => (
+            <button type="button" key={f} className={`wf-pick${on.has(f) ? ' is-on' : ''}`}
+              onClick={() => { const next = new Set(on); if (next.has(f)) next.delete(f); else next.add(f); onChange(next.size ? [...next] : ['text']) }}>
+              {on.has(f) && <Icon name="check" size={13} />}<code>{f}</code>
+            </button>
+          ))}
+        </div>
+      )
+    }
     case 'json':
       return <JsonEdit value={value} onChange={onChange} />
     case 'seconds':
@@ -142,7 +173,7 @@ export function FieldInput({ field, value, params, onChange, onPatch }: Props) {
           {variables.map((v) => (
             <button type="button" key={v.value} className={`wf-pick${on.has(v.value) ? ' is-on' : ''}`}
               onClick={() => onChange(on.has(v.value) ? [...on].filter((x) => x !== v.value) : [...on, v.value])}>
-              {on.has(v.value) && <Icon name="check" size={13} />}{friendlyVar(v.value)}
+              {on.has(v.value) && <Icon name="check" size={13} />}{dev ? <code>{v.value}</code> : friendlyVar(v.value)}
             </button>
           ))}
         </div>

@@ -38,7 +38,7 @@ function KnowledgeTab() {
             <div key={k.id} className="db-knob-row">
               <span className="db-kbrow">
                 <span className="db-source-icon"><Icon name="book" size={17} /></span>
-                <span className="db-source-text"><b>{k.name}</b><span>{k.sources.length ? `${k.sources.length} source${k.sources.length > 1 ? 's' : ''}` : 'Empty'}</span></span>
+                <span className="db-source-text"><b>{k.name}</b><span>{k.documents.length ? `${k.documents.length} document${k.documents.length > 1 ? 's' : ''}` : 'Empty'}{on.has(k.id) && !k.documents.some((d) => d.status === 'ready') ? ' · no ready documents yet, so searches come back empty' : ''}</span></span>
               </span>
               <div className="db-knob-ctl"><Toggle on={on.has(k.id)} onChange={(v) => set('kbs', v ? [...draft.kbs, k.id] : draft.kbs.filter((x) => x !== k.id))} /></div>
             </div>

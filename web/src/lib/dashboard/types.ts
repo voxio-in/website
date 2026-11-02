@@ -30,6 +30,8 @@ export type Session = {
   webActions?: WebActionEvent[]
   /** Started from the dashboard's Test tab. */
   test?: boolean
+  /** The flow's recorded fields: final value and every change (saved by the agent service; docs/VARIABLE_HISTORY_SPEC.md). */
+  variables?: Record<string, { value: unknown; history?: { value: unknown; at?: string; turn?: number }[] }>
   /** Test sessions: what the agent did on the page, and every request and message (keys masked). */
   actions?: { id: string; label: string }[]
   wire?: { id: number; dir: 'out' | 'in'; label: string; data: unknown; at: number; ref?: number }[]
@@ -148,7 +150,21 @@ export type FlowSummary = {
 }
 
 export type VoicePreset = { id: string; name: string; kind: 'stt' | 'tts'; config: ProviderConfig; used_by: string[] }
-export type KnowledgeBase = { id: string; name: string; sources: { kind: string; label: string; status: 'ready' | 'indexing' | 'failed'; chunks: number; added_at: string }[] }
+/** How a knowledge base's PDFs are cut into passages (backend limits: chunk_size 200 to 2000, overlap 0 to half of it). */
+export type KbSettings = { chunk_size?: number; overlap?: number }
+/** One PDF in a knowledge base, as the backend writes it to Neon (knowledge_documents). */
+export type KbDocument = {
+  id: string; filename: string; size: number; pages: number; chunks: number; images_skipped: number
+  status: 'processing' | 'ready' | 'failed'; error?: string; settings: KbSettings
+  metadata: Record<string, string | number | boolean | null>; created_at: string
+}
+export type KnowledgeBase = {
+  id: string; name: string
+  /** Embedding model, fixed for the base's life; empty means the service default. */
+  model?: string
+  settings: KbSettings
+  documents: KbDocument[]
+}
 export type Avatar = { uuid: string; label: string; detector: 's3fd' | 'dwpose'; frames: number; fps: number; created_at: string; /** A short looping preview of the face, or a photo (see previewType). */ preview?: string; previewType?: 'image' | 'video'; /** Flows whose looks or smooth changes use it (Avatars page). */ usedBy?: { key: string; name: string }[]; /** Someone else's face, for an admin. */ owner?: string }
 export type Integration = { id: string; kind: 'shopify'; name: string; status: 'connected' | 'error'; connected_at: string }
 

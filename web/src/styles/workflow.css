@@ -837,3 +837,146 @@
 .wf .wf-quick.is-below { left: auto; right: 16px; transform: none; }
 .wf .wf-quick.is-below .wf-quick-menu { left: auto; right: 0; transform: none; }
 @media (prefers-reduced-motion: reduce) { .wf .react-flow__handle.wf-h-side { transition: none; } }
+.wf .wf-help.is-warn { color: var(--db-warn-text, #b54708); }
+
+/* Developer mode (DevSettings.tsx): the Voice page's tiles (.db-fgroup / .db-fcell),
+   grouped under its "More settings" rows. Only what the panel needs on top of those. */
+.wf-devbadge { padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--db-accent) 16%, transparent); color: var(--db-accent); }
+.wf-dev { display: flex; flex-direction: column; }
+.wf-dev .db-more { border-top: 0; padding-top: 0; }
+.wf-dev .db-more-row { margin-top: 4px; }
+.wf-dev .db-fgroup { margin: 4px 0 8px; }
+/* Tiles that share a row stay side by side, however narrow the panel. */
+.wf-dev .wf-dev-row { flex-wrap: nowrap; }
+.wf-dev .db-fcell { flex: 1 1 0; }
+.wf-dev .db-fcell.wf-dev-narrow { flex: 0 0 52px; padding: 0; align-items: center; justify-content: center; }
+.wf-dev .db-fcell textarea.db-in { resize: vertical; font-size: 16px; line-height: 1.45; padding-top: 4px; }
+.wf-dev-label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.wf-dev-label em { font-style: normal; font-size: 13px; color: var(--db-muted); opacity: .8; }
+.wf-dev-reset { display: inline-flex; align-items: center; gap: 4px; padding: 0 4px; border: 0; background: none; color: var(--db-accent); font-size: 13px; cursor: pointer; }
+.wf-dev-x { width: 100%; height: 100%; min-height: 56px; display: grid; place-items: center; border: 0; background: none; color: var(--db-muted); cursor: pointer; }
+.wf-dev-x:hover { color: var(--db-danger, #e5484d); }
+.wf-dev-add { display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; border: 0; background: none; color: var(--db-accent); font-size: 15px; font-weight: 500; cursor: pointer; }
+.wf-devpick { display: grid; gap: 8px; }
+.wf-pick code { font-size: 15px; }
+.wf-combo { position: relative; display: flex; align-items: center; }
+.wf-combo > .db-in { flex: 1; min-width: 0; }
+.wf-combo-btn { width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--db-muted); cursor: pointer; }
+.wf-combo-btn svg { transition: transform .15s; }
+.wf-combo.is-open .wf-combo-btn svg { transform: rotate(180deg); }
+.wf-combo-list { position: absolute; z-index: 20; top: calc(100% + 6px); left: -16px; right: -16px; margin: 0; padding: 4px; list-style: none; border-radius: 14px; background: var(--db-side); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+.wf-combo-list button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+.wf-combo-list button:hover, .wf-combo-list button.is-on { background: var(--cell-hi); }
+/* Each key (or joined pair) is its own section inside a group: a heading, then its tiles. */
+.wf-dev-part { padding: 6px 0 10px 8px; }
+.wf-dev-part + .wf-dev-part { border-top: 1px solid var(--hair); padding-top: 12px; }
+.wf-dev-part-head { display: flex; align-items: center; min-height: 28px; padding: 0 8px 6px; }
+.wf-dev-part-head .db-flabel, .wf-dev-part-title { font-size: 16.5px; font-weight: 600; color: var(--db-text); }
+.wf-dev-part .db-fgroup { margin: 0; }
+.wf-dev-state { font-size: 16px; color: var(--db-muted); }
+.wf-dev-block + .wf-dev-block { margin-top: 14px; }
+.wf-dev-block-title { display: block; padding: 0 8px 6px; font-size: 14px; font-weight: 500; color: var(--db-muted); }
+.wf-dev-block .wf-dev-add { margin: 6px 0 0 8px; }
+.wf-devchip { display: inline-flex; align-items: center; gap: 0; padding: 0; overflow: hidden; }
+.wf-devchip > button { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.wf-devchip-name { display: inline-flex; align-items: center; gap: 6px; padding: 5px 4px 5px 12px; }
+.wf-devchip-x { display: grid; place-items: center; padding: 5px 10px 5px 6px; opacity: .7; }
+.wf-devchip-x:hover { opacity: 1; color: var(--db-danger, #e5484d); }
+.wf-devchip.is-shown { box-shadow: 0 0 0 1px var(--db-accent) inset; }
+.wf-devchip-desc { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--cell-hi); font-size: 15px; line-height: 1.45; color: var(--db-text); }
+.wf-devchip-desc code { margin-right: 6px; color: var(--db-accent); }
+/* A tile whose switch is off: still shown, so the combination reads whole, but not editable. */
+.wf-dev .db-fcell.wf-dev-off { opacity: .45; pointer-events: none; }
+.wf-dev-note { margin: 6px 0 0 8px; font-size: 14px; color: var(--db-muted); }
+.wf-dev-note.is-in { margin: 0; font-size: 15px; line-height: 1.45; }
+.wf-dev-note code { color: var(--db-text); }
+
+/* Reveal: a setting that appears opens its height and fades and slides in; closing runs it back.
+   Ease-out on the way in, quicker on the way out, so it follows the click that caused it. */
+.wf-reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-4px);
+  transition: grid-template-rows .2s cubic-bezier(.4, 0, 1, 1), opacity .14s linear, transform .2s cubic-bezier(.4, 0, 1, 1); }
+.wf-reveal.is-open { grid-template-rows: 1fr; opacity: 1; transform: none;
+  transition: grid-template-rows .26s cubic-bezier(.2, .8, .2, 1), opacity .2s linear .05s, transform .26s cubic-bezier(.2, .8, .2, 1); }
+.wf-reveal-in { min-height: 0; overflow: hidden; }
+.wf-reveal.is-open > .wf-reveal-in { overflow: visible; }
+
+/* A tile that arrives inside a row (a name beside its switch, duration <-> length) grows in from where it sits. */
+@keyframes wf-dev-enter { from { opacity: 0; transform: scale(.97) translateX(-6px); } to { opacity: 1; transform: none; } }
+.wf-dev .db-fcell.wf-dev-enter { animation: wf-dev-enter .24s cubic-bezier(.2, .8, .2, 1); transform-origin: left center; }
+
+/* Sections: one column; two when the panel is wide, out_dict across both. */
+.wf-dev-parts { display: grid; grid-template-columns: minmax(0, 1fr); }
+.wf-dev.is-wide .wf-dev-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; }
+.wf-dev-slot { min-width: 0; }
+.wf-dev-slot.is-span { grid-column: 1 / -1; }
+.wf-dev-parts .wf-dev-part + .wf-dev-part, .wf-dev-slot + .wf-dev-slot > .wf-reveal-in > .wf-dev-part { border-top: 1px solid var(--hair); padding-top: 12px; }
+.wf-dev.is-wide .wf-dev-slot:not(.is-span) > .wf-reveal-in > .wf-dev-part { border-top: 0; padding-top: 6px; }
+
+/* The <-|-> grip on the panel's left edge. */
+.wf-panel { position: relative; }
+.wf-panel-grip { position: absolute; left: -6px; top: 0; bottom: 0; z-index: 3; width: 12px; display: grid; place-items: center; cursor: col-resize; touch-action: none; }
+.wf-panel-grip > span { width: 4px; height: 44px; border-radius: 2px; background: rgb(var(--ink) / 0.18); transition: background .15s, height .2s; }
+.wf-panel-grip:hover > span, .wf-resizing .wf-panel-grip > span { background: var(--db-accent); height: 64px; }
+.wf-resizing, .wf-resizing * { cursor: col-resize !important; user-select: none !important; }
+.wf .wf-panel.is-sized { max-width: 70vw; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-reveal, .wf-reveal.is-open { transition: none; }
+  .wf-dev .db-fcell.wf-dev-enter { animation: none; }
+}
+
+/* Stage 2 (900px+): three columns, so variables, flags and input_variables share one row. */
+.wf-dev.is-stage-2 .wf-dev-parts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* The panel body clips the stage change's glide, so nothing passes over the step title. */
+.wf-panel-body { overflow-x: hidden; }
+
+/* A led group: its key's control on one line (remove's switch, interruption_type's dropdown).
+   Once it turns something on, a chevron fades in and it opens like an expander. */
+.wf-dev-lead { margin-top: 4px; padding: 6px 0 8px; border-top: 1px solid var(--hair); }
+/* Heading line (key, reset, chevron) above a full-width control tile, like every other section. */
+.wf-dev-lead-row { padding: 6px 0 4px 8px; }
+.wf-dev-lead-head { gap: 8px; }
+.wf-dev-lead-head .wf-dev-lead-chev { margin-left: auto; }
+.wf-dev-lead-row .db-fgroup { margin: 0; }
+.wf-dev-lead-row .db-fcell { border-radius: 20px; }
+.wf-dev-lead-chev { width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center; border: 0; border-radius: 16px; background: none; color: var(--db-muted); cursor: pointer;
+  opacity: 0; transform: rotate(-90deg) scale(.6); pointer-events: none;
+  transition: opacity .18s linear, transform .26s cubic-bezier(.2, .8, .2, 1), background-color .15s; }
+.wf-dev-lead.is-active .wf-dev-lead-chev { opacity: 1; transform: rotate(-90deg); pointer-events: auto; }
+.wf-dev-lead.is-active.is-open .wf-dev-lead-chev { transform: none; }
+.wf-dev-lead-chev:hover { background: var(--cell); color: var(--db-text); }
+.wf-dev-lead > .wf-reveal .wf-dev-parts { padding-top: 6px; }
+
+/* A step with a single group (Listen, Branch) shows its sections without an expander. */
+.wf-dev.is-flat > .wf-dev-parts > .wf-dev-slot:first-child .wf-dev-part { padding-top: 0; }
+.wf-dev-block-title .db-flabel { font-size: 14px; font-weight: 500; color: var(--db-muted); }
+.wf-dev-route { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; align-items: center; }
+.wf-dev-route.is-none { font-size: 14px; color: var(--db-muted); }
+.wf-dev .db-fcell textarea.wf-prompt, .wf-dev .db-fcell .wf-prompt textarea { font-size: 16px; }
+/* Nothing inside a tile may be wider than the tile: steppers and pickers shrink with it. */
+.wf-dev .db-fcell > * { max-width: 100%; min-width: 0; }
+.wf-dev .db-fcell .db-stepper { width: 100%; max-width: 260px; }
+.wf-dev .db-fcell .db-stepper input { min-width: 0; }
+.wf-dev .db-fcell .db-dd, .wf-dev .db-fcell .db-dd-btn { min-width: 0; max-width: 100%; }
+.wf-dev .db-dd-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Toolbar combinations (WorkflowEditor): tools as icons joined in one bar; a tool's label
+   opens beside it while hovered or focused. Test and Save joined the same way. */
+.wf-combo-bar { display: inline-flex; align-items: stretch; gap: 2px; padding: 0; border-radius: 20px; overflow: hidden; }
+.wf-tool { display: inline-flex; align-items: center; gap: 0; height: 40px; padding: 0 10px; border: 0; border-radius: 6px; background: var(--cell); color: var(--db-muted); font: inherit; font-size: 14.5px; font-weight: 500; white-space: nowrap; cursor: pointer;
+  transition: background-color .15s linear, color .15s linear, gap .22s cubic-bezier(.2, .8, .2, 1); }
+.wf-combo-bar > :first-child { border-radius: 20px 6px 6px 20px; padding-left: 12px; }
+.wf-combo-bar > :last-child { border-radius: 6px 20px 20px 6px; padding-right: 12px; }
+.wf-tool-label { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; transition: max-width .24s cubic-bezier(.2, .8, .2, 1), opacity .16s linear; }
+.wf-tool:hover:not(:disabled), .wf-tool:focus-visible { gap: 8px; background: var(--cell-hi); color: var(--db-text); }
+.wf-tool:hover:not(:disabled) .wf-tool-label, .wf-tool:focus-visible .wf-tool-label { max-width: 180px; opacity: 1; transition: max-width .26s cubic-bezier(.2, .8, .2, 1), opacity .2s linear .04s; }
+.wf-tool.is-on { color: var(--db-accent); background: color-mix(in srgb, var(--db-accent) 14%, var(--cell)); }
+.wf-tool:disabled { opacity: .4; cursor: default; }
+.wf-tool:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--db-accent) inset; }
+.wf-combo-act { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border: 0; border-radius: 6px; background: var(--cell); color: var(--db-text); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; transition: background-color .15s linear; }
+.wf-combo-act:hover:not(:disabled) { background: var(--cell-hi); }
+.wf-combo-act.is-primary { background: var(--db-accent); color: var(--db-on-accent, #06221d); }
+.wf-combo-act.is-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.wf-combo-act:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .wf-tool, .wf-tool-label { transition: none; } }
+

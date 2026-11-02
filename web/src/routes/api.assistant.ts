@@ -18,6 +18,7 @@ import { act } from '#/server/assistant/changes.server'
 import { answerFrom, chatFor, deleteChat, listChats, readChat, renameChat, saveAnswer, saveQuestion, updateCard } from '#/server/assistant/chats.server'
 import { prettyName } from '#/lib/workflow/registry'
 import { shortKey } from '#/server/assistant/redact'
+import { readUploads } from '#/server/assistant/files.server'
 
 const json = (body: unknown, status = 200) => Response.json(body, { status })
 
@@ -107,7 +108,7 @@ export const Route = createFileRoute('/api/assistant')({
         if (!ASSISTANT_ON) return json({ ok: false, reason: 'Ask Voxio is turned off.' }, 404)
         const me = await currentUser()
         if (!me) return json({ ok: false, reason: 'Please log in again.' }, 401)
-        const body = (await request.json()) as { model?: string; history?: Msg[]; ctx?: Context; mentions?: Mention[]; act?: { id: string; action: 'apply' | 'discard' | 'undo'; chat?: string }; chat?: string; chatAction?: { id: string; rename?: string; remove?: boolean } }
+        const body = (await request.json()) as { files?: unknown; model?: string; history?: Msg[]; ctx?: Context; mentions?: Mention[]; act?: { id: string; action: 'apply' | 'discard' | 'undo'; chat?: string }; chat?: string; chatAction?: { id: string; rename?: string; remove?: boolean } }
         if (body.chatAction) {
           try {
             if (body.chatAction.remove) await deleteChat(me.id, body.chatAction.id)
@@ -129,6 +130,12 @@ export const Route = createFileRoute('/api/assistant')({
         }
         const history = (body.history ?? []).filter((m) => m && (m.role === 'user' || m.role === 'assistant')).slice(-30)
         if (!history.length || history[history.length - 1].role !== 'user') return json({ ok: false, reason: 'Say something first.' }, 400)
+        // Files ride on this message only (earlier ones are never resent).
+        for (const m of history) if (m.role === 'user') delete (m as { files?: unknown }).files
+        try {
+          const files = await readUploads(body.files)
+          if (files.length) (history[history.length - 1] as { files?: unknown }).files = files
+        } catch (e) { return json({ ok: false, reason: (e as Error).message }, 400) }
 
         const enc = new TextEncoder()
         const stream = new ReadableStream({

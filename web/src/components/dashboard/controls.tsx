@@ -89,7 +89,8 @@ export function Dropdown({ value, options, onChange, placeholder = 'Choose…', 
     const width = Math.max(rect.width, 240)
     const below = window.innerHeight - rect.bottom
     const up = below < 320 && rect.top > below
-    popStyle = { position: 'fixed', left: Math.min(rect.left, window.innerWidth - width - 8), width, ...(up ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }) }
+    // `top: auto` when opening upwards: the stylesheet's `top` would otherwise push the list off the screen.
+    popStyle = { position: 'fixed', left: Math.min(rect.left, window.innerWidth - width - 8), width, ...(up ? { top: 'auto', bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }) }
     const noteW = 260
     const right = rect.left + width + 10 + noteW < window.innerWidth
     noteStyle = { position: 'fixed', width: noteW, ...(up ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }), left: right ? rect.left + width + 10 : Math.max(8, rect.left - noteW - 10) }
@@ -156,7 +157,7 @@ export function InfoTip({ text }: { text: string }) {
     const w = 260
     const left = Math.min(Math.max(8, rect.left + rect.width / 2 - w / 2), window.innerWidth - w - 8)
     const above = rect.top > 120
-    style = { position: 'fixed', width: w, left, ...(above ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }) }
+    style = { position: 'fixed', width: w, left, ...(above ? { top: 'auto', bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8, bottom: 'auto' }) }
   }
   return (
     <span ref={ref} className="db-info" tabIndex={0} aria-label={text}

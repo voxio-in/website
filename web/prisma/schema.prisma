@@ -301,15 +301,23 @@ model Face {
   @@map("faces")
 }
 
-// Knowledge bases. Mongo only keeps their ids (user.kbs, flow.kbs); names and
-// sources get tables here.
+// Knowledge bases. A flow connects one through `flows.kbs` (ids); a rag node
+// names it with `kb`. Its vectors live in the Milvus collection
+// `collection_name`, embedded with `embeddings` ({model, config}, fixed for its
+// life); `settings` are what its documents are chunked with. The backend
+// database service writes these rows and fills the collection.
 model KnowledgeBase {
-  id        String            @id
-  userId    String            @map("user_id")
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  createdAt DateTime          @default(now()) @map("created_at")
-  sources   KnowledgeSource[]
+  id             String              @id
+  userId         String              @map("user_id")
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  collectionName String              @unique @map("collection_name")
+  embeddings     Json                @default("{}")
+  settings       Json                @default("{}")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @default(now()) @updatedAt @map("updated_at")
+  sources        KnowledgeSource[]
+  documents      KnowledgeDocument[]
 
   @@index([userId])
   @@map("knowledge_bases")
@@ -327,6 +335,32 @@ model KnowledgeSource {
 
   @@index([kbId])
   @@map("knowledge_sources")
+}
+
+// One uploaded PDF of a knowledge base (the backend's /kb/documents). The original is in R2 at
+// `r2Key`; `status` is processing, then ready or failed (`error`). `settings` are the ones it was chunked with.
+model KnowledgeDocument {
+  id            String        @id @default(cuid())
+  kbId          String        @map("kb_id")
+  kb            KnowledgeBase @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  filename      String
+  r2Key         String        @map("r2_key")
+  size          Int
+  sha256        String
+  pages         Int           @default(0)
+  imagesSkipped Int           @default(0) @map("images_skipped")
+  chunks        Int           @default(0)
+  status        String        @default("processing")
+  error         String?
+  settings      Json          @default("{}")
+  metadata      Json          @default("{}")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([kbId, sha256])
+  @@index([kbId])
+  @@index([status])
+  @@map("knowledge_documents")
 }
 
 // Every webhook POST to a flow's URL (dashboard).
@@ -356,11 +390,47 @@ model Dashboard {
   title     String
   spec      Json
   keyHash   String?  @unique @map("key_hash")
+  // Sharing outside the dashboard, at /v/<slug>: private (owner only), login (the
+  // owner's viewer accounts, user id + password) or public (anyone with the link).
+  access    String   @default("private")
+  slug      String?  @unique
+  // On a shared page: people with the link may create their own user (shown in Users, removable).
+  signup    Boolean  @default(false)
+  // The owner's brand on the shared page: { name, logo (data URL), accent (#rrggbb), mode (dark|light) }.
+  brand     Json     @default("{}")
+  viewers   DashboardViewer[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@index([userId])
   @@map("dashboards")
+}
+
+// A login for one shared dashboard, made by its owner: a user id and a password (scrypt).
+model DashboardViewer {
+  id           String   @id @default(cuid())
+  dashboardId  String   @map("dashboard_id")
+  dashboard    Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  username     String
+  passwordHash String   @map("password_hash")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  sessions     DashboardViewerSession[]
+
+  @@unique([dashboardId, username])
+  @@map("dashboard_viewers")
+}
+
+// A signed-in viewer's browser: only the SHA-256 of the cookie token is kept.
+model DashboardViewerSession {
+  tokenHash String   @id @map("token_hash")
+  viewerId  String   @map("viewer_id")
+  viewer    DashboardViewer @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([viewerId])
+  @@map("dashboard_viewer_sessions")
 }
 
 // Ask Voxio conversations. A user keeps many; each message is stored whole:

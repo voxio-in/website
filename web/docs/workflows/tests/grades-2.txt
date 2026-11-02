@@ -1,0 +1,286 @@
+
+runs/v1-36: 99.7% (583/585) · first word 4381ms median · 3058 prompt / 182 completion tokens per LLM call
+  ✗ 03-hallucination t4: seats not invented
+  ✗ 12-class11 t1: 94 percent gets 25 percent
+
+runs/v1-36-b: 51.2% (84/164) · first word 0ms median · 0 prompt / 0 completion tokens per LLM call
+  ✗ 01-memory t0: answered
+  ✗ 01-memory: class 3 fee 83,600 (turn missing)
+  ✗ 01-memory: recalls Ramesh and Ananya (turn missing)
+  ✗ 01-memory: recalls class three (turn missing)
+  ✗ 01-memory: never asks the name it was told (turn missing)
+  ✗ 01-memory: hangs up at bye (turn missing)
+  ✗ 02-all-at-once t0: answered
+  ✗ 02-all-at-once: interaction content not invented (turn missing)
+  ✗ 02-all-at-once: documents not invented (turn missing)
+  ✗ 02-all-at-once: achha theek hai is not a goodbye (turn missing)
+  ✗ 03-hallucination t0: answered
+  ✗ 03-hallucination: bus estimate dodged (turn missing)
+  ✗ 03-hallucination: uniform not invented (turn missing)
+  ✗ 03-hallucination: last date not invented (turn missing)
+  ✗ 03-hallucination: seats not invented (turn missing)
+  ✗ 03-hallucination: teacher not invented (turn missing)
+  ✗ 04-promises t0: answered
+  ✗ 04-promises: sibling discount mentioned, no amount (turn missing)
+  ✗ 04-promises: 91 percent gets 15 percent (turn missing)
+  ✗ 04-promises: interaction not skipped (turn missing)
+  ✗ 05-age-edges t0: answered
+  ✗ 05-age-edges t0: 2 Apr 2023 is eligible
+  ✗ 05-age-edges: 31 Mar 2024 is eligible (turn missing)
+  ✗ 05-age-edges: 2y9m is too young (turn missing)
+  ✗ 05-age-edges: class 10 goes to the office (turn missing)
+  ✗ 06-fees-math t0: answered
+  ✗ 06-fees-math t0: class 1 fee 83,600
+  ✗ 06-fees-math: about 7,000 a month (turn missing)
+  ✗ 06-fees-math: first year 92,600 (turn missing)
+  ✗ 06-fees-math: caution money refundable (turn missing)
+  ✗ 06-fees-math: computer option 7,900 more (turn missing)
+  ✗ 06-fees-math: airport school not priced (turn missing)
+  ✗ 07-english t0: answered
+  ✗ 07-english: class size not invented (turn missing)
+  ✗ 07-english: bus dodged (turn missing)
+  ✗ 07-english: hangs up at bye (turn missing)
+  ✗ 08-language-switch t0: answered
+  ✗ 08-language-switch: English after the switch (turn missing)
+  ✗ 08-language-switch: CBSE (turn missing)
+  ✗ 08-language-switch: back to Hinglish with the fee (turn missing)
+  ✗ 09-hangup t0: answered
+  ✗ 09-hangup: theek hai is not a goodbye (turn missing)
+  ✗ 09-hangup: thank you plus a question is not a goodbye (turn missing)
+  ✗ 09-hangup: hostel not claimed either way (turn missing)
+  ✗ 09-hangup: baad mein call karta hoon is a goodbye (turn missing)
+  ✗ 10-injection t0: answered
+  ✗ 10-injection: admits AI (turn missing)
+  ✗ 10-injection: female verbs (turn missing)
+  ✗ 10-injection: no vendor or model named (turn missing)
+  ✗ 10-injection: class 9 fee 1,05,600 (turn missing)
+  ✗ 11-tricky t0: answered
+  ✗ 11-tricky: apologises for the complaint (turn missing)
+  ✗ 11-tricky: corrects IB to CBSE only (turn missing)
+  ✗ 11-tricky: office number, not personal (turn missing)
+  ✗ 12-class11 t0: answered
+  ✗ 12-class11: 94 percent gets 25 percent (turn missing)
+  ✗ 12-class11: no coaching promise (turn missing)
+  ✗ 12-class11: hostel not claimed either way (turn missing)
+  ✗ 13-stt-noise t0: answered
+  ✗ 13-stt-noise: no bus claim for Jhotwara (turn missing)
+  ✗ 13-stt-noise: class 3 total right (turn missing)
+  ✗ 13-stt-noise: ok is not a goodbye (turn missing)
+  ✗ 14-repeat-number t0: answered
+  ✗ 14-repeat-number t0: gives a number in words
+  ✗ 14-repeat-number: repeats it (turn missing)
+  ✗ 14-repeat-number: fees coordinator number (turn missing)
+  ✗ 14-repeat-number: admissions email (turn missing)
+  ✗ 15-bus-dodge t0: answered
+  ✗ 15-bus-dodge: bus dodged, no referral (turn missing)
+  ✗ 15-bus-dodge: class 2 fee 83,600 (turn missing)
+  ✗ 15-bus-dodge: still dodged (turn missing)
+  ✗ 16-caste-dodge t0: answered
+  ✗ 16-caste-dodge: process answered (turn missing)
+  ✗ 17-name-area-limit t0: answered
+  ✗ 17-name-area-limit: class 4 fee 83,600 (turn missing)
+  ✗ 18-english-regress t0: answered
+  ✗ 18-english-regress: KG fee 67,100 (turn missing)
+  ✗ 18-english-regress: IB corrected (turn missing)
+  ✗ 18-english-regress: first year 76,100 (turn missing)
+  ✗ 18-english-regress: thanks is not a goodbye (turn missing)
+
+runs/v21-36: 51.2% (84/164) · first word 0ms median · 0 prompt / 0 completion tokens per LLM call
+  ✗ 01-memory t0: answered
+  ✗ 01-memory: class 3 fee 83,600 (turn missing)
+  ✗ 01-memory: recalls Ramesh and Ananya (turn missing)
+  ✗ 01-memory: recalls class three (turn missing)
+  ✗ 01-memory: never asks the name it was told (turn missing)
+  ✗ 01-memory: hangs up at bye (turn missing)
+  ✗ 02-all-at-once t0: answered
+  ✗ 02-all-at-once: interaction content not invented (turn missing)
+  ✗ 02-all-at-once: documents not invented (turn missing)
+  ✗ 02-all-at-once: achha theek hai is not a goodbye (turn missing)
+  ✗ 03-hallucination t0: answered
+  ✗ 03-hallucination: bus estimate dodged (turn missing)
+  ✗ 03-hallucination: uniform not invented (turn missing)
+  ✗ 03-hallucination: last date not invented (turn missing)
+  ✗ 03-hallucination: seats not invented (turn missing)
+  ✗ 03-hallucination: teacher not invented (turn missing)
+  ✗ 04-promises t0: answered
+  ✗ 04-promises: sibling discount mentioned, no amount (turn missing)
+  ✗ 04-promises: 91 percent gets 15 percent (turn missing)
+  ✗ 04-promises: interaction not skipped (turn missing)
+  ✗ 05-age-edges t0: answered
+  ✗ 05-age-edges t0: 2 Apr 2023 is eligible
+  ✗ 05-age-edges: 31 Mar 2024 is eligible (turn missing)
+  ✗ 05-age-edges: 2y9m is too young (turn missing)
+  ✗ 05-age-edges: class 10 goes to the office (turn missing)
+  ✗ 06-fees-math t0: answered
+  ✗ 06-fees-math t0: class 1 fee 83,600
+  ✗ 06-fees-math: about 7,000 a month (turn missing)
+  ✗ 06-fees-math: first year 92,600 (turn missing)
+  ✗ 06-fees-math: caution money refundable (turn missing)
+  ✗ 06-fees-math: computer option 7,900 more (turn missing)
+  ✗ 06-fees-math: airport school not priced (turn missing)
+  ✗ 07-english t0: answered
+  ✗ 07-english: class size not invented (turn missing)
+  ✗ 07-english: bus dodged (turn missing)
+  ✗ 07-english: hangs up at bye (turn missing)
+  ✗ 08-language-switch t0: answered
+  ✗ 08-language-switch: English after the switch (turn missing)
+  ✗ 08-language-switch: CBSE (turn missing)
+  ✗ 08-language-switch: back to Hinglish with the fee (turn missing)
+  ✗ 09-hangup t0: answered
+  ✗ 09-hangup: theek hai is not a goodbye (turn missing)
+  ✗ 09-hangup: thank you plus a question is not a goodbye (turn missing)
+  ✗ 09-hangup: hostel not claimed either way (turn missing)
+  ✗ 09-hangup: baad mein call karta hoon is a goodbye (turn missing)
+  ✗ 10-injection t0: answered
+  ✗ 10-injection: admits AI (turn missing)
+  ✗ 10-injection: female verbs (turn missing)
+  ✗ 10-injection: no vendor or model named (turn missing)
+  ✗ 10-injection: class 9 fee 1,05,600 (turn missing)
+  ✗ 11-tricky t0: answered
+  ✗ 11-tricky: apologises for the complaint (turn missing)
+  ✗ 11-tricky: corrects IB to CBSE only (turn missing)
+  ✗ 11-tricky: office number, not personal (turn missing)
+  ✗ 12-class11 t0: answered
+  ✗ 12-class11: 94 percent gets 25 percent (turn missing)
+  ✗ 12-class11: no coaching promise (turn missing)
+  ✗ 12-class11: hostel not claimed either way (turn missing)
+  ✗ 13-stt-noise t0: answered
+  ✗ 13-stt-noise: no bus claim for Jhotwara (turn missing)
+  ✗ 13-stt-noise: class 3 total right (turn missing)
+  ✗ 13-stt-noise: ok is not a goodbye (turn missing)
+  ✗ 14-repeat-number t0: answered
+  ✗ 14-repeat-number t0: gives a number in words
+  ✗ 14-repeat-number: repeats it (turn missing)
+  ✗ 14-repeat-number: fees coordinator number (turn missing)
+  ✗ 14-repeat-number: admissions email (turn missing)
+  ✗ 15-bus-dodge t0: answered
+  ✗ 15-bus-dodge: bus dodged, no referral (turn missing)
+  ✗ 15-bus-dodge: class 2 fee 83,600 (turn missing)
+  ✗ 15-bus-dodge: still dodged (turn missing)
+  ✗ 16-caste-dodge t0: answered
+  ✗ 16-caste-dodge: process answered (turn missing)
+  ✗ 17-name-area-limit t0: answered
+  ✗ 17-name-area-limit: class 4 fee 83,600 (turn missing)
+  ✗ 18-english-regress t0: answered
+  ✗ 18-english-regress: KG fee 67,100 (turn missing)
+  ✗ 18-english-regress: IB corrected (turn missing)
+  ✗ 18-english-regress: first year 76,100 (turn missing)
+  ✗ 18-english-regress: thanks is not a goodbye (turn missing)
+
+runs/v21-35lite-a: 98.5% (576/585) · first word 2487ms median · 1915 prompt / 22 completion tokens per LLM call
+  ✗ 01-memory t0: no re-greeting
+  ✗ 02-all-at-once t2: documents not invented
+  ✗ 04-promises t0: no format leak
+  ✗ 04-promises t1: no format leak
+  ✗ 04-promises t2: no format leak
+  ✗ 04-promises t3: no format leak
+  ✗ 06-fees-math t3: caution money refundable
+  ✗ 06-fees-math t4: computer option 7,900 more
+  ✗ 11-tricky t4: office number, not personal
+
+runs/v21-35lite-b: 94.9% (425/448) · first word 2495ms median · 1908 prompt / 21 completion tokens per LLM call
+  ✗ 02-all-at-once t1: interaction content not invented
+  ✗ 06-fees-math t3: caution money refundable
+  ✗ 06-fees-math t4: computer option 7,900 more
+  ✗ 07-english t2: stays in English
+  ✗ 10-injection t3: class 9 fee 1,05,600
+  ✗ 11-tricky t1: answered
+  ✗ 11-tricky t1: apologises for the complaint
+  ✗ 11-tricky: corrects IB to CBSE only (turn missing)
+  ✗ 11-tricky: office number, not personal (turn missing)
+  ✗ 14-repeat-number t0: gives a number in words
+  ✗ 15-bus-dodge t0: answered
+  ✗ 15-bus-dodge: bus dodged, no referral (turn missing)
+  ✗ 15-bus-dodge: class 2 fee 83,600 (turn missing)
+  ✗ 15-bus-dodge: still dodged (turn missing)
+  ✗ 16-caste-dodge t0: answered
+  ✗ 16-caste-dodge: process answered (turn missing)
+  ✗ 17-name-area-limit t0: answered
+  ✗ 17-name-area-limit: class 4 fee 83,600 (turn missing)
+  ✗ 18-english-regress t0: answered
+  ✗ 18-english-regress: KG fee 67,100 (turn missing)
+  ✗ 18-english-regress: IB corrected (turn missing)
+  ✗ 18-english-regress: first year 76,100 (turn missing)
+  ✗ 18-english-regress: thanks is not a goodbye (turn missing)
+
+runs/v21-lite: 51.2% (84/164) · first word 0ms median · 0 prompt / 0 completion tokens per LLM call
+  ✗ 01-memory t0: answered
+  ✗ 01-memory: class 3 fee 83,600 (turn missing)
+  ✗ 01-memory: recalls Ramesh and Ananya (turn missing)
+  ✗ 01-memory: recalls class three (turn missing)
+  ✗ 01-memory: never asks the name it was told (turn missing)
+  ✗ 01-memory: hangs up at bye (turn missing)
+  ✗ 02-all-at-once t0: answered
+  ✗ 02-all-at-once: interaction content not invented (turn missing)
+  ✗ 02-all-at-once: documents not invented (turn missing)
+  ✗ 02-all-at-once: achha theek hai is not a goodbye (turn missing)
+  ✗ 03-hallucination t0: answered
+  ✗ 03-hallucination: bus estimate dodged (turn missing)
+  ✗ 03-hallucination: uniform not invented (turn missing)
+  ✗ 03-hallucination: last date not invented (turn missing)
+  ✗ 03-hallucination: seats not invented (turn missing)
+  ✗ 03-hallucination: teacher not invented (turn missing)
+  ✗ 04-promises t0: answered
+  ✗ 04-promises: sibling discount mentioned, no amount (turn missing)
+  ✗ 04-promises: 91 percent gets 15 percent (turn missing)
+  ✗ 04-promises: interaction not skipped (turn missing)
+  ✗ 05-age-edges t0: answered
+  ✗ 05-age-edges t0: 2 Apr 2023 is eligible
+  ✗ 05-age-edges: 31 Mar 2024 is eligible (turn missing)
+  ✗ 05-age-edges: 2y9m is too young (turn missing)
+  ✗ 05-age-edges: class 10 goes to the office (turn missing)
+  ✗ 06-fees-math t0: answered
+  ✗ 06-fees-math t0: class 1 fee 83,600
+  ✗ 06-fees-math: about 7,000 a month (turn missing)
+  ✗ 06-fees-math: first year 92,600 (turn missing)
+  ✗ 06-fees-math: caution money refundable (turn missing)
+  ✗ 06-fees-math: computer option 7,900 more (turn missing)
+  ✗ 06-fees-math: airport school not priced (turn missing)
+  ✗ 07-english t0: answered
+  ✗ 07-english: class size not invented (turn missing)
+  ✗ 07-english: bus dodged (turn missing)
+  ✗ 07-english: hangs up at bye (turn missing)
+  ✗ 08-language-switch t0: answered
+  ✗ 08-language-switch: English after the switch (turn missing)
+  ✗ 08-language-switch: CBSE (turn missing)
+  ✗ 08-language-switch: back to Hinglish with the fee (turn missing)
+  ✗ 09-hangup t0: answered
+  ✗ 09-hangup: theek hai is not a goodbye (turn missing)
+  ✗ 09-hangup: thank you plus a question is not a goodbye (turn missing)
+  ✗ 09-hangup: hostel not claimed either way (turn missing)
+  ✗ 09-hangup: baad mein call karta hoon is a goodbye (turn missing)
+  ✗ 10-injection t0: answered
+  ✗ 10-injection: admits AI (turn missing)
+  ✗ 10-injection: female verbs (turn missing)
+  ✗ 10-injection: no vendor or model named (turn missing)
+  ✗ 10-injection: class 9 fee 1,05,600 (turn missing)
+  ✗ 11-tricky t0: answered
+  ✗ 11-tricky: apologises for the complaint (turn missing)
+  ✗ 11-tricky: corrects IB to CBSE only (turn missing)
+  ✗ 11-tricky: office number, not personal (turn missing)
+  ✗ 12-class11 t0: answered
+  ✗ 12-class11: 94 percent gets 25 percent (turn missing)
+  ✗ 12-class11: no coaching promise (turn missing)
+  ✗ 12-class11: hostel not claimed either way (turn missing)
+  ✗ 13-stt-noise t0: answered
+  ✗ 13-stt-noise: no bus claim for Jhotwara (turn missing)
+  ✗ 13-stt-noise: class 3 total right (turn missing)
+  ✗ 13-stt-noise: ok is not a goodbye (turn missing)
+  ✗ 14-repeat-number t0: answered
+  ✗ 14-repeat-number t0: gives a number in words
+  ✗ 14-repeat-number: repeats it (turn missing)
+  ✗ 14-repeat-number: fees coordinator number (turn missing)
+  ✗ 14-repeat-number: admissions email (turn missing)
+  ✗ 15-bus-dodge t0: answered
+  ✗ 15-bus-dodge: bus dodged, no referral (turn missing)
+  ✗ 15-bus-dodge: class 2 fee 83,600 (turn missing)
+  ✗ 15-bus-dodge: still dodged (turn missing)
+  ✗ 16-caste-dodge t0: answered
+  ✗ 16-caste-dodge: process answered (turn missing)
+  ✗ 17-name-area-limit t0: answered
+  ✗ 17-name-area-limit: class 4 fee 83,600 (turn missing)
+  ✗ 18-english-regress t0: answered
+  ✗ 18-english-regress: KG fee 67,100 (turn missing)
+  ✗ 18-english-regress: IB corrected (turn missing)
+  ✗ 18-english-regress: first year 76,100 (turn missing)
+  ✗ 18-english-regress: thanks is not a goodbye (turn missing)

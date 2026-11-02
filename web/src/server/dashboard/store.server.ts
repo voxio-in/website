@@ -15,7 +15,7 @@ import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto'
 
 import type { Prisma } from '@prisma/client'
 
-import type { Account, Avatar, Delivery, FlowDoc, KnowledgeBase, ProviderConfig, Session, VoicePreset, WebActionEvent } from '#/lib/dashboard/types'
+import type { Account, Avatar, Delivery, FlowDoc, KbDocument, KbSettings, ProviderConfig, Session, VoicePreset, WebActionEvent } from '#/lib/dashboard/types'
 import { TEMPLATES } from '#/lib/workflow/templates'
 import { withStart } from '#/lib/workflow/convert'
 import { db, withDb } from '#/server/db'
@@ -80,7 +80,7 @@ const userInclude = {
   numbers: { orderBy: { phoneNumber: 'asc' } },
   ownedNumbers: { orderBy: { phoneNumber: 'asc' } },
   faces: { orderBy: { createdAt: 'asc' } },
-  knowledge: { orderBy: { createdAt: 'asc' }, include: { sources: { orderBy: { addedAt: 'asc' } } } },
+  knowledge: { orderBy: { createdAt: 'asc' }, include: { documents: { orderBy: { createdAt: 'asc' } } } },
 } satisfies Prisma.UserInclude
 type UserRow = Prisma.UserGetPayload<{ include: typeof userInclude }>
 type SessionRow = FlowRow['sessions'][number]
@@ -131,8 +131,13 @@ function toStore(u: UserRow): Store {
     }),
     voices: [...u.stt.map(voice('stt')), ...u.tts.map(voice('tts'))],
     knowledge: u.knowledge.map((k) => ({
-      id: k.id, name: k.name,
-      sources: k.sources.map((s) => ({ kind: s.kind, label: s.label, status: s.status as KnowledgeBase['sources'][number]['status'], chunks: s.chunks, added_at: s.addedAt.toISOString() })),
+      id: k.id, name: k.name, model: String((k.embeddings as { model?: string } | null)?.model ?? '') || undefined,
+      settings: (k.settings ?? {}) as KbSettings,
+      documents: k.documents.map((d) => ({
+        id: d.id, filename: d.filename, size: d.size, pages: d.pages, chunks: d.chunks, images_skipped: d.imagesSkipped,
+        status: d.status as KbDocument['status'], error: d.error ?? undefined, settings: (d.settings ?? {}) as KbSettings,
+        metadata: (d.metadata ?? {}) as KbDocument['metadata'], created_at: d.createdAt.toISOString(),
+      })),
     })),
     avatars: u.faces.map((f) => {
       const clip = f.clip as { frames?: number; fps?: number }
@@ -158,7 +163,8 @@ function toStore(u: UserRow): Store {
 // through `save` drops the entry.
 const CACHE_MS = 20_000
 const cache = new Map<string, { at: number; store: Store }>()
-const forget = (userId: string) => cache.delete(userId)
+/** Drop one user's cached account, after a change made outside `mutate` (knowledge bases). */
+export const forget = (userId: string) => cache.delete(userId)
 /** Drop every cached account, after a change that touches several users at once (number ownership). */
 export const forgetAllAccounts = () => cache.clear()
 
@@ -326,18 +332,7 @@ async function save(userId: string, before: Store, after: Store) {
       : (table as typeof db.stt).create({ data: { id, user: connectUser, ...data } }))
   }
 
-  // Knowledge bases and their sources.
-  const k0 = byId(a0.knowledge, (k) => k.id)
-  const k1 = byId(a1.knowledge, (k) => k.id)
-  for (const id of k0.keys()) if (!k1.has(id)) ops.push(db.knowledgeBase.deleteMany({ where: { id, userId } }))
-  for (const [id, k] of k1) {
-    const prev = k0.get(id)
-    if (prev && same(prev, k)) continue
-    const sources = k.sources.map((s) => ({ kind: s.kind, label: s.label, status: s.status, chunks: s.chunks, addedAt: date(s.added_at) }))
-    ops.push(prev
-      ? db.knowledgeBase.update({ where: { id }, data: { name: k.name, sources: { deleteMany: {}, create: sources } } })
-      : db.knowledgeBase.create({ data: { id, name: k.name, user: connectUser, sources: { create: sources } } }))
-  }
+  // Knowledge bases are written through the SDK (knowledge.server.ts), never from here.
 
   // Avatars → faces.
   const f0 = byId(a0.avatars, (f) => f.uuid)
@@ -580,9 +575,8 @@ export function demoStore(base: Account): Store {
         { id: 's_soniox', name: 'Soniox Hindi + English', kind: 'stt', config: { service: 'soniox', language: ['hi', 'en'], 'enable-speaker-diarization': true }, used_by: [] },
       ],
       knowledge: [
-        { id: 'kb_clinic', name: 'Clinic FAQ', sources: [
-          { kind: 'pdf', label: 'clinic-handbook.pdf', status: 'ready', chunks: 214, added_at: days(12) },
-          { kind: 'web', label: 'https://example-clinic.in (whole site)', status: 'ready', chunks: 96, added_at: days(9) },
+        { id: 'kb_clinic', name: 'Clinic FAQ', settings: { chunk_size: 500, overlap: 100 }, documents: [
+          { id: 'doc_handbook', filename: 'clinic-handbook.pdf', size: 2_400_000, pages: 38, chunks: 214, images_skipped: 6, status: 'ready', settings: {}, metadata: {}, created_at: days(12) },
         ] },
       ],
       avatars: [

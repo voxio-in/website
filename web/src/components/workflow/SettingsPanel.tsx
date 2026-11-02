@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Label } from '#/components/dashboard/controls'
 import { CopySettingsMenu } from '#/components/dashboard/kit/CopySettingsMenu'
@@ -6,6 +6,7 @@ import Icon from '#/components/dashboard/Icon'
 import type { NodeData } from '#/lib/workflow/convert'
 import { prettyName, specFor, type Field } from '#/lib/workflow/registry'
 import type { Issue } from '#/lib/workflow/validate'
+import { DevSettings } from './DevSettings'
 import { FieldInput } from './Fields'
 
 type Props = {
@@ -23,6 +24,8 @@ type Props = {
   racing?: boolean
   /** The flow's voice service, for settings that work with one voice only. */
   ttsService?: string
+  /** Developer mode: the engine's raw keys, grouped, instead of the plain settings. */
+  dev?: boolean
 }
 
 const SERVICE_NAME: Record<string, string> = { deepgram: 'Deepgram', sarvam: 'Sarvam', elevenlabs: 'ElevenLabs', google: 'Google', resembleai: 'Resemble' }
@@ -48,8 +51,46 @@ function groups(fields: Field[]): [Field['section'] | undefined, Field[]][] {
 /** Step names stay machine-safe; people type normal words. */
 const toId = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9?]+/g, '_').replace(/^_+|_+$/g, '')
 
-export default function SettingsPanel({ id, data, isStart, issues, onParams, onRename, onStart, onDelete, onDuplicate, onClose, racing, ttsService }: Props) {
+const WIDTH_KEY = 'vx.wf.panel'
+const MIN_W = 380
+
+/** The panel's width, set by dragging its left edge and remembered in this browser; 0 means the stylesheet's. */
+function usePanelWidth() {
+  const [width, setWidth] = useState(0)
+  const drag = useRef<{ x: number; w: number } | null>(null)
+  useEffect(() => { try { setWidth(Number(localStorage.getItem(WIDTH_KEY)) || 0) } catch { /* private window */ } }, [])
+  const save = (w: number) => { try { localStorage.setItem(WIDTH_KEY, String(w)) } catch { /* private window: this visit only */ } }
+  const down = (e: React.PointerEvent<HTMLDivElement>) => {
+    const panel = e.currentTarget.parentElement
+    if (!panel) return
+    e.preventDefault()
+    drag.current = { x: e.clientX, w: panel.getBoundingClientRect().width }
+    const max = Math.max(MIN_W, Math.round(window.innerWidth * 0.7))
+    let last = drag.current.w
+    const move = (m: PointerEvent) => {
+      if (!drag.current) return
+      // The grip is on the left edge: dragging left widens.
+      last = Math.round(Math.min(max, Math.max(MIN_W, drag.current.w + drag.current.x - m.clientX)))
+      setWidth(last)
+    }
+    const up = () => {
+      drag.current = null
+      save(last)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      document.body.classList.remove('wf-resizing')
+    }
+    document.body.classList.add('wf-resizing')
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  const reset = () => { setWidth(0); try { localStorage.removeItem(WIDTH_KEY) } catch { /* private window */ } }
+  return [width, { down, reset }] as const
+}
+
+export default function SettingsPanel({ id, data, isStart, issues, onParams, onRename, onStart, onDelete, onDuplicate, onClose, racing, ttsService, dev }: Props) {
   const spec = specFor(data.type)
+  const [width, startDrag] = usePanelWidth()
   // Every step opens on its main settings: what decides the step (Say's words or the AI's reply, what an AI decides) is there.
   const [tab, setTab] = useState<'setup' | 'more'>('setup')
   const [name, setName] = useState(prettyName(id))
@@ -59,6 +100,8 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
     const next = { ...p }
     if (v === undefined) delete next[key]
     else next[key] = v
+    // A setting that only matters while its switch is on goes with it (emotion → emotion style).
+    if (!v) for (const f of spec.fields) if (f.requires === key) delete next[f.key]
     onParams(next)
   }
 
@@ -68,7 +111,11 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
   const hasMore = spec.fields.some((f) => f.advanced && applies(f))
 
   return (
-    <aside className="wf-panel" style={{ '--c': spec.color } as React.CSSProperties}>
+    <aside className={`wf-panel${width ? ' is-sized' : ''}`} style={{ '--c': spec.color, ...(width ? { width } : {}) } as React.CSSProperties}>
+      <div className="wf-panel-grip" role="separator" aria-orientation="vertical" aria-label="Resize settings" title="Drag to resize · double-click to reset"
+        onPointerDown={startDrag.down} onDoubleClick={startDrag.reset}>
+        <span />
+      </div>
       <div className="wf-panel-head">
         <span className="wf-tile is-lg"><Icon name={spec.icon} size={20} /></span>
         <div className="wf-panel-titles">
@@ -87,7 +134,7 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
         </ul>
       )}
 
-      {hasMore && (
+      {hasMore && !dev && (
         <div className="db-pills wf-panel-tabs">
           <button className={tab === 'setup' ? 'is-on' : ''} onClick={() => setTab('setup')}>Main settings</button>
           <button className={tab === 'more' ? 'is-on' : ''} onClick={() => setTab('more')}>Developer settings</button>
@@ -95,19 +142,24 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
       )}
 
       <div className="wf-panel-body">
-        {groups(fields).map(([sec, list]) => {
+        {dev && <DevSettings spec={spec} params={p} onParams={onParams} />}
+        {!dev && groups(fields).map(([sec, list]) => {
           const rows = list.map((f, i) => {
             // A setting that needs another voice says so instead of a switch that does nothing.
-            const off = f.tts && ttsService !== f.tts
+            // If it's already on (an imported workflow, or the voice changed), the switch stays so it can be turned off.
+            const wrongVoice = !!f.tts && ttsService !== f.tts
+            const off = wrongVoice && !p[f.key]
+            const voiceName = SERVICE_NAME[ttsService ?? ''] ?? 'another service'
             const inline = (f.kind === 'bool' || f.kind === 'hangup' || f.kind === 'aihangup' || f.kind === 'canend') && !off
             return (
               <div key={`${f.key}-${i}`} className={`wf-field${inline ? ' is-inline' : ''}${off ? ' is-off' : ''}`}>
                 <Label>{f.label}</Label>
                 {off
-                  ? <p className="wf-help">Works only with an ElevenLabs voice. This flow speaks with {SERVICE_NAME[ttsService ?? ''] ?? 'another service'}.</p>
+                  ? <p className="wf-help">Works only with an ElevenLabs voice. This flow speaks with {voiceName}.</p>
                   : <FieldInput field={f} value={p[f.key]} params={p} onChange={(v) => set(f.key, v)} onPatch={(patch) => onParams({ ...p, ...patch })} />}
+                {wrongVoice && !off && <p className="wf-help is-warn">This flow speaks with {voiceName}, which reads cues like [laughs] out loud. Turn this off.</p>}
                 {/* The one line that decides the choice, in view, not only behind an (i). */}
-                {f.help && !off && <p className="wf-help">{f.help}</p>}
+                {f.help && !off && !wrongVoice && <p className="wf-help">{f.help}</p>}
               </div>
             )
           })
@@ -122,7 +174,7 @@ export default function SettingsPanel({ id, data, isStart, issues, onParams, onR
             </section>
           )
         })}
-        {!fields.length && <p className="wf-help">{tab === 'setup' && spec.setupNote ? spec.setupNote : 'Nothing to set here. This step just works.'}</p>}
+        {!dev && !fields.length && <p className="wf-help">{tab === 'setup' && spec.setupNote ? spec.setupNote : 'Nothing to set here. This step just works.'}</p>}
       </div>
 
       {/* Labelled actions; when "Make first step" needs the room they shrink to icons. */}

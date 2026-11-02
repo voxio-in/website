@@ -421,10 +421,6 @@ export const getAccount = createServerFn({ method: 'GET' }).handler(async (): Pr
 type AccountOp =
   | { op: 'voice.save'; voice: Account['voices'][number] }
   | { op: 'voice.delete'; id: string }
-  | { op: 'kb.create'; name: string }
-  | { op: 'kb.addSource'; id: string; kind: string; label: string }
-  | { op: 'kb.delete'; id: string }
-  | { op: 'kb.removeSource'; id: string; index: number }
   | { op: 'avatar.add'; label: string; detector: 's3fd' | 'dwpose' }
   | { op: 'avatar.delete'; uuid: string }
   | { op: 'integration.connect'; shop: string }
@@ -462,23 +458,6 @@ export const accountOp = createServerFn({ method: 'POST' })
             acct.voices = acct.voices.filter((v) => v.id !== a.id)
             break
           }
-          case 'kb.create':
-            acct.knowledge.push({ id: `kb_${randomUUID().slice(0, 8)}`, name: a.name || 'Untitled', sources: [] })
-            break
-          case 'kb.addSource': {
-            const kb = acct.knowledge.find((k) => k.id === a.id)
-            if (!kb) throw new Error('Knowledge base not found.')
-            kb.sources.push({ kind: a.kind, label: a.label, status: 'ready', chunks: 20 + Math.floor(Math.random() * 180), added_at: now })
-            break
-          }
-          case 'kb.removeSource': {
-            const kb = acct.knowledge.find((k) => k.id === a.id)
-            if (kb) kb.sources.splice(a.index, 1)
-            break
-          }
-          case 'kb.delete':
-            acct.knowledge = acct.knowledge.filter((k) => k.id !== a.id)
-            break
           case 'avatar.add':
             acct.avatars.push({ uuid: randomUUID(), label: a.label || 'main', detector: a.detector, frames: 250, fps: 25, created_at: now })
             break

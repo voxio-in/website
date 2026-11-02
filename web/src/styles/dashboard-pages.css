@@ -557,3 +557,33 @@
 
 .db-xml { width: 100%; font-size: 13px; line-height: 1.5; white-space: pre; overflow: auto; resize: vertical; tab-size: 4; }
 .db-xml-err { margin: 8px 0 0; font-size: 13.5px; color: var(--db-err-text, var(--db-err)); }
+
+/* Knowledge: documents, their status and actions; the dialogs' passage settings. */
+.db-kb-model { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 13.5px; color: var(--db-muted); background: rgb(var(--ink) / 0.05); white-space: nowrap; }
+.db-doc-acts { display: inline-flex; gap: 2px; flex-shrink: 0; }
+.db-doc-acts .db-iconbtn:disabled { opacity: .35; cursor: default; }
+.db-doc-note { color: var(--db-muted); }
+.db-pill-busy { display: inline-flex; align-items: center; gap: 7px; }
+.db-spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: db-spin .8s linear infinite; }
+@keyframes db-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .db-spin { animation-duration: 2.4s; } }
+.db-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--db-muted); }
+.db-hint.is-err { color: var(--db-err-text); }
+.db-soon { margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--db-warn-text); background: rgba(255, 198, 112, 0.12); }
+.db-toggle:disabled { opacity: .45; cursor: default; }
+/* Chunk size | overlap, and key | value | x, as joined tiles in one row. */
+.db .db-chunkpair, .db .db-metarow { flex-direction: row; margin-top: 6px; }
+.db .db-chunkpair > .db-fcell, .db .db-metarow > .db-fcell { flex: 1; min-width: 0; border-radius: 6px; }
+.db .db-chunkpair > :first-child, .db .db-metarow > :first-child { border-radius: 20px 6px 6px 20px; }
+.db .db-chunkpair > :last-child, .db .db-metarow > :last-child { border-radius: 6px 20px 20px 6px; }
+.db .db-metarow > .is-narrow { flex: 0 0 auto; display: grid; place-items: center; padding: 0 6px; }
+.db-adv { display: grid; gap: 16px; padding: 10px 2px 4px; }
+.db-addmeta { justify-self: start; margin-top: 8px; }
+
+/* Session replay: the flow's recorded fields and when each was found */
+.db-recorded { margin-top: 16px; display: grid; gap: 8px; }
+.db-recorded ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.db-recorded li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 14px; }
+.db-recorded-name { min-width: 120px; opacity: .7; text-transform: capitalize; }
+.db-recorded-hist { display: flex; flex-wrap: wrap; gap: 4px 6px; font-size: 12.5px; opacity: .6; }
+.db-recorded-hist span + span::before { content: '→ '; }

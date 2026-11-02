@@ -2,6 +2,7 @@
 // second panel with that flow's sections. No sign-in yet; the server acts as
 // the single account in VOXIO_USER_API_KEY.
 
+import { Canvas } from '#/components/assistant/Canvas'
 import { Link, Outlet, createFileRoute, redirect, useMatches, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 
@@ -52,11 +53,10 @@ const RAIL: { to: string; label: string; icon: IconName; exact?: boolean }[] = [
   // Ask Voxio is off for now (see lib/features).
   ...(ASSISTANT_ON ? [{ to: '/dashboard/assistant', label: 'Ask Voxio', icon: 'spark' as IconName }] : []),
   { to: '/dashboard/flows', label: 'Flows', icon: 'flows' },
-  ...(DASHBOARDS_ON ? [{ to: '/dashboard/dashboards', label: 'Dashboards', icon: 'chart' as IconName }] : []),
+  ...(DASHBOARDS_ON ? [{ to: '/dashboard/dashboards', label: 'VAD', icon: 'chart' as IconName }] : []),
   { to: '/dashboard/voices', label: 'Voices', icon: 'voice' },
   { to: '/dashboard/avatars', label: 'Avatars', icon: 'avatar' },
-  // Knowledge is hidden for now; the pages still exist.
-  // { to: '/dashboard/knowledge', label: 'Knowledge', icon: 'book' },
+  { to: '/dashboard/knowledge', label: 'Knowledge', icon: 'book' },
   // Apps (integrations) is hidden for now; the page still exists.
   // { to: '/dashboard/integrations', label: 'Apps', icon: 'plug' },
   { to: '/dashboard/developers', label: 'Developers', icon: 'code' },
@@ -92,7 +92,7 @@ export const FLOW_SECTIONS: { title: string; items: { path: string; label: strin
 
 const TITLES: Record<string, string> = {
   flows: 'Flows', voices: 'Voices', avatars: 'Avatars', knowledge: 'Knowledge', numbers: 'Numbers',
-  integrations: 'Apps', developers: 'Developers', settings: 'Settings', assistant: 'Ask Voxio', dashboards: 'Dashboards',
+  integrations: 'Apps', developers: 'Developers', settings: 'Settings', assistant: 'Ask Voxio', dashboards: 'VAD',
 }
 const SECTION_LABEL = Object.fromEntries(FLOW_SECTIONS.flatMap((s) => s.items.map((i) => [i.path, i.label])))
 
@@ -118,6 +118,8 @@ function DashboardLayout() {
   const flowMatch = pathname.match(/^\/dashboard\/flows\/([^/]+)(?:\/([^/]+))?/)
   const flowKey = flowMatch ? decodeURIComponent(flowMatch[1]) : null
   const inWorkflow = flowMatch?.[2] === 'workflow'
+  // Inside one VAD: its own menu (Dashboard, Users, Settings, Ask Voxio), like a flow's.
+  const vadId = pathname.match(/^\/dashboard\/dashboards\/([^/]+)/)?.[1] ?? null
   const flowName = useFlowName()
   const { admin } = Route.useRouteContext()
 
@@ -144,8 +146,11 @@ function DashboardLayout() {
   useEffect(() => {
     if (!ASSISTANT_ON) return
     const onKey = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setAssistant((a) => !a) } }
+    // Pages can open it too (a dashboard's Ask Voxio tab).
+    const onOpen = () => setAssistant(true)
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('vx-assistant-open', onOpen)
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('vx-assistant-open', onOpen) }
   }, [])
   // On the full view the panel isn't needed: Ctrl/⌘+K there just focuses the box.
   const onAssistant = pathname === '/dashboard/assistant'
@@ -153,9 +158,9 @@ function DashboardLayout() {
   useEffect(() => setMobile(false), [pathname])
 
   // Folding the flow menu shrinks it to icons (labels on hover) instead of hiding it.
-  const showPanel = !!flowKey
-  const panelMini = !!flowKey && !panelOpen
-  const mainCollapsed = collapsed || !!flowKey
+  const showPanel = !!flowKey || !!vadId
+  const panelMini = showPanel && !panelOpen
+  const mainCollapsed = collapsed || showPanel
   const crumbs = crumbsFor(pathname, flowName)
   const up = [...crumbs].reverse().find((c) => c.to)
 
@@ -191,17 +196,17 @@ function DashboardLayout() {
         </div>
       </nav>
 
-      {showPanel && flowKey && (
+      {showPanel && (
         <aside className="db-panel">
-          <FlowPanel flowKey={flowKey} mini={panelMini && !mobile} />
+          {flowKey ? <FlowPanel flowKey={flowKey} mini={panelMini && !mobile} /> : vadId && <VadPanel id={decodeURIComponent(vadId)} mini={panelMini && !mobile} />}
         </aside>
       )}
 
       <div className="db-col">
         <header className="db-topbar">
-          <button className="db-iconbtn db-collapse" onClick={() => (flowKey ? setPanelOpen(!panelOpen) : toggleMain())}
-            aria-label={flowKey ? (panelOpen ? 'Hide flow menu' : 'Show flow menu') : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={flowKey ? (panelOpen ? 'Hide flow menu' : 'Show flow menu') : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <button className="db-iconbtn db-collapse" onClick={() => (showPanel ? setPanelOpen(!panelOpen) : toggleMain())}
+            aria-label={showPanel ? (panelOpen ? 'Hide menu' : 'Show menu') : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={showPanel ? (panelOpen ? 'Hide menu' : 'Show menu') : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
             <Icon name="panel" size={18} />
           </button>
           <button className="db-iconbtn db-burger2" onClick={() => setMobile(!mobile)} aria-label="Menu"><Icon name="list" size={18} /></button>
@@ -213,7 +218,7 @@ function DashboardLayout() {
           <span className="db-topbar-sep" />
           <Crumbs crumbs={crumbs} />
           {ASSISTANT_ON && !onAssistant && (
-            <button type="button" className={`db-asbtn${assistant ? ' is-on' : ''}`} onClick={() => setAssistant(!assistant)} title="Ask Voxio (Ctrl+K)" aria-pressed={assistant}>
+            <button type="button" className={`db-asbtn${assistant ? ' is-on' : ''}`} onClick={() => { if (!assistant) window.dispatchEvent(new Event('vx-assistant-new')); setAssistant(!assistant) }} title="Ask Voxio (Ctrl+K)" aria-pressed={assistant}>
               <SparklesIcon size={16} />Ask Voxio<kbd>Ctrl K</kbd>
             </button>
           )}
@@ -224,6 +229,7 @@ function DashboardLayout() {
           </ThemeCtx.Provider>
         </main>
       </div>
+      {ASSISTANT_ON && <Canvas />}
       {ASSISTANT_ON && <Assistant open={assistant && !onAssistant} onClose={() => setAssistant(false)}
         ctx={{ page: pathname, flow: flowKey ? { key: flowKey, name: flowName } : undefined, session: sessionParam }} />}
       <PolishedToaster theme={theme} />
@@ -259,6 +265,54 @@ function useFlowName() {
   const matches = useMatches()
   const loaded = matches.find((m) => m.routeId === '/dashboard/flows/$flowId')?.loaderData as Result<FlowDoc> | undefined
   return loaded?.ok ? loaded.data.flow_name : 'Flow'
+}
+
+/** One VAD's menu: its sections are the page's ?tab, and Ask Voxio opens the panel on it. */
+export const VAD_TABS = [
+  { tab: 'dashboard', label: 'Dashboard', icon: 'chart' },
+  { tab: 'users', label: 'Users', icon: 'avatar' },
+  { tab: 'settings', label: 'Settings', icon: 'settings' },
+] as const
+
+function VadPanel({ id, mini }: { id: string; mini: boolean }) {
+  const [title, setTitle] = useState('VAD')
+  const tab = useRouterState({ select: (s) => (s.location.search as { tab?: string }).tab }) ?? 'dashboard'
+  useEffect(() => {
+    let gone = false
+    const get = () => fetch(`/api/vad?id=${encodeURIComponent(id)}`).then((r) => r.json()).then((r) => { if (!gone && r.ok) setTitle(r.data.title) }).catch(() => {})
+    void get()
+    window.addEventListener('vx-applied', get)
+    return () => { gone = true; window.removeEventListener('vx-applied', get) }
+  }, [id])
+  return (
+    <>
+      <div className="db-panel-head">
+        <span className="db-panel-avatar" data-tip={title}>{title.slice(0, 1).toUpperCase()}</span>
+        <span className="db-panel-title">{title}</span>
+      </div>
+      <DockArea active={mini} className="db-panel-dock">
+        <div className="db-panel-group">
+          {VAD_TABS.map((it) => (
+            <DockSlot key={it.tab}>
+              <Link to="/dashboard/dashboards/$dashId" params={{ dashId: id }} search={{ tab: it.tab }}
+                className={`db-panel-item${tab === it.tab ? ' is-active' : ''}`} data-tip={it.label}>
+                <Icon name={it.icon as IconName} size={18} />
+                <span className="db-panel-name">{it.label}</span>
+              </Link>
+            </DockSlot>
+          ))}
+          {ASSISTANT_ON && (
+            <DockSlot>
+              <button type="button" className="db-panel-item" data-tip="Ask Voxio" onClick={() => { window.dispatchEvent(new Event('vx-assistant-new')); window.dispatchEvent(new Event('vx-assistant-open')) }}>
+                <SparklesIcon size={18} />
+                <span className="db-panel-name">Ask Voxio</span>
+              </button>
+            </DockSlot>
+          )}
+        </div>
+      </DockArea>
+    </>
+  )
 }
 
 function FlowPanel({ flowKey, mini }: { flowKey: string; mini: boolean }) {

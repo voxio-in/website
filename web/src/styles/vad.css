@@ -14,14 +14,14 @@
 .vad-card:hover { background: rgb(var(--ink) / 0.06); border-color: rgb(var(--ink) / 0.14); }
 .vad-card-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--db-accent-text, var(--db-accent)); background: var(--m3-tonal, rgb(var(--ink) / 0.06)); flex-shrink: 0; }
 .vad-card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.vad-card-text b { font-size: 15px; }
-.vad-card-text small { font-size: 12.5px; color: var(--db-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vad-card-text b { font-size: 17px; }
+.vad-card-text small { font-size: 14.5px; color: var(--db-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- dashboard page ---------- */
 .vad-page { max-width: none; }
 .vad-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
-.vad-hint { margin: -4px 0 12px; font-size: 13px; color: var(--db-muted); }
-.vad-err { margin: 0 0 12px; font-size: 13.5px; color: var(--db-err-text, var(--db-err)); }
+.vad-hint { margin: -4px 0 12px; font-size: 15px; color: var(--db-muted); }
+.vad-err { margin: 0 0 12px; font-size: 15px; color: var(--db-err-text, var(--db-err)); }
 .vad-empty { padding: 40px 0; text-align: center; color: var(--db-muted); }
 .vad-add { position: relative; }
 .vad-add-menu {
@@ -42,44 +42,44 @@
 }
 .db[data-theme="light"] .vad-w { background: #fff; }
 .vad-w.is-text { background: transparent; border-style: dashed; }
-.vad-w-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 4px; min-height: 40px; }
+.vad-w-head { display: flex; align-items: center; gap: 8px; padding: 14px 18px 6px; min-height: 44px; }
 .vad-w-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.vad-w-titles b { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vad-w-titles small { font-size: 12px; color: var(--db-muted); }
+.vad-w-titles b { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vad-w-titles small { font-size: 14px; color: var(--db-muted); }
 .vad-grip { cursor: grab; user-select: none; color: var(--db-muted); font-size: 14px; letter-spacing: -2px; padding: 2px 4px; border-radius: 6px; }
 .vad-grip:hover { background: rgb(var(--ink) / 0.08); color: var(--db-text); }
 .vad-grip:active { cursor: grabbing; }
 .vad-w-x { width: 26px; height: 26px; border: 0; border-radius: 13px; background: none; color: var(--db-muted); font-size: 18px; line-height: 1; cursor: pointer; }
 .vad-w-x:hover { background: color-mix(in srgb, var(--db-err) 14%, transparent); color: var(--db-err); }
-.vad-w-body { flex: 1; min-height: 0; padding: 4px 14px 12px; display: flex; flex-direction: column; }
-.vad-w.is-text .vad-w-body { overflow-y: auto; font-size: 14px; }
-.vad-w-note { margin: auto 0; font-size: 13px; color: var(--db-muted); line-height: 1.5; }
+.vad-w-body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 18px 14px; display: flex; flex-direction: column; }
+.vad-w.is-text .vad-w-body { overflow-y: auto; font-size: 16px; }
+.vad-w-note { margin: auto 0; font-size: 15px; color: var(--db-muted); line-height: 1.5; }
 .vad-w-skel { flex: 1; border-radius: 10px; background: linear-gradient(90deg, rgb(var(--ink) / 0.04), rgb(var(--ink) / 0.08), rgb(var(--ink) / 0.04)); background-size: 200% 100%; animation: vad-skel 1.4s linear infinite; }
 @keyframes vad-skel { from { background-position: 100% 0 } to { background-position: -100% 0 } }
 
 /* KPI */
 .vad-kpi { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 0; }
 .vad-kpi-value { font-weight: 650; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
-.vad-kpi-change { font-size: 12.5px; font-weight: 600; }
+.vad-kpi-change { font-size: 14px; font-weight: 600; }
 .vad-kpi-change em { font-style: normal; font-weight: 400; color: var(--db-muted); margin-left: 4px; }
 .vad-kpi-change.is-good { color: var(--db-accent-text, #5ee6c8); }
 .vad-kpi-change.is-bad { color: var(--db-err-text, #ff7a7a); }
 .vad-kpi-goal { position: relative; display: block; height: 6px; border-radius: 3px; background: rgb(var(--ink) / 0.08); margin-top: 4px; }
 .vad-kpi-goal i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--db-accent); }
-.vad-kpi-goal em { position: absolute; right: 0; top: 8px; font-style: normal; font-size: 11.5px; color: var(--db-muted); }
+.vad-kpi-goal em { position: absolute; right: 0; top: 8px; font-style: normal; font-size: 13px; color: var(--db-muted); }
 .vad-spark { width: 100%; height: 30px; margin-top: auto; }
 
 /* Chart */
-.vad-chart { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.vad-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--db-muted); margin-bottom: 6px; }
+.vad-chart { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.vad-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--db-muted); margin-bottom: 6px; }
 .vad-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .vad-legend i { width: 8px; height: 8px; border-radius: 2px; }
 
 /* Table */
 .vad-table { overflow: auto; flex: 1; }
-.vad-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.vad-table th { position: sticky; top: 0; text-align: left; font-weight: 600; font-size: 12px; color: var(--db-muted); padding: 6px 8px; background: inherit; border-bottom: 1px solid var(--hair); }
-.vad-table td { padding: 8px; border-bottom: 1px solid var(--hair); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vad-table table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.vad-table th { position: sticky; top: 0; z-index: 1; background: var(--db-card); text-align: left; font-weight: 600; font-size: 14px; color: var(--db-muted); padding: 8px 10px; background: inherit; border-bottom: 1px solid var(--hair); }
+.vad-table td { padding: 10px; border-bottom: 1px solid var(--hair); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .vad-table tr.is-link { cursor: pointer; }
 .vad-table tr.is-link:hover td { background: rgb(var(--ink) / 0.04); }
 
@@ -91,3 +91,164 @@
 .vad-grid .react-grid-item > .react-resizable-handle::after { border-color: var(--db-muted); }
 .vad-grid .react-grid-item { transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), width 0.2s, height 0.2s; }
 .vad-grid .react-grid-item.react-draggable-dragging, .vad-grid .react-grid-item.resizing { transition: none; z-index: 5; }
+
+/* ---------- sharing: owner's panel ---------- */
+.vad-head-actions { display: flex; gap: 8px; align-items: center; }
+.vad-share { display: grid; gap: 22px; padding: 20px 22px; border-radius: 20px; background: var(--surface); border: 1px solid var(--hair); }
+.vad-share-block { display: grid; gap: 12px; }
+.vad-share-access { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.vad-share-opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--hair); cursor: pointer; }
+.vad-share-opt.is-on { border-color: var(--db-accent); box-shadow: 0 0 0 1px var(--db-accent) inset; }
+.vad-share-opt span { display: grid; gap: 3px; }
+.vad-share-opt small, .vad-share-viewers small, .vad-share-note { color: var(--db-muted); font-size: 13px; }
+.vad-share-link { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vad-share-link code { padding: 6px 10px; border-radius: 10px; background: rgb(var(--ink) / 0.05); overflow-wrap: anywhere; }
+.vad-share-viewers { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.vad-share-viewers li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.vad-share-viewers li button { margin-left: auto; }
+.vad-share-add { display: flex; flex-wrap: wrap; gap: 8px; }
+.vad-share-add .db-in { flex: 1 1 180px; }
+.vad-share-brand { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.vad-share-brand .db-field { display: grid; gap: 6px; font-size: 14px; }
+.vad-share-color { width: 56px; height: 36px; padding: 0; border: 1px solid var(--hair); border-radius: 10px; background: none; }
+.vad-share-logo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vad-share-logo img { height: 36px; max-width: 120px; object-fit: contain; }
+
+/* ---------- sharing: the page at /v/<slug> ---------- */
+.db.vad-public { display: block; min-height: 100vh; color: var(--db-text); }
+.vad-public-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 24px 32px 8px; }
+.vad-public-logo { height: 44px; max-width: 160px; object-fit: contain; }
+.vad-public-titles { display: grid; gap: 2px; }
+.vad-public-org { color: var(--db-muted); font-size: 14px; }
+.vad-public-user { margin-left: auto; display: flex; gap: 10px; align-items: center; color: var(--db-muted); font-size: 14px; }
+.vad-public-main { padding: 16px 32px 48px; }
+.vad-signin { max-width: 360px; margin: 48px auto; display: grid; gap: 14px; padding: 24px; border-radius: 20px; background: var(--surface); border: 1px solid var(--hair); }
+.vad-signin .db-field { display: grid; gap: 6px; font-size: 14px; }
+@media (max-width: 640px) {
+  .vad-public-head { padding: 16px 16px 4px; }
+  .vad-public-main { padding: 12px 16px 32px; }
+  .vad-public-user { margin-left: 0; }
+}
+.vad-share-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.vad-share-check span { display: grid; gap: 3px; }
+.vad-share-check small { color: var(--db-muted); font-size: 13px; }
+.vad-public-nav { display: flex; gap: 6px; padding: 0 32px; border-bottom: 1px solid var(--hair); }
+.vad-public-nav button { background: none; border: 0; color: var(--db-muted); padding: 10px 12px; font: inherit; font-size: 15px; cursor: pointer; border-bottom: 2px solid transparent; }
+.vad-public-nav button.is-on { color: var(--db-text); border-bottom-color: var(--db-accent); }
+.vad-public-settings { display: grid; gap: 22px; max-width: 880px; }
+.vad-signin-switch { background: none; border: 0; color: var(--db-accent-text); cursor: pointer; font: inherit; font-size: 14px; padding: 0; justify-self: start; }
+@media (max-width: 640px) { .vad-public-nav { padding: 0 16px; overflow-x: auto; } }
+.vad-owner-nav { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--hair); overflow-x: auto; }
+.vad-owner-nav button { background: none; border: 0; color: var(--db-muted); padding: 10px 12px; font: inherit; font-size: 15px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.vad-owner-nav button.is-on { color: var(--db-text); border-bottom-color: var(--db-accent); }
+.vad-owner-state { margin-left: auto; color: var(--db-muted); font-size: 13px; white-space: nowrap; }
+.vad-owner-nav button.vad-owner-ask { display: inline-flex; align-items: center; gap: 6px; color: var(--db-accent-text); }
+
+/* ---------- the VAD page at /v/<slug>: complete on its own (no dashboard shell, no site chrome) ---------- */
+.db.vad-public {
+  display: block; height: auto; min-height: 100dvh;
+  font-family: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 16px; line-height: 1.5; color: var(--db-text); background: var(--db-bg);
+}
+.vad-public-title { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; }
+.vad-public-org { font-size: 15px; }
+.vad-public-loading { color: var(--db-muted); font-size: 16px; }
+.vad-signin { margin: 8vh auto; width: min(400px, 100%); gap: 16px; padding: 28px; box-shadow: var(--glow); }
+.vad-signin-title { margin: 0 0 4px; font-size: 22px; font-weight: 650; }
+.vad-field { display: grid; gap: 6px; font-size: 15px; font-weight: 500; }
+.vad-in {
+  width: 100%; height: 44px; padding: 0 14px; font: inherit; font-size: 16px; color: var(--db-text);
+  background: var(--db-card); border: 1px solid var(--db-line-2); border-radius: 12px; outline: none;
+}
+.vad-in:focus { border-color: var(--db-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--db-accent) 22%, transparent); }
+.vad-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px;
+  font: inherit; font-size: 15px; font-weight: 600; color: var(--db-text); cursor: pointer;
+  background: rgb(var(--ink) / 0.05); border: 1px solid var(--db-line-2); border-radius: 12px;
+}
+.vad-btn:hover:not(:disabled) { background: rgb(var(--ink) / 0.09); }
+.vad-btn.is-primary { height: 46px; color: #fff; background: var(--db-accent); border-color: transparent; }
+.vad-btn.is-primary:hover:not(:disabled) { filter: brightness(1.06); background: var(--db-accent); }
+.vad-btn:disabled { opacity: 0.6; cursor: default; }
+.vad-signin-switch { font-size: 15px; }
+.vad-public .vad-err { color: var(--db-err-text, var(--db-err)); font-size: 15px; margin: 0; }
+
+/* ---------- owner pages in Voxio: built on the dashboard's setcards and connected groups ---------- */
+.vad-page > * + * { margin-top: 24px; }
+.vad-status { align-self: center; }
+.db .vad-users { display: flex; flex-direction: column; gap: 8px; }
+.db .vad-user-id { font-size: 17px; line-height: 28px; color: var(--db-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db .vad-linkgroup .db-btngroup.is-icons { gap: 2px; }
+.db .vad-linkgroup .db-btngroup.is-icons .db-gbtn:first-child { border-radius: 8px; }
+.db .vad-linkgroup .db-btngroup.is-icons .db-gbtn:last-child { border-radius: 8px 24px 24px 8px; }
+.db .vad-colorbtn, .db .vad-logobtn { position: relative; cursor: pointer; gap: 12px; }
+.db .vad-colorbtn input[type="color"], .db .vad-logobtn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.db .vad-swatch { width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 0 0 1px rgb(var(--ink) / 0.2) inset; }
+.db .vad-logobtn img { height: 32px; max-width: 96px; object-fit: contain; }
+.db .vad-ddfield { cursor: pointer; }
+.db .vad-ddfield .db-dd-btn { height: 28px; min-height: 28px; padding: 0; border: 0; background: transparent; box-shadow: none; font-size: 17px; width: 100%; }
+.db .vad-newgroup { max-width: 720px; }
+
+/* ---------- edit: the widget panel ---------- */
+.vad-shelf { margin-bottom: 16px; }
+.vad-shelf-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.vad-shelf-hint { margin-left: auto; font-size: 15px; color: var(--db-muted); }
+.vad-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.db .vad-tile {
+  display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 14px; border: 0; border-radius: 12px;
+  background: var(--cell); color: var(--db-text); font: inherit; text-align: left; cursor: grab; transition: background-color 0.15s linear;
+}
+.db .vad-tile:hover { background: var(--cell-hi); }
+.db .vad-tile:active { cursor: grabbing; }
+.vad-tile-grip { color: var(--db-muted); letter-spacing: -2px; font-size: 15px; }
+.vad-tile-text { display: flex; flex-direction: column; min-width: 0; }
+.vad-tile-text b { font-size: 16px; font-weight: 600; }
+.vad-tile-text small { font-size: 14px; color: var(--db-muted); }
+.vad-grid .react-grid-item.dropping { visibility: visible; }
+.vad-grid.is-editing { min-height: 240px; border-radius: 18px; outline: 1px dashed rgb(var(--ink) / 0.12); outline-offset: 6px; }
+
+/* ---------- placement, after Echobotics (ListToolbar, ChartHeader) ----------
+   Filters are cells of one bar (2px apart, round outer ends); Edit / Save sit at its right
+   end. Each widget is a chart card: title on the left, controls on the right, a hairline
+   under the header. No cards inside cards. */
+.db .vad-bar { margin-bottom: 20px; }
+.db .vad-bar-cells { flex: 0 1 auto; }
+.db .vad-bar .db-ltoolbar-actions { margin-left: auto; }
+.db .vad-w { border-radius: 16px; border: 1px solid var(--hair); box-shadow: none; }
+.db .vad-w-head { padding: 16px 20px 12px; min-height: 56px; border-bottom: 1px solid var(--hair); }
+.db .vad-w.is-text .vad-w-head, .db .vad-w.is-kpi .vad-w-head { border-bottom: 0; }
+.db .vad-w-titles b { font-size: 18px; line-height: 26px; }
+.db .vad-w-body { padding: 12px 20px 16px; }
+.db .vad-w-x { width: 36px; height: 36px; border-radius: 18px; display: grid; place-items: center; margin-left: auto; }
+.db .db-head .vad-status { align-self: center; }
+
+/* Ask Voxio in a VAD's side menu is a <button>: drop the browser's button look so it matches the links. */
+.db button.db-panel-item { width: 100%; border: 0; background: none; font: inherit; font-size: 16.5px; color: var(--db-muted); text-align: left; justify-content: flex-start; cursor: pointer; }
+.db button.db-panel-item:hover { background: rgb(var(--ink) / 0.04); color: var(--db-text); }
+.db.panel-mini button.db-panel-item { justify-content: center; }
+
+/* Copy and Open: the link field's full height, the same width as each other. */
+.db .vad-linkgroup > .db-btngroup.is-icons { display: flex; align-self: stretch; }
+.db .vad-linkgroup .db-btngroup.is-icons .db-gbtn { height: auto; min-height: 64px; align-self: stretch; min-width: 64px; justify-content: center; }
+
+/* Range: each choice is a cell of the toolbar, like Echobotics' toggle group. */
+.db .vad-bar-cells > .vad-cell { height: 40px; padding: 0 18px; border: 0; color: var(--db-text); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; }
+.db .vad-bar-cells > .vad-cell:hover { background: var(--cell-hi); }
+.db .vad-bar-cells > .vad-cell.is-on { background: rgb(var(--ink) / 0.14); border-radius: 20px; font-weight: 600; }
+.db .vad-bar-cells > .db-fchip .db-fchip-btn { font-size: 15px; }
+
+/* Text sizes: 16px body as the floor for data, like the rest of the dashboard. */
+.db .vad-table table { font-size: 17px; }
+.db .vad-table th { font-size: 15px; padding: 10px 12px; }
+.db .vad-table td { padding: 12px; }
+.db .vad-w-titles b { font-size: 19px; }
+.db .vad-w-titles small, .db .vad-legend { font-size: 15px; }
+.db .vad-w-note { font-size: 16px; }
+.db .vad-status { font-size: 14px; padding: 4px 12px; }
+
+/* Charts fill what is left of the card under the header and legend. Their size never comes from
+   their own content: with an aspect ratio, the chart's height grew the box, the box grew the
+   chart, and the bars ended up far below the visible area. */
+.db .vad-w-body { position: relative; }
+.db .vad-chart { flex: 1 1 0; min-height: 0; }
+.db .vad-chart > .vad-plot { flex: 1 1 0; min-height: 0; height: auto; overflow: hidden; }

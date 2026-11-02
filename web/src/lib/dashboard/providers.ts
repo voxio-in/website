@@ -107,6 +107,9 @@ export const STT_PROVIDERS: Provider[] = [
 
 const SARVAM_V3 = ['shubh', 'aditya', 'ritu', 'priya', 'neha', 'rahul', 'pooja', 'rohan', 'simran', 'kavya', 'amit', 'dev', 'ishita', 'shreya', 'ratan', 'varun', 'manan', 'sumit', 'roopa', 'kabir', 'aayan', 'ashutosh', 'advait', 'anand', 'tanya', 'tarun', 'sunny', 'mani', 'gokul', 'vijay', 'shruti', 'suhani', 'mohit', 'kavitha', 'rehan', 'soham', 'rupali']
 const SARVAM_V2 = ['anushka', 'manisha', 'vidya', 'arya', 'abhilash', 'karun', 'hitesh']
+// Gender by Sarvam's voice list (v2 documented; v3 by the voice's name), so a search for "female" can match.
+const SARVAM_FEMALE = new Set(['ritu', 'priya', 'neha', 'pooja', 'simran', 'kavya', 'ishita', 'shreya', 'roopa', 'tanya', 'shruti', 'suhani', 'kavitha', 'rupali', 'anushka', 'manisha', 'vidya', 'arya'])
+const sarvamOpt = (v: string) => ({ value: v, label: cap(v), hint: SARVAM_FEMALE.has(v) ? 'female' : 'male' })
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 
 export const TTS_PROVIDERS: Provider[] = [
@@ -127,8 +130,8 @@ export const TTS_PROVIDERS: Provider[] = [
     defaults: { model: 'bulbul:v3', voice: 'simran', language: 'en-IN' },
     fields: [
       { key: 'model', label: 'Model', kind: 'select', basic: true, default: 'bulbul:v3', options: opts(['bulbul:v3', 'Bulbul v3', 'Latest', '37 natural voices. Best for Indian-English and Hindi conversations.'], ['bulbul:v2', 'Bulbul v2', '', 'Fewer voices, but lets you tune pitch and loudness.']), help: 'Which voice model speaks. Hover an option to compare.' },
-      { key: 'voice', label: 'Voice', kind: 'select', basic: true, default: 'simran', when: { key: 'model', test: isBulbul3 }, options: SARVAM_V3.map((v) => ({ value: v, label: cap(v) })), help: 'The voice callers hear.' },
-      { key: 'voice', label: 'Voice', kind: 'select', basic: true, default: 'anushka', when: { key: 'model', test: isBulbul2 }, options: SARVAM_V2.map((v) => ({ value: v, label: cap(v) })), help: 'The voice callers hear.' },
+      { key: 'voice', label: 'Voice', kind: 'select', basic: true, default: 'simran', when: { key: 'model', test: isBulbul3 }, options: SARVAM_V3.map(sarvamOpt), help: 'The voice callers hear.' },
+      { key: 'voice', label: 'Voice', kind: 'select', basic: true, default: 'anushka', when: { key: 'model', test: isBulbul2 }, options: SARVAM_V2.map(sarvamOpt), help: 'The voice callers hear.' },
       { key: 'language', label: 'Language', kind: 'select', basic: true, default: 'en-IN', options: INDIC, help: 'The language the agent speaks in.' },
       { key: 'pace', label: 'Speed', kind: 'slider', basic: true, min: 0.5, max: 2, step: 0.05, default: 1, unit: '×', help: 'How fast the agent talks.' },
       { key: 'temperature', label: 'Expressiveness', kind: 'slider', min: 0.01, max: 1, step: 0.01, default: 0.6, when: { key: 'model', test: isBulbul3 }, help: 'Higher sounds livelier; lower sounds steadier.' },

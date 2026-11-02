@@ -10,7 +10,8 @@ const LLM_TYPES = new Set(['llm', 'llm-streaming', 'llm_shopify', 'shopify_llm',
 const keysOf = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x) => typeof x === 'string') : v && typeof v === 'object' ? Object.keys(v) : []
 
-export function validate(graph: Graph): Issue[] {
+/** `knowledge`: the account's knowledge bases (id → passages), when known, to check rag steps against. */
+export function validate(graph: Graph, knowledge?: Map<string, number>): Issue[] {
   const issues: Issue[] = []
   const ids = graph.nodes.map((n) => n.id)
   const start = ids[0]
@@ -92,7 +93,17 @@ export function validate(graph: Graph): Issue[] {
       at('warning', 'This AI step says nothing out loud, and no later step uses what it decides, so the caller won’t notice it. Add a Spoken reply under What it decides, or a Say step after it.')
     if ((n.data.type === 'llm' || n.data.type === 'llm-streaming') && !String(p.system_prompt ?? '').trim())
       at('warning', 'This AI step has no instructions yet. Tell it who it is and what to do.')
-    if (n.data.type === 'rag' && !String(p.collection_name ?? '').trim()) at('error', 'Choose which knowledge base to search.')
+    if (n.data.type === 'rag') {
+      const kb = String(p.kb ?? '').trim()
+      // A raw collection_name (older workflows) still runs; the engine prefers kb.
+      if (!kb && !String(p.collection_name ?? '').trim()) at('error', 'Choose which knowledge base to search.')
+      else if (kb && knowledge && !knowledge.has(kb)) at('error', 'That knowledge base no longer exists. Choose another one.')
+      else if (kb && knowledge?.get(kb) === 0) at('warning', 'This knowledge base has no ready documents yet, so every search comes back empty. Add a PDF on the Knowledge page.')
+      const t = p.timeout
+      if (t != null && !(typeof t === 'number' && t > 0 && t <= 30)) at('error', 'Search timeout must be more than 0 and at most 30 seconds.')
+      const out = (Array.isArray(p.output_variables) ? String(p.output_variables[0] ?? '') : '') || 'rag_context'
+      if (!consumed.has(out)) at('warning', `No later step reads “${out}”, so the passages are found but never used. Add it to the next AI step's input.`)
+    }
   }
 
   return issues

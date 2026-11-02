@@ -35,7 +35,8 @@ function inline(text: string, key = 0): ReactNode[] {
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index))
     const t = m[0]
-    if (t.startsWith('**')) out.push(<strong key={k++}>{t.slice(2, -2)}</strong>)
+    // Bold and italic can hold links (models bold step links), so their text is parsed too.
+    if (t.startsWith('**')) out.push(<strong key={k++}>{inline(t.slice(2, -2), k * 100)}</strong>)
     else if (t.startsWith('`')) out.push(<code key={k++}>{t.slice(1, -1)}</code>)
     else if (t.startsWith('[')) {
       const [, label = '', href = ''] = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(t) ?? []
@@ -44,7 +45,7 @@ function inline(text: string, key = 0): ReactNode[] {
         const safe = /^(https?:|\/)/.test(href) ? href : undefined
         out.push(safe ? <a key={k++} href={safe} target={safe.startsWith('/') ? undefined : '_blank'} rel="noreferrer">{label}</a> : label)
       }
-    } else out.push(<em key={k++}>{t.slice(1, -1)}</em>)
+    } else out.push(<em key={k++}>{inline(t.slice(1, -1), k * 100)}</em>)
     last = m.index + t.length
   }
   if (last < text.length) out.push(text.slice(last))

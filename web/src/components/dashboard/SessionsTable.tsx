@@ -244,6 +244,7 @@ function ReplayDialog({ s: given, flowKey, showData, onClose }: { s: Session; fl
               ))}
             </div>
           ) : <p className="db-muted">No transcript for this session.</p>}
+          {s.variables && Object.keys(s.variables).length > 0 && <Recorded vars={s.variables} start={s.startTime} />}
           {kind === 'browser' && steps.length > 0 && <Timeline events={steps} />}
           {actions.length > 0 && (
             <section className="db-live-actions db-replay-actions">
@@ -318,6 +319,33 @@ const STATUS: Record<WebActionEvent['status'], { label: string; cls: string }> =
   timeout: { label: 'Page didn’t respond', cls: 'is-err' },
   interrupted: { label: 'Caller interrupted', cls: 'is-warn' },
   no_channel: { label: 'Page not connected', cls: 'is-err' },
+}
+
+/** What the agent recorded on this call: each field's final value, and when it was found or changed (turn, time into the call). */
+function Recorded({ vars, start }: { vars: NonNullable<Session['variables']>; start: string }) {
+  const show = (v: unknown) => (v === true ? 'yes' : v === false ? 'no' : v === null || v === '' ? 'cleared' : typeof v === 'object' ? JSON.stringify(v) : String(v))
+  const into = (at?: string) => {
+    const s = at ? Math.round((new Date(at).getTime() - new Date(start).getTime()) / 1000) : NaN
+    return Number.isFinite(s) && s >= 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : ''
+  }
+  return (
+    <section className="db-recorded">
+      <span className="db-flabel">What it recorded</span>
+      <ul>
+        {Object.entries(vars).map(([name, v]) => (
+          <li key={name}>
+            <span className="db-recorded-name">{name.replace(/_/g, ' ')}</span>
+            <strong>{show(v.value)}</strong>
+            {(v.history?.length ?? 0) > 0 && (
+              <span className="db-recorded-hist">
+                {v.history!.map((h, k) => <span key={k}>{v.history!.length > 1 ? `${show(h.value)} ` : ''}{h.turn != null ? `turn ${h.turn}` : ''}{into(h.at) ? ` · ${into(h.at)}` : ''}</span>)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
 }
 
 function Timeline({ events }: { events: WebActionEvent[] }) {
