@@ -2796,3 +2796,4 @@ What the backend needs is written up for the backend work in
 - edit_settings: "voice" maps to the provider voice setting when it has none by that name (Deepgram Aura uses model); errors list key (Label). Fixes 14 failed proposals for roche_au_caller.
 - edit_settings: a wrong provider setting returns that provider's full settings + values (same as voice_options), so one retry fixes it.
 - Pool timeout on Apply all: act() now runs one user's Apply/Discard/Undo in order (no concurrent saves, no double apply); Prisma pool_timeout 30s unless DATABASE_URL sets one.
+- Deploy fix: voxioagent back to ^3.0.0 (npm registry; local SDK is the same 3.0.0). Server build failed on voxioagent/client and /widget because package.json pointed at ../../voice-bot-sdk.
